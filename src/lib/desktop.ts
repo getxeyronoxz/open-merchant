@@ -29,6 +29,8 @@ export const tauriDesktopClient: DesktopClient = {
   saveAssumptions: (root, assumptions) => invoke("save_assumptions", { root, assumptions }),
   calculateAndSaveScenarios: (root) => invoke("calculate_and_save_scenarios", { root }),
   generateReport: (root) => invoke("generate_report", { root }),
+  listArtifacts: (root) => invoke("list_artifacts", { root }),
+  readArtifact: (root, relativePath) => invoke("read_artifact", { root, relativePath }),
   listRecentProjects: () => invoke<RecentProject[]>("list_recent_projects"),
   removeRecentProject: (root: string) =>
     invoke<void>("remove_recent_project", { root }),

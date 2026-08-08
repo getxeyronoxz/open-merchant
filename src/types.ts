@@ -87,6 +87,13 @@ export interface EconomicsScenario {
   grossMarginPercent: string;
 }
 
+export interface ArtifactDescriptor {
+  relativePath: string;
+  kind: string;
+  generated: boolean;
+  exists: boolean;
+}
+
 export interface RecentProject {
   name: string;
   path: string;
@@ -114,6 +121,8 @@ export interface DesktopClient {
   saveAssumptions(root: string, assumptions: CostAssumptions): Promise<void>;
   calculateAndSaveScenarios(root: string): Promise<EconomicsScenario[]>;
   generateReport(root: string): Promise<string>;
+  listArtifacts(root: string): Promise<ArtifactDescriptor[]>;
+  readArtifact(root: string, relativePath: string): Promise<string>;
   listRecentProjects(): Promise<RecentProject[]>;
   removeRecentProject(root: string): Promise<void>;
 }

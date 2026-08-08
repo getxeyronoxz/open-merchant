@@ -30,4 +30,8 @@ pub enum WorkspaceError {
     },
     #[error("Invalid project input: {0}")]
     Validation(String),
+    #[error("Unknown workspace artifact: {0}")]
+    UnknownArtifact(String),
+    #[error("Workspace artifact exceeds the 2 MiB text-viewer limit: {0}")]
+    ArtifactTooLarge(PathBuf),
 }
