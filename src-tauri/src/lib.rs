@@ -24,6 +24,8 @@ pub fn run() {
             commands::load_competitors,
             commands::save_competitors,
             commands::competitor_statistics,
+            commands::load_assumptions,
+            commands::save_assumptions,
             commands::list_recent_projects,
             commands::remove_recent_project,
         ])

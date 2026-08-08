@@ -87,6 +87,12 @@ pub fn competitor_statistics(service: State<'_, MerchantService>, root: String) 
 }
 
 #[tauri::command]
+pub fn load_assumptions(service: State<'_, MerchantService>, root: String) -> Result<merchant_core::CostAssumptions, CommandError> { service.load_assumptions(&root).map_err(Into::into) }
+
+#[tauri::command]
+pub fn save_assumptions(service: State<'_, MerchantService>, root: String, assumptions: merchant_core::CostAssumptions) -> Result<(), CommandError> { service.save_assumptions(&root, assumptions).map_err(Into::into) }
+
+#[tauri::command]
 pub fn list_recent_projects(
     service: State<'_, MerchantService>,
 ) -> Result<Vec<RecentProject>, CommandError> {

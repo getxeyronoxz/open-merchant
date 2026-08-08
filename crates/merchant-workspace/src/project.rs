@@ -1,7 +1,7 @@
 use std::{fs, path::{Path, PathBuf}};
 
 use chrono::{DateTime, Utc};
-use merchant_core::{validation::{validate_competitors, validate_currency, validate_evidence_sources, validate_objective, validate_project_name}, Competitor, DecimalString, EvidenceSource, ProjectManifest, ProjectSnapshot, SCHEMA_VERSION};
+use merchant_core::{validation::{validate_assumptions, validate_competitors, validate_currency, validate_evidence_sources, validate_objective, validate_project_name}, Competitor, CostAssumptions, DecimalString, EvidenceSource, ProjectManifest, ProjectSnapshot, SCHEMA_VERSION};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -191,6 +191,21 @@ impl Workspace {
         })?;
         atomic::write(&path, &contents)
     }
+
+    pub fn load_assumptions(&self) -> Result<CostAssumptions, WorkspaceError> {
+        let path = paths::at(&self.root, paths::ASSUMPTIONS);
+        let contents = fs::read_to_string(&path).map_err(|source| WorkspaceError::Io { path: path.clone(), source })?;
+        let assumptions = serde_json::from_str::<CostAssumptions>(&contents).map_err(|source| WorkspaceError::Json { path: path.clone(), source })?;
+        validate_assumptions(&assumptions, &self.load_snapshot()?.manifest.currency).map_err(|error| WorkspaceError::Validation(error.to_string()))?;
+        Ok(assumptions)
+    }
+
+    pub fn save_assumptions(&self, assumptions: &CostAssumptions) -> Result<(), WorkspaceError> {
+        let path = paths::at(&self.root, paths::ASSUMPTIONS);
+        validate_assumptions(assumptions, &self.load_snapshot()?.manifest.currency).map_err(|error| WorkspaceError::Validation(error.to_string()))?;
+        let json = serde_json::to_vec_pretty(assumptions).map_err(|source| WorkspaceError::Json { path: path.clone(), source })?;
+        atomic::write(&path, &with_newline(json))
+    }
 }
 
 fn competitor_from_csv(row: CompetitorCsv) -> Result<Competitor, WorkspaceError> {
@@ -236,10 +251,12 @@ fn initialize_files(root: &Path, manifest: &ProjectManifest) -> Result<(), Works
         &paths::at(root, paths::COMPETITORS),
         b"schema_version,id,product,brand,price,currency,marketplace,url,source_id,notes,observed_at\n",
     )?;
-    atomic::write(
-        &paths::at(root, paths::ASSUMPTIONS),
-        b"{\n  \"schemaVersion\": 1,\n  \"acquisitionCost\": \"0\",\n  \"shippingCost\": \"0\",\n  \"marketplaceFeeRate\": \"0\",\n  \"paymentFeeRate\": \"0\",\n  \"otherCosts\": \"0\",\n  \"sellingPrices\": [\"0\", \"0\", \"0\"]\n}\n",
-    )?;
+    let assumptions_path = paths::at(root, paths::ASSUMPTIONS);
+    let assumptions = serde_json::to_vec_pretty(&CostAssumptions::empty(manifest.currency.clone())).map_err(|source| WorkspaceError::Json {
+        path: assumptions_path.clone(),
+        source,
+    })?;
+    atomic::write(&assumptions_path, &with_newline(assumptions))?;
     atomic::write(
         &paths::at(root, paths::REPORT_SECTIONS),
         b"{\n  \"schemaVersion\": 1,\n  \"decisionSummary\": \"\",\n  \"marketObservations\": [],\n  \"risks\": [],\n  \"opportunities\": []\n}\n",

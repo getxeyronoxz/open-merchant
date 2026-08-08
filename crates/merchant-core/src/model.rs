@@ -100,3 +100,31 @@ pub struct Competitor {
     pub notes: String,
     pub observed_at: DateTime<Utc>,
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ScenarioPrices {
+    pub low: Option<DecimalString>,
+    pub base: Option<DecimalString>,
+    pub high: Option<DecimalString>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CostAssumptions {
+    pub schema_version: u32,
+    pub currency: String,
+    pub acquisition_cost: DecimalString,
+    pub shipping_cost: DecimalString,
+    pub marketplace_fee_rate: DecimalString,
+    pub payment_fee_rate: DecimalString,
+    pub other_costs: DecimalString,
+    pub scenario_prices: ScenarioPrices,
+}
+
+impl CostAssumptions {
+    pub fn empty(currency: impl Into<String>) -> Self {
+        let zero = DecimalString::from_decimal(Decimal::ZERO);
+        Self { schema_version: crate::SCHEMA_VERSION, currency: currency.into(), acquisition_cost: zero, shipping_cost: zero, marketplace_fee_rate: zero, payment_fee_rate: zero, other_costs: zero, scenario_prices: ScenarioPrices { low: None, base: None, high: None } }
+    }
+}
