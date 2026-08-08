@@ -1,0 +1,18 @@
+[package]
+name = "open-merchant"
+version = "0.1.0"
+description = "Local-first commerce research workspace"
+authors = ["Open Merchant contributors"]
+edition = "2021"
+
+[lib]
+name = "open_merchant_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+merchant-core = { path = "../crates/merchant-core" }
+merchant-workspace = { path = "../crates/merchant-workspace" }
+tauri = { version = "2", features = [] }
