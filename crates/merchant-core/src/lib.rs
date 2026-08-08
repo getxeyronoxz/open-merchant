@@ -1,5 +1,10 @@
 pub const SCHEMA_VERSION: u32 = 1;
 
+pub mod model;
+pub mod validation;
+
+pub use model::{ProjectManifest, ProjectSnapshot};
+
 #[cfg(test)]
 mod tests {
     #[test]
