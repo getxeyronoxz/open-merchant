@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use merchant_core::ProjectSnapshot;
+use merchant_core::{EvidenceSource, ProjectSnapshot};
 use merchant_workspace::{Workspace, WorkspaceError};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -60,6 +60,15 @@ impl MerchantService {
         self.recents
             .upsert(snapshot.manifest.name.clone(), snapshot.root.clone())?;
         Ok(snapshot)
+    }
+
+    pub fn load_evidence(&self, root: &str) -> Result<Vec<EvidenceSource>, AppError> {
+        Ok(Workspace::open(root)?.load_evidence()?)
+    }
+
+    pub fn save_evidence(&self, root: &str, evidence: Vec<EvidenceSource>) -> Result<(), AppError> {
+        Workspace::open(root)?.save_evidence(&evidence)?;
+        Ok(())
     }
 
     pub fn list_recent_projects(&self) -> Result<Vec<RecentProject>, AppError> {
