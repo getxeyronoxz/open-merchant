@@ -1,0 +1,4 @@
+schema_version,scenario,selling_price,acquisition_cost,shipping_cost,marketplace_fee_rate,marketplace_fee,payment_fee_rate,payment_fee,other_costs,total_cost,gross_profit,gross_margin_percent
+1,low,3499.00,1800.00,180.00,12.00,419.88,2.00,69.98,120.00,2589.86,909.14,25.98
+1,base,4499.00,1800.00,180.00,12.00,539.88,2.00,89.98,120.00,2729.86,1769.14,39.32
+1,high,5499.00,1800.00,180.00,12.00,659.88,2.00,109.98,120.00,2869.86,2629.14,47.81
