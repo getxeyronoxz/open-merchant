@@ -5,6 +5,7 @@ import { ObjectiveScreen } from "../features/objective/ObjectiveScreen";
 import { EvidenceScreen } from "../features/evidence/EvidenceScreen";
 import { CompetitorsScreen } from "../features/competitors/CompetitorsScreen";
 import { EconomicsScreen } from "../features/economics/EconomicsScreen";
+import { ReportScreen } from "../features/report/ReportScreen";
 import type { Competitor, CompetitorStatistics, CostAssumptions, EconomicsScenario, EvidenceSource } from "../types";
 
 const sections = ["Objective", "Evidence", "Competitors", "Economics", "Report", "Artifacts"] as const;
@@ -59,6 +60,8 @@ export function AppShell() {
           <CompetitorsScreen currency={project.manifest.currency} competitors={competitors} evidence={evidence} statistics={statistics} onSave={async (next) => { await client.saveCompetitors(project.root, next); setCompetitors(next); setStatistics(await client.competitorStatistics(project.root)); }} />
         ) : section === "Economics" && assumptions ? (
           <EconomicsScreen assumptions={assumptions} scenarios={scenarios} onSave={async (next) => { await client.saveAssumptions(project.root, next); setAssumptions(next); }} onCalculate={async () => setScenarios(await client.calculateAndSaveScenarios(project.root))} />
+        ) : section === "Report" ? (
+          <ReportScreen onGenerate={() => client.generateReport(project.root)} />
         ) : (
           <section className="rounded-xl border border-stone-800 bg-stone-900 p-6">
             <p className="text-sm font-medium text-emerald-300">{section}</p>

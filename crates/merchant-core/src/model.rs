@@ -122,6 +122,14 @@ pub struct CostAssumptions {
     pub scenario_prices: ScenarioPrices,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ReportSections { pub schema_version: u32, pub decision_summary: String, pub market_observations: Vec<String>, pub risks: Vec<String>, pub opportunities: Vec<String> }
+impl ReportSections { pub fn empty() -> Self { Self { schema_version: crate::SCHEMA_VERSION, decision_summary: String::new(), market_observations: vec![], risks: vec![], opportunities: vec![] } } }
+
+#[derive(Clone, Debug)]
+pub struct ReportInput { pub manifest: ProjectManifest, pub sections: ReportSections, pub evidence: Vec<EvidenceSource>, pub assumptions: CostAssumptions, pub scenarios: Vec<crate::EconomicsScenario>, pub run_id: String, pub generated_at: DateTime<Utc> }
+
 impl CostAssumptions {
     pub fn empty(currency: impl Into<String>) -> Self {
         let zero = DecimalString::from_decimal(Decimal::ZERO);

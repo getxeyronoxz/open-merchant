@@ -4,10 +4,12 @@ pub mod model;
 pub mod validation;
 pub mod statistics;
 pub mod economics;
+pub mod report;
 
-pub use model::{Competitor, CostAssumptions, DecimalString, EvidenceSource, Observation, ProjectManifest, ProjectSnapshot, ScenarioPrices};
+pub use model::{Competitor, CostAssumptions, DecimalString, EvidenceSource, Observation, ProjectManifest, ProjectSnapshot, ReportInput, ReportSections, ScenarioPrices};
 pub use statistics::{competitor_statistics, CompetitorStatistics};
 pub use economics::{calculate_scenarios, EconomicsScenario, ScenarioName};
+pub use report::render_opportunity_report;
 
 #[derive(Clone, Debug, thiserror::Error, PartialEq, Eq)]
 pub enum DomainError {
