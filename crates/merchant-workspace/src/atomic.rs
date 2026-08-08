@@ -23,6 +23,12 @@ pub fn write(path: &Path, contents: &[u8]) -> Result<(), WorkspaceError> {
         path: temporary.clone(),
         source,
     })?;
+    if path.exists() {
+        fs::remove_file(path).map_err(|source| WorkspaceError::Io {
+            path: path.to_path_buf(),
+            source,
+        })?;
+    }
     fs::rename(&temporary, path).map_err(|source| WorkspaceError::Io {
         path: path.to_path_buf(),
         source,

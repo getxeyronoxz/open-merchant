@@ -80,6 +80,19 @@ impl Workspace {
             manifest,
         })
     }
+
+    pub fn save_manifest(&self, manifest: &ProjectManifest) -> Result<ProjectManifest, WorkspaceError> {
+        validate_manifest(&paths::at(&self.root, paths::MANIFEST), manifest)?;
+        let mut saved = manifest.clone();
+        saved.updated_at = Utc::now();
+        let path = paths::at(&self.root, paths::MANIFEST);
+        let json = serde_json::to_vec_pretty(&saved).map_err(|source| WorkspaceError::Json {
+            path: path.clone(),
+            source,
+        })?;
+        atomic::write(&path, &with_newline(json))?;
+        Ok(saved)
+    }
 }
 
 fn initialize_files(root: &Path, manifest: &ProjectManifest) -> Result<(), WorkspaceError> {

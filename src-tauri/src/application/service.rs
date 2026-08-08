@@ -46,6 +46,22 @@ impl MerchantService {
         Ok(snapshot)
     }
 
+    pub fn save_manifest(
+        &self,
+        root: &str,
+        manifest: merchant_core::ProjectManifest,
+    ) -> Result<ProjectSnapshot, AppError> {
+        let workspace = Workspace::open(root)?;
+        let manifest = workspace.save_manifest(&manifest)?;
+        let snapshot = ProjectSnapshot {
+            root: workspace.root().to_string_lossy().into_owned(),
+            manifest,
+        };
+        self.recents
+            .upsert(snapshot.manifest.name.clone(), snapshot.root.clone())?;
+        Ok(snapshot)
+    }
+
     pub fn list_recent_projects(&self) -> Result<Vec<RecentProject>, AppError> {
         self.recents.list()
     }
