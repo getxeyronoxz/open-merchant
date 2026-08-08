@@ -1,8 +1,17 @@
-export default function App() {
+import { ProjectProvider, useProject } from "./context/ProjectContext";
+import { HomeScreen, WorkspaceShell } from "./features/home/HomeScreen";
+import { tauriDesktopClient } from "./lib/desktop";
+import type { DesktopClient } from "./types";
+
+function AppRouter() {
+  const { project } = useProject();
+  return project ? <WorkspaceShell /> : <HomeScreen />;
+}
+
+export default function App({ client = tauriDesktopClient }: { client?: DesktopClient }) {
   return (
-    <main className="min-h-screen bg-stone-950 p-8 text-stone-50">
-      <h1 className="text-3xl font-semibold tracking-tight">Open Merchant</h1>
-      <p className="mt-2 text-stone-300">Local commerce research workspace</p>
-    </main>
+    <ProjectProvider client={client}>
+      <AppRouter />
+    </ProjectProvider>
   );
 }
