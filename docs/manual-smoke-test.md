@@ -14,3 +14,11 @@ Run this checklist against a Windows 11 desktop build before a public showcase.
 - [ ] Inspect JSON, JSONL, CSV, Markdown, runs, and provenance in the app.
 - [ ] Open the project folder in Explorer.
 - [ ] Close the app, relaunch, reopen from Recents, and confirm all state.
+
+## Production Build Checks
+
+- [ ] `npm run tauri build -- --bundles nsis` completes.
+- [ ] The NSIS installer exists and is non-empty.
+- [ ] A fresh install launches Open Merchant.
+- [ ] The installed app completes create → report → reopen.
+- [ ] Uninstall removes the app but does not delete user project folders.
