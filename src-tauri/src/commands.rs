@@ -82,6 +82,11 @@ pub fn save_competitors(service: State<'_, MerchantService>, root: String, compe
 }
 
 #[tauri::command]
+pub fn competitor_statistics(service: State<'_, MerchantService>, root: String) -> Result<merchant_core::CompetitorStatistics, CommandError> {
+    service.competitor_statistics(&root).map_err(Into::into)
+}
+
+#[tauri::command]
 pub fn list_recent_projects(
     service: State<'_, MerchantService>,
 ) -> Result<Vec<RecentProject>, CommandError> {

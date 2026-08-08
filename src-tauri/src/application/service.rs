@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use merchant_core::{Competitor, EvidenceSource, ProjectSnapshot};
+use merchant_core::{competitor_statistics, Competitor, CompetitorStatistics, EvidenceSource, ProjectSnapshot};
 use merchant_workspace::{Workspace, WorkspaceError};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -78,6 +78,10 @@ impl MerchantService {
     pub fn save_competitors(&self, root: &str, competitors: Vec<Competitor>) -> Result<(), AppError> {
         Workspace::open(root)?.save_competitors(&competitors)?;
         Ok(())
+    }
+
+    pub fn competitor_statistics(&self, root: &str) -> Result<CompetitorStatistics, AppError> {
+        Ok(competitor_statistics(&Workspace::open(root)?.load_competitors()?))
     }
 
     pub fn list_recent_projects(&self) -> Result<Vec<RecentProject>, AppError> {
