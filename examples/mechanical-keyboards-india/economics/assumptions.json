@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "currency": "INR",
+  "acquisitionCost": "1800.00",
+  "shippingCost": "180.00",
+  "marketplaceFeeRate": "12.00",
+  "paymentFeeRate": "2.00",
+  "otherCosts": "120.00",
+  "scenarioPrices": {
+    "low": "3499.00",
+    "base": "4499.00",
+    "high": "5499.00"
+  }
+}

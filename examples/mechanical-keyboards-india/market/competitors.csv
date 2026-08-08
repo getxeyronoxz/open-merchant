@@ -1,0 +1,6 @@
+schema_version,id,product,brand,price,currency,marketplace,url,source_id,notes,observed_at
+1,C-001,Compact wired mechanical keyboard,SampleKey,2499.00,INR,Sample marketplace,https://example.com/sample-keyboard-listing,S-001,Demo sample data; not a live market claim.,2026-08-08T17:49:46.163675500+00:00
+1,C-002,75% hot-swappable keyboard,SampleKey,3499.00,INR,Sample marketplace,https://example.com/sample-keyboard-listing,S-001,Demo sample data; not a live market claim.,2026-08-08T17:49:46.163675500+00:00
+1,C-003,75% hot-swappable keyboard,DemoBoard,4299.00,INR,Sample marketplace,https://example.com/sample-keyboard-listing,S-002,Demo sample data; not a live market claim.,2026-08-08T17:49:46.163675500+00:00
+1,C-004,Wireless mechanical keyboard,DemoBoard,5499.00,INR,Sample marketplace,https://example.com/sample-keyboard-listing,S-002,Demo sample data; not a live market claim.,2026-08-08T17:49:46.163675500+00:00
+1,C-005,Wireless aluminium keyboard,ExampleSwitch,6999.00,INR,Sample marketplace,https://example.com/sample-keyboard-listing,S-003,Demo sample data; not a live market claim.,2026-08-08T17:49:46.163675500+00:00
