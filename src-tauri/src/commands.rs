@@ -46,6 +46,15 @@ pub fn open_project(
 }
 
 #[tauri::command]
+pub fn save_manifest(
+    service: State<'_, MerchantService>,
+    root: String,
+    manifest: merchant_core::ProjectManifest,
+) -> Result<ProjectSnapshot, CommandError> {
+    service.save_manifest(&root, manifest).map_err(Into::into)
+}
+
+#[tauri::command]
 pub fn list_recent_projects(
     service: State<'_, MerchantService>,
 ) -> Result<Vec<RecentProject>, CommandError> {

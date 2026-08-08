@@ -41,3 +41,25 @@ fn removing_a_recent_project_does_not_delete_its_workspace() {
     assert!(service.list_recent_projects().unwrap().is_empty());
     assert!(std::path::Path::new(&snapshot.root).is_dir());
 }
+
+#[test]
+fn saving_a_manifest_through_the_service_survives_reopen() {
+    let temp = tempfile::tempdir().unwrap();
+    let service = MerchantService::new(RecentProjectsStore::new(temp.path().join("recents.json")));
+    let mut snapshot = service
+        .create_project(CreateProjectRequest {
+            parent_directory: temp.path().to_string_lossy().into_owned(),
+            name: "Keyboard Study".into(),
+            objective: "Assess demand".into(),
+            currency: "INR".into(),
+        })
+        .unwrap();
+    snapshot.manifest.objective = "Updated commercial question".into();
+
+    service.save_manifest(&snapshot.root, snapshot.manifest).unwrap();
+
+    assert_eq!(
+        service.open_project(&snapshot.root).unwrap().manifest.objective,
+        "Updated commercial question"
+    );
+}

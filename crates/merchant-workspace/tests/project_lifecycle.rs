@@ -43,3 +43,18 @@ fn create_never_overwrites_an_existing_project_folder() {
 
     assert!(error.to_string().contains("already exists"));
 }
+
+#[test]
+fn saving_manifest_survives_reopen() {
+    let temp = tempfile::tempdir().unwrap();
+    let workspace = Workspace::create(temp.path(), "Keyboard Study", "Assess demand", "INR").unwrap();
+    let mut snapshot = workspace.load_snapshot().unwrap();
+    snapshot.manifest.objective = "Updated commercial question".into();
+
+    workspace.save_manifest(&snapshot.manifest).unwrap();
+
+    assert_eq!(
+        Workspace::open(workspace.root()).unwrap().load_snapshot().unwrap().manifest.objective,
+        "Updated commercial question"
+    );
+}

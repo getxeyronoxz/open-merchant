@@ -30,6 +30,7 @@ export interface DesktopClient {
   chooseDirectory(title: string): Promise<string | null>;
   createProject(input: CreateProjectInput): Promise<ProjectSnapshot>;
   openProject(root: string): Promise<ProjectSnapshot>;
+  saveManifest(root: string, manifest: ProjectManifest): Promise<ProjectSnapshot>;
   listRecentProjects(): Promise<RecentProject[]>;
   removeRecentProject(root: string): Promise<void>;
 }

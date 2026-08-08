@@ -18,6 +18,8 @@ export const tauriDesktopClient: DesktopClient = {
   createProject: (input: CreateProjectInput) =>
     invoke<ProjectSnapshot>("create_project", { request: input }),
   openProject: (root: string) => invoke<ProjectSnapshot>("open_project", { root }),
+  saveManifest: (root, manifest) =>
+    invoke<ProjectSnapshot>("save_manifest", { root, manifest }),
   listRecentProjects: () => invoke<RecentProject[]>("list_recent_projects"),
   removeRecentProject: (root: string) =>
     invoke<void>("remove_recent_project", { root }),
