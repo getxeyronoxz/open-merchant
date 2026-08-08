@@ -1,7 +1,7 @@
 # Open Merchant V0 Design
 
-**Status:** Approved direction, written specification awaiting user review  
-**Date:** 2026-08-08  
+**Status:** Revised approved direction, written specification awaiting user review
+**Date:** 2026-08-08
 **Milestone:** Credible Windows public prototype in approximately two weeks
 
 ## 1. Summary
@@ -11,6 +11,8 @@ Open Merchant V0 is a local-first Windows desktop workspace for researching whet
 The application is not a chatbot. Its primary product is a collection of normal, inspectable files owned by the user. The desktop interface is a structured editor, calculation engine, report generator, and artifact viewer for those files.
 
 V0 deliberately excludes AI, web scraping, marketplace integrations, cloud services, accounts, collaboration, inventory, purchasing, and ecommerce operations. The milestone proves one complete workflow from project creation to a persistent, evidence-linked opportunity report.
+
+Delivery is timeboxed for a solo founder. The complete user-facing vertical slice is the public-prototype gate. Production hardening remains architecturally supported but cannot delay that gate.
 
 ## 2. Target User and Job
 
@@ -57,7 +59,7 @@ The user collects and enters research manually. Open Merchant structures the evi
 - Basic generation history and artifact provenance
 - Persistence across application restarts
 - Automated domain, workspace, report, and focused UI tests
-- Windows CI and an unsigned NSIS installer
+- Windows production build and a basic unsigned NSIS installer
 - Example mechanical-keyboard project
 - README, MIT license, screenshots, and demo-ready sample data
 
@@ -79,6 +81,40 @@ The user collects and enters research manually. Open Merchant structures the evi
 - Live multi-process or multi-user file collaboration
 - Automatic updates, telemetry, analytics, or crash-reporting services
 - Code signing unless signing credentials already exist outside the repository
+
+### 4.3 Delivery Priority and Timebox
+
+Implementation follows this binding order:
+
+1. Create, open, and reopen a project
+2. Research objective
+3. Evidence records
+4. Competitor table
+5. Deterministic competitor statistics
+6. Economics inputs
+7. Deterministic unit-economics calculations
+8. Markdown opportunity-report generation
+9. Persistence as normal local artifacts
+10. Basic artifact viewer
+11. Basic run and provenance history
+12. Windows production build
+13. Example project
+14. README
+15. Three screenshots
+16. Demo-ready workflow
+
+Each item must work through the user interface and persist through application restart before later items receive polish. Automated tests are written with each implementation task, especially for domain calculations, workspace round trips, and report generation; testing is not deferred to the end.
+
+After all 16 items work reliably, remaining time may be spent on:
+
+- External-file conflict detection
+- Richer provenance inspection
+- Additional hashing and integrity validation
+- Sophisticated save recovery
+- CI and installer polish
+- Secondary UX refinement
+
+These hardening items remain compatible with the architecture but are not completion criteria for the first public Windows prototype. An incomplete hardening item is removed or disabled rather than allowed to destabilize the vertical slice. No feature from outside V0 may replace these priorities.
 
 ## 5. User Experience
 
@@ -370,7 +406,7 @@ Competitor statistics use only valid non-negative prices:
 - Tailwind CSS plus a small local component layer for a consistent showcase UI
 - Vitest and React Testing Library for focused frontend tests
 - Rust unit and integration tests
-- GitHub Actions on `windows-latest`
+- GitHub Actions on `windows-latest` after the vertical slice passes locally
 - NSIS Windows installer
 
 No Redux, Zustand, database, ORM, server, or generated plugin system is needed. React component state and a small project context are sufficient for one open project.
@@ -430,7 +466,7 @@ For structured edits:
 5. The completed temporary file replaces the destination while preserving the previous file until replacement succeeds.
 6. The UI receives the updated timestamp and hash and displays **Saved**.
 
-The application records the loaded hash of each source-data file. If a file changes externally while the project is open, a save stops instead of overwriting it. The user is offered **Reload project**; V0 does not merge changes.
+The core vertical slice treats Open Merchant as the sole writer while a project is open and documents that limitation. After the vertical slice is reliable, external-file conflict detection may record each loaded source-data hash and stop a save when the on-disk hash changes. The user is then offered **Reload project**; V0 never attempts a merge.
 
 Generated artifacts are always rebuilt from parsed source data. The application never reads previously generated calculation columns as trusted inputs.
 
@@ -443,7 +479,7 @@ Errors use user-facing messages with actionable detail and a technical detail di
 - **Malformed file:** name the relative file and field or row; do not silently repair or overwrite it.
 - **Validation failure:** keep the editor open, mark the invalid fields, and do not generate derived artifacts.
 - **Save failure:** retain dirty in-memory data, show the destination, and offer retry.
-- **External modification:** stop the write and offer a full reload.
+- **External modification, hardening phase:** when conflict detection is enabled, stop the write and offer a full reload.
 - **Missing generated artifact:** show it as not generated and offer the appropriate generation action.
 - **Failed generation:** append a failed run unless the run journal itself is unavailable, preserve the previous successful artifact, and show a safe error summary without a stack trace, secret values, or paths outside the selected project.
 - **Missing recent project:** mark the shortcut unavailable without treating it as data loss.
@@ -483,10 +519,10 @@ Using temporary directories:
 - Preserve commas, quotes, Unicode, and newlines in CSV fields
 - Parse and rewrite JSONL records
 - Reject malformed and newer-schema projects without modification
-- Detect external file changes before overwrite
-- Preserve the prior artifact when generation fails
 - Append valid run and provenance records
 - Verify recorded SHA-256 hashes
+
+After the vertical slice passes, hardening tests cover external-change detection and recovery of the prior artifact from interrupted or failed generation.
 
 ### 12.3 Report Tests
 
@@ -508,15 +544,17 @@ Using temporary directories:
 
 Desktop end-to-end automation is not required for V0. A documented manual smoke test covers create, edit, generate, close, reopen, artifact inspection, and installer launch.
 
-## 13. Build, CI, and Public Showcase
+## 13. Build and Public Showcase
 
-CI runs on Windows and performs:
+The core delivery gate requires a successful local Windows production build and launch smoke test. The basic unsigned NSIS package must install and launch on Windows 11; branding, signing, and release automation are not blockers.
+
+After the vertical slice passes locally, Windows CI is added to perform:
 
 - Frontend formatting, type checking, tests, and production build
 - Rust formatting check, linting, and tests
 - Tauri production build on the main branch and release tags
 
-The public prototype uses an unsigned NSIS installer. The README warns that Windows may display a reputation warning for an unsigned prototype.
+The README warns that Windows may display a reputation warning for an unsigned prototype.
 
 The repository includes:
 
@@ -531,20 +569,20 @@ The repository includes:
 
 ## 14. Acceptance Criteria
 
-The milestone is complete when all of the following are true:
+The first public Windows prototype is complete when all of the following are true:
 
-1. A user can install or launch the Windows build.
-2. The user can create a project in a chosen folder.
-3. The user can enter an objective, evidence, competitors, costs, and scenario prices.
-4. Competitor statistics and unit economics match the documented formulas and tests.
-5. The user can generate an evidence-linked Markdown report.
-6. The project folder contains readable CSV, JSON, JSONL, and Markdown artifacts in the documented structure.
-7. A run record and provenance record identify the report's inputs and output hashes.
-8. The user can inspect those files in the app and open the folder in Explorer.
-9. Closing and reopening the app restores the project from disk.
-10. Malformed or externally changed files are not silently overwritten.
-11. Domain and workspace automated tests pass in Windows CI.
-12. An example project, useful README, three screenshots, and a short demo are ready for a public repository.
+1. A user can create a project in a chosen folder, close the app, reopen the project, and recover its saved state.
+2. The user can edit the objective, evidence, competitors, costs, and three selling-price scenarios through the desktop UI.
+3. Competitor statistics and unit economics match the documented formulas and automated tests.
+4. The user can generate an evidence-linked Markdown opportunity report from current saved inputs.
+5. The project folder contains readable CSV, JSON, JSONL, and Markdown artifacts in the documented structure.
+6. Basic run and provenance records identify the generation operation, time, referenced sources, inputs, outputs, and output hashes.
+7. The user can inspect known files in the app and open the project folder in Explorer.
+8. Important domain, workspace round-trip, and report-generation tests pass locally.
+9. A Windows production build and basic unsigned NSIS package launch successfully on Windows 11.
+10. A complete example project, useful README, three screenshots, and a 30–60 second demo-ready workflow are present.
+
+External-file conflict detection, rich provenance browsing, extra integrity checks, advanced recovery, CI/release polish, and secondary UX refinement are explicitly non-blocking for this acceptance gate.
 
 ## 15. Approved Design Decisions
 
@@ -555,6 +593,7 @@ The milestone is complete when all of the following are true:
 - Support shared costs and exactly three selling-price scenarios.
 - Generate the report deterministically from saved data and user-authored narrative.
 - Track only meaningful generation operations, not every edit.
-- Keep external editing safe but simple: detect conflicts and reload rather than merge.
+- If hardening time remains, detect external edits and reload rather than attempting a merge.
 - Ship Windows only with an unsigned NSIS prototype installer.
 - Defer AI and all online research integrations until after the artifact-first workflow is proven.
+- Treat the ordered user-facing vertical slice as the public-prototype gate; perform hardening only after that gate works reliably.
