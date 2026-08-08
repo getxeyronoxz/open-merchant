@@ -4,7 +4,7 @@ pub mod model;
 pub mod validation;
 pub mod statistics;
 
-pub use model::{Competitor, DecimalString, EvidenceSource, Observation, ProjectManifest, ProjectSnapshot};
+pub use model::{Competitor, CostAssumptions, DecimalString, EvidenceSource, Observation, ProjectManifest, ProjectSnapshot, ScenarioPrices};
 pub use statistics::{competitor_statistics, CompetitorStatistics};
 
 #[derive(Clone, Debug, thiserror::Error, PartialEq, Eq)]

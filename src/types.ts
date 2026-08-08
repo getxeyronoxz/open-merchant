@@ -55,6 +55,23 @@ export interface CompetitorStatistics {
   median: string | null;
 }
 
+export interface ScenarioPrices {
+  low: string | null;
+  base: string | null;
+  high: string | null;
+}
+
+export interface CostAssumptions {
+  schemaVersion: number;
+  currency: string;
+  acquisitionCost: string;
+  shippingCost: string;
+  marketplaceFeeRate: string;
+  paymentFeeRate: string;
+  otherCosts: string;
+  scenarioPrices: ScenarioPrices;
+}
+
 export interface RecentProject {
   name: string;
   path: string;
@@ -78,6 +95,8 @@ export interface DesktopClient {
   loadCompetitors(root: string): Promise<Competitor[]>;
   saveCompetitors(root: string, competitors: Competitor[]): Promise<void>;
   competitorStatistics(root: string): Promise<CompetitorStatistics>;
+  loadAssumptions(root: string): Promise<CostAssumptions>;
+  saveAssumptions(root: string, assumptions: CostAssumptions): Promise<void>;
   listRecentProjects(): Promise<RecentProject[]>;
   removeRecentProject(root: string): Promise<void>;
 }

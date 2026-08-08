@@ -4,7 +4,8 @@ import { useProject } from "../context/ProjectContext";
 import { ObjectiveScreen } from "../features/objective/ObjectiveScreen";
 import { EvidenceScreen } from "../features/evidence/EvidenceScreen";
 import { CompetitorsScreen } from "../features/competitors/CompetitorsScreen";
-import type { Competitor, CompetitorStatistics, EvidenceSource } from "../types";
+import { EconomicsScreen } from "../features/economics/EconomicsScreen";
+import type { Competitor, CompetitorStatistics, CostAssumptions, EvidenceSource } from "../types";
 
 const sections = ["Objective", "Evidence", "Competitors", "Economics", "Report", "Artifacts"] as const;
 type Section = (typeof sections)[number];
@@ -15,9 +16,11 @@ export function AppShell() {
   const [evidence, setEvidence] = useState<EvidenceSource[]>([]);
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [statistics, setStatistics] = useState<CompetitorStatistics>({ validPriceCount: 0, minimum: null, maximum: null, average: null, median: null });
+  const [assumptions, setAssumptions] = useState<CostAssumptions | null>(null);
   useEffect(() => {
     void client.loadEvidence(project?.root ?? "").then(setEvidence).catch(() => setEvidence([]));
   }, [client, project?.root]);
+  useEffect(() => { void client.loadAssumptions(project?.root ?? "").then(setAssumptions).catch(() => setAssumptions(null)); }, [client, project?.root]);
   useEffect(() => {
     void client.loadCompetitors(project?.root ?? "").then(setCompetitors).catch(() => setCompetitors([]));
   }, [client, project?.root]);
@@ -53,6 +56,8 @@ export function AppShell() {
           <EvidenceScreen evidence={evidence} onSave={async (next) => { await client.saveEvidence(project.root, next); setEvidence(next); }} />
         ) : section === "Competitors" ? (
           <CompetitorsScreen currency={project.manifest.currency} competitors={competitors} evidence={evidence} statistics={statistics} onSave={async (next) => { await client.saveCompetitors(project.root, next); setCompetitors(next); setStatistics(await client.competitorStatistics(project.root)); }} />
+        ) : section === "Economics" && assumptions ? (
+          <EconomicsScreen assumptions={assumptions} onSave={async (next) => { await client.saveAssumptions(project.root, next); setAssumptions(next); }} />
         ) : (
           <section className="rounded-xl border border-stone-800 bg-stone-900 p-6">
             <p className="text-sm font-medium text-emerald-300">{section}</p>

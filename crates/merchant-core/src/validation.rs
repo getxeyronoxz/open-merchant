@@ -1,5 +1,5 @@
 use thiserror::Error;
-use crate::{Competitor, EvidenceSource};
+use crate::{Competitor, CostAssumptions, EvidenceSource};
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 pub enum ValidationError {
@@ -50,6 +50,22 @@ pub fn validate_competitors(competitors: &[Competitor], project_currency: &str) 
         if competitor.price.is_some_and(|price| price.decimal().is_sign_negative()) {
             return Err(ValidationError::InvalidEvidence(format!("{} has a negative price", competitor.id)));
         }
+    }
+    Ok(())
+}
+
+pub fn validate_assumptions(assumptions: &CostAssumptions, project_currency: &str) -> Result<(), ValidationError> {
+    if assumptions.schema_version != crate::SCHEMA_VERSION || assumptions.currency != project_currency {
+        return Err(ValidationError::InvalidEvidence("Assumptions must use the project schema and currency".into()));
+    }
+    for value in [assumptions.acquisition_cost, assumptions.shipping_cost, assumptions.other_costs] {
+        if value.decimal().is_sign_negative() { return Err(ValidationError::InvalidEvidence("Costs cannot be negative".into())); }
+    }
+    for value in [assumptions.marketplace_fee_rate, assumptions.payment_fee_rate] {
+        if value.decimal().is_sign_negative() || value.decimal() > rust_decimal::Decimal::from(100) { return Err(ValidationError::InvalidEvidence("Fee rates must be between 0 and 100".into())); }
+    }
+    for value in [assumptions.scenario_prices.low, assumptions.scenario_prices.base, assumptions.scenario_prices.high].into_iter().flatten() {
+        if value.decimal() <= rust_decimal::Decimal::ZERO { return Err(ValidationError::InvalidEvidence("Scenario prices must be positive".into())); }
     }
     Ok(())
 }
