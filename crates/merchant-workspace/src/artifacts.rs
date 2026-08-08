@@ -33,7 +33,10 @@ impl Workspace {
             return Err(WorkspaceError::UnknownArtifact(relative_path.to_owned()));
         }
         let path = self.root().join(relative_path);
-        let metadata = fs::metadata(&path).map_err(|source| WorkspaceError::Io { path: path.clone(), source })?;
+        let metadata = fs::metadata(&path).map_err(|source| WorkspaceError::Io {
+            path: path.clone(),
+            source,
+        })?;
         if metadata.len() > MAX_TEXT_BYTES {
             return Err(WorkspaceError::ArtifactTooLarge(path));
         }
@@ -42,5 +45,13 @@ impl Workspace {
 }
 
 fn kind(path: &str) -> &'static str {
-    if path.ends_with(".md") { "markdown" } else if path.ends_with(".csv") { "csv" } else if path.ends_with(".jsonl") { "jsonl" } else { "json" }
+    if path.ends_with(".md") {
+        "markdown"
+    } else if path.ends_with(".csv") {
+        "csv"
+    } else if path.ends_with(".jsonl") {
+        "jsonl"
+    } else {
+        "json"
+    }
 }

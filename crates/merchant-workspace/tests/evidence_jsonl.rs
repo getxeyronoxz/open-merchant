@@ -5,7 +5,8 @@ use merchant_workspace::Workspace;
 #[test]
 fn evidence_round_trips_as_one_json_object_per_line() {
     let temp = tempfile::tempdir().unwrap();
-    let workspace = Workspace::create(temp.path(), "Keyboard Study", "Assess demand", "INR").unwrap();
+    let workspace =
+        Workspace::create(temp.path(), "Keyboard Study", "Assess demand", "INR").unwrap();
     let now = Utc::now();
     let evidence = vec![EvidenceSource {
         schema_version: SCHEMA_VERSION,

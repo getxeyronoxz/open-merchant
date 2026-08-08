@@ -39,7 +39,10 @@ fn generating_a_report_records_its_run_and_output_provenance() {
     assert!(markdown.contains("# Keyboard Study"));
     let runs = service.list_runs(&snapshot.root).unwrap();
     assert_eq!(runs.len(), 1);
-    assert_eq!(runs[0].operation, merchant_workspace::RunOperation::ReportGenerated);
+    assert_eq!(
+        runs[0].operation,
+        merchant_workspace::RunOperation::ReportGenerated
+    );
     assert_eq!(runs[0].output_artifacts.len(), 2);
     assert!(runs[0]
         .output_artifacts

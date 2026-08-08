@@ -1,5 +1,5 @@
-use thiserror::Error;
 use crate::{Competitor, CostAssumptions, EvidenceSource};
+use thiserror::Error;
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 pub enum ValidationError {
@@ -17,55 +17,123 @@ pub fn validate_evidence_sources(sources: &[EvidenceSource]) -> Result<(), Valid
     let mut ids = std::collections::HashSet::new();
     for source in sources {
         if source.schema_version != crate::SCHEMA_VERSION {
-            return Err(ValidationError::InvalidEvidence(format!("{} has an unsupported schema version", source.id)));
+            return Err(ValidationError::InvalidEvidence(format!(
+                "{} has an unsupported schema version",
+                source.id
+            )));
         }
         if !source.id.starts_with("S-") || source.id.len() <= 2 || !ids.insert(&source.id) {
-            return Err(ValidationError::InvalidEvidence("source IDs must be unique and start with S-".into()));
+            return Err(ValidationError::InvalidEvidence(
+                "source IDs must be unique and start with S-".into(),
+            ));
         }
         let valid_url = ["https://", "http://"].iter().any(|prefix| {
-            source.url.strip_prefix(prefix).is_some_and(|rest| !rest.trim().is_empty())
+            source
+                .url
+                .strip_prefix(prefix)
+                .is_some_and(|rest| !rest.trim().is_empty())
         });
         if !valid_url {
-            return Err(ValidationError::InvalidEvidence(format!("{} needs an http or https URL", source.id)));
+            return Err(ValidationError::InvalidEvidence(format!(
+                "{} needs an http or https URL",
+                source.id
+            )));
         }
         if source.title.trim().is_empty() {
-            return Err(ValidationError::InvalidEvidence(format!("{} needs a title", source.id)));
+            return Err(ValidationError::InvalidEvidence(format!(
+                "{} needs a title",
+                source.id
+            )));
         }
     }
     Ok(())
 }
 
-pub fn validate_competitors(competitors: &[Competitor], project_currency: &str) -> Result<(), ValidationError> {
+pub fn validate_competitors(
+    competitors: &[Competitor],
+    project_currency: &str,
+) -> Result<(), ValidationError> {
     let mut ids = std::collections::HashSet::new();
     for competitor in competitors {
         if competitor.schema_version != crate::SCHEMA_VERSION {
-            return Err(ValidationError::InvalidEvidence(format!("{} has an unsupported schema version", competitor.id)));
+            return Err(ValidationError::InvalidEvidence(format!(
+                "{} has an unsupported schema version",
+                competitor.id
+            )));
         }
-        if !competitor.id.starts_with("C-") || competitor.id.len() <= 2 || !ids.insert(&competitor.id) {
-            return Err(ValidationError::InvalidEvidence("competitor IDs must be unique and start with C-".into()));
+        if !competitor.id.starts_with("C-")
+            || competitor.id.len() <= 2
+            || !ids.insert(&competitor.id)
+        {
+            return Err(ValidationError::InvalidEvidence(
+                "competitor IDs must be unique and start with C-".into(),
+            ));
         }
         if competitor.product.trim().is_empty() || competitor.currency != project_currency {
-            return Err(ValidationError::InvalidEvidence(format!("{} has an invalid product or currency", competitor.id)));
+            return Err(ValidationError::InvalidEvidence(format!(
+                "{} has an invalid product or currency",
+                competitor.id
+            )));
         }
-        if competitor.price.is_some_and(|price| price.decimal().is_sign_negative()) {
-            return Err(ValidationError::InvalidEvidence(format!("{} has a negative price", competitor.id)));
+        if competitor
+            .price
+            .is_some_and(|price| price.decimal().is_sign_negative())
+        {
+            return Err(ValidationError::InvalidEvidence(format!(
+                "{} has a negative price",
+                competitor.id
+            )));
         }
     }
     Ok(())
 }
 
-pub fn validate_assumptions(assumptions: &CostAssumptions, project_currency: &str) -> Result<(), ValidationError> {
-    if assumptions.schema_version != crate::SCHEMA_VERSION || assumptions.currency != project_currency {
-        return Err(ValidationError::InvalidEvidence("Assumptions must use the project schema and currency".into()));
+pub fn validate_assumptions(
+    assumptions: &CostAssumptions,
+    project_currency: &str,
+) -> Result<(), ValidationError> {
+    if assumptions.schema_version != crate::SCHEMA_VERSION
+        || assumptions.currency != project_currency
+    {
+        return Err(ValidationError::InvalidEvidence(
+            "Assumptions must use the project schema and currency".into(),
+        ));
     }
-    for value in [assumptions.acquisition_cost, assumptions.shipping_cost, assumptions.other_costs] {
-        if value.decimal().is_sign_negative() { return Err(ValidationError::InvalidEvidence("Costs cannot be negative".into())); }
+    for value in [
+        assumptions.acquisition_cost,
+        assumptions.shipping_cost,
+        assumptions.other_costs,
+    ] {
+        if value.decimal().is_sign_negative() {
+            return Err(ValidationError::InvalidEvidence(
+                "Costs cannot be negative".into(),
+            ));
+        }
     }
-    for value in [assumptions.marketplace_fee_rate, assumptions.payment_fee_rate] {
-        if value.decimal().is_sign_negative() || value.decimal() > rust_decimal::Decimal::from(100) { return Err(ValidationError::InvalidEvidence("Fee rates must be between 0 and 100".into())); }
+    for value in [
+        assumptions.marketplace_fee_rate,
+        assumptions.payment_fee_rate,
+    ] {
+        if value.decimal().is_sign_negative() || value.decimal() > rust_decimal::Decimal::from(100)
+        {
+            return Err(ValidationError::InvalidEvidence(
+                "Fee rates must be between 0 and 100".into(),
+            ));
+        }
     }
-    for value in [assumptions.scenario_prices.low, assumptions.scenario_prices.base, assumptions.scenario_prices.high].into_iter().flatten() {
-        if value.decimal() <= rust_decimal::Decimal::ZERO { return Err(ValidationError::InvalidEvidence("Scenario prices must be positive".into())); }
+    for value in [
+        assumptions.scenario_prices.low,
+        assumptions.scenario_prices.base,
+        assumptions.scenario_prices.high,
+    ]
+    .into_iter()
+    .flatten()
+    {
+        if value.decimal() <= rust_decimal::Decimal::ZERO {
+            return Err(ValidationError::InvalidEvidence(
+                "Scenario prices must be positive".into(),
+            ));
+        }
     }
     Ok(())
 }

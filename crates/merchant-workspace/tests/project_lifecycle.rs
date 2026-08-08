@@ -14,18 +14,14 @@ fn create_then_open_preserves_manifest_and_layout() {
     assert!(workspace.root().join("merchant-project.json").is_file());
     assert!(workspace.root().join("sources/sources.jsonl").is_file());
     assert!(workspace.root().join("market/competitors.csv").is_file());
-    assert!(
-        workspace
-            .root()
-            .join("economics/assumptions.json")
-            .is_file()
-    );
-    assert!(
-        workspace
-            .root()
-            .join("reports/report-sections.json")
-            .is_file()
-    );
+    assert!(workspace
+        .root()
+        .join("economics/assumptions.json")
+        .is_file());
+    assert!(workspace
+        .root()
+        .join("reports/report-sections.json")
+        .is_file());
 
     let reopened = Workspace::open(workspace.root()).unwrap();
     let snapshot = reopened.load_snapshot().unwrap();
@@ -36,10 +32,21 @@ fn create_then_open_preserves_manifest_and_layout() {
 #[test]
 fn create_never_overwrites_an_existing_project_folder() {
     let temp = tempfile::tempdir().unwrap();
-    Workspace::create(temp.path(), "Mechanical Keyboards India", "Assess demand", "INR").unwrap();
+    Workspace::create(
+        temp.path(),
+        "Mechanical Keyboards India",
+        "Assess demand",
+        "INR",
+    )
+    .unwrap();
 
-    let error = Workspace::create(temp.path(), "Mechanical Keyboards India", "New objective", "INR")
-        .unwrap_err();
+    let error = Workspace::create(
+        temp.path(),
+        "Mechanical Keyboards India",
+        "New objective",
+        "INR",
+    )
+    .unwrap_err();
 
     assert!(error.to_string().contains("already exists"));
 }
@@ -47,14 +54,20 @@ fn create_never_overwrites_an_existing_project_folder() {
 #[test]
 fn saving_manifest_survives_reopen() {
     let temp = tempfile::tempdir().unwrap();
-    let workspace = Workspace::create(temp.path(), "Keyboard Study", "Assess demand", "INR").unwrap();
+    let workspace =
+        Workspace::create(temp.path(), "Keyboard Study", "Assess demand", "INR").unwrap();
     let mut snapshot = workspace.load_snapshot().unwrap();
     snapshot.manifest.objective = "Updated commercial question".into();
 
     workspace.save_manifest(&snapshot.manifest).unwrap();
 
     assert_eq!(
-        Workspace::open(workspace.root()).unwrap().load_snapshot().unwrap().manifest.objective,
+        Workspace::open(workspace.root())
+            .unwrap()
+            .load_snapshot()
+            .unwrap()
+            .manifest
+            .objective,
         "Updated commercial question"
     );
 }

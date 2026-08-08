@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::{fmt, str::FromStr};
+use uuid::Uuid;
 
 use crate::DomainError;
 
@@ -11,35 +11,50 @@ pub struct DecimalString(Decimal);
 
 impl DecimalString {
     pub fn parse(value: &str) -> Result<Self, DomainError> {
-        let decimal = Decimal::from_str(value).map_err(|_| DomainError::InvalidDecimal(value.to_owned()))?;
+        let decimal =
+            Decimal::from_str(value).map_err(|_| DomainError::InvalidDecimal(value.to_owned()))?;
         if decimal.scale() > 2 {
             return Err(DomainError::InvalidDecimal(value.to_owned()));
         }
         Ok(Self(decimal))
     }
 
-    pub fn decimal(self) -> Decimal { self.0 }
+    pub fn decimal(self) -> Decimal {
+        self.0
+    }
 
-    pub fn from_decimal(value: Decimal) -> Self { Self(value) }
+    pub fn from_decimal(value: Decimal) -> Self {
+        Self(value)
+    }
 
-    pub fn file_string(self) -> String { format!("{:.2}", self.0.round_dp(2)) }
+    pub fn file_string(self) -> String {
+        format!("{:.2}", self.0.round_dp(2))
+    }
 }
 
 impl Serialize for DecimalString {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
         serializer.serialize_str(&self.file_string())
     }
 }
 
 impl<'de> Deserialize<'de> for DecimalString {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
         let value = String::deserialize(deserializer)?;
         Self::parse(&value).map_err(serde::de::Error::custom)
     }
 }
 
 impl fmt::Display for DecimalString {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result { self.file_string().fmt(formatter) }
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.file_string().fmt(formatter)
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -124,15 +139,52 @@ pub struct CostAssumptions {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct ReportSections { pub schema_version: u32, pub decision_summary: String, pub market_observations: Vec<String>, pub risks: Vec<String>, pub opportunities: Vec<String> }
-impl ReportSections { pub fn empty() -> Self { Self { schema_version: crate::SCHEMA_VERSION, decision_summary: String::new(), market_observations: vec![], risks: vec![], opportunities: vec![] } } }
+pub struct ReportSections {
+    pub schema_version: u32,
+    pub decision_summary: String,
+    pub market_observations: Vec<String>,
+    pub risks: Vec<String>,
+    pub opportunities: Vec<String>,
+}
+impl ReportSections {
+    pub fn empty() -> Self {
+        Self {
+            schema_version: crate::SCHEMA_VERSION,
+            decision_summary: String::new(),
+            market_observations: vec![],
+            risks: vec![],
+            opportunities: vec![],
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
-pub struct ReportInput { pub manifest: ProjectManifest, pub sections: ReportSections, pub evidence: Vec<EvidenceSource>, pub assumptions: CostAssumptions, pub scenarios: Vec<crate::EconomicsScenario>, pub run_id: String, pub generated_at: DateTime<Utc> }
+pub struct ReportInput {
+    pub manifest: ProjectManifest,
+    pub sections: ReportSections,
+    pub evidence: Vec<EvidenceSource>,
+    pub assumptions: CostAssumptions,
+    pub scenarios: Vec<crate::EconomicsScenario>,
+    pub run_id: String,
+    pub generated_at: DateTime<Utc>,
+}
 
 impl CostAssumptions {
     pub fn empty(currency: impl Into<String>) -> Self {
         let zero = DecimalString::from_decimal(Decimal::ZERO);
-        Self { schema_version: crate::SCHEMA_VERSION, currency: currency.into(), acquisition_cost: zero, shipping_cost: zero, marketplace_fee_rate: zero, payment_fee_rate: zero, other_costs: zero, scenario_prices: ScenarioPrices { low: None, base: None, high: None } }
+        Self {
+            schema_version: crate::SCHEMA_VERSION,
+            currency: currency.into(),
+            acquisition_cost: zero,
+            shipping_cost: zero,
+            marketplace_fee_rate: zero,
+            payment_fee_rate: zero,
+            other_costs: zero,
+            scenario_prices: ScenarioPrices {
+                low: None,
+                base: None,
+                high: None,
+            },
+        }
     }
 }
