@@ -25,6 +25,7 @@ export function AppShell() {
     void client.loadEvidence(project?.root ?? "").then(setEvidence).catch(() => setEvidence([]));
   }, [client, project?.root]);
   useEffect(() => { void client.loadAssumptions(project?.root ?? "").then(setAssumptions).catch(() => setAssumptions(null)); }, [client, project?.root]);
+  useEffect(() => { void client.loadScenarios(project?.root ?? "").then(setScenarios).catch(() => setScenarios([])); }, [client, project?.root]);
   useEffect(() => {
     void client.loadCompetitors(project?.root ?? "").then(setCompetitors).catch(() => setCompetitors([]));
   }, [client, project?.root]);

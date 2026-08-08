@@ -132,6 +132,7 @@ export interface DesktopClient {
   loadAssumptions(root: string): Promise<CostAssumptions>;
   saveAssumptions(root: string, assumptions: CostAssumptions): Promise<void>;
   calculateAndSaveScenarios(root: string): Promise<EconomicsScenario[]>;
+  loadScenarios(root: string): Promise<EconomicsScenario[]>;
   loadReportSections(root: string): Promise<ReportSections>;
   saveReportSections(root: string, sections: ReportSections): Promise<void>;
   generateReport(root: string): Promise<string>;

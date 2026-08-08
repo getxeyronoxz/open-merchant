@@ -28,6 +28,7 @@ export const tauriDesktopClient: DesktopClient = {
   loadAssumptions: (root) => invoke("load_assumptions", { root }),
   saveAssumptions: (root, assumptions) => invoke("save_assumptions", { root, assumptions }),
   calculateAndSaveScenarios: (root) => invoke("calculate_and_save_scenarios", { root }),
+  loadScenarios: (root) => invoke("load_scenarios", { root }),
   loadReportSections: (root) => invoke("load_report_sections", { root }),
   saveReportSections: (root, sections) => invoke("save_report_sections", { root, sections }),
   generateReport: (root) => invoke("generate_report", { root }),

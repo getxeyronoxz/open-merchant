@@ -20,6 +20,7 @@ export function createFakeDesktopClient(): FakeDesktopClient {
     loadAssumptions: vi.fn<DesktopClient["loadAssumptions"]>().mockResolvedValue({ schemaVersion: 1, currency: "INR", acquisitionCost: "0.00", shippingCost: "0.00", marketplaceFeeRate: "0.00", paymentFeeRate: "0.00", otherCosts: "0.00", scenarioPrices: { low: null, base: null, high: null } }),
     saveAssumptions: vi.fn<DesktopClient["saveAssumptions"]>(),
     calculateAndSaveScenarios: vi.fn<DesktopClient["calculateAndSaveScenarios"]>().mockResolvedValue([]),
+    loadScenarios: vi.fn<DesktopClient["loadScenarios"]>().mockResolvedValue([]),
     loadReportSections: vi.fn<DesktopClient["loadReportSections"]>().mockResolvedValue({ schemaVersion: 1, decisionSummary: "", marketObservations: [], risks: [], opportunities: [] }),
     saveReportSections: vi.fn<DesktopClient["saveReportSections"]>(),
     generateReport: vi.fn<DesktopClient["generateReport"]>().mockResolvedValue(""),
