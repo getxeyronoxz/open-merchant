@@ -1,6 +1,25 @@
+pub mod application;
+mod commands;
+
+use application::{MerchantService, RecentProjectsStore};
+use tauri::Manager;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            let data_dir = app.path().app_data_dir().map_err(|error| error.to_string())?;
+            app.manage(MerchantService::new(RecentProjectsStore::new(
+                data_dir.join("recent-projects.json"),
+            )));
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            commands::create_project,
+            commands::open_project,
+            commands::list_recent_projects,
+            commands::remove_recent_project,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running Open Merchant");
 }
