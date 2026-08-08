@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Local-first commerce research workspace"
 authors = ["Open Merchant contributors"]
 edition = "2021"
+license = "AGPL-3.0-only"
 
 [lib]
 name = "open_merchant_lib"

@@ -38,7 +38,7 @@
 - `vite.config.ts` — React, Tailwind, Vite, and Vitest configuration.
 - `tsconfig*.json` — strict TypeScript configurations.
 - `index.html` — local bundled application entry point.
-- `LICENSE` — MIT license.
+- `LICENSE` — canonical GNU Affero General Public License v3 text.
 - `README.md` — product, setup, build, workspace format, and limitations.
 
 ### Pure commerce core
@@ -1653,9 +1653,9 @@ npm run tauri build -- --bundles nsis
 
 Document the project tree, formulas, unsigned-installer warning, Windows-only status, sole-writer limitation while open, and explicit V0 exclusions.
 
-- [ ] **Step 3: Add the MIT license**
+- [ ] **Step 3: Add the AGPL-3.0-only license**
 
-Use the standard MIT text with copyright year 2026 and the repository owner's chosen public name. Do not invent a legal entity; if no public name is configured, use `Open Merchant contributors`.
+Use the canonical unmodified GNU Affero General Public License v3 text. Attribute Open Merchant as `Copyright © 2026 Xeyronox` without introducing private identity information.
 
 - [ ] **Step 4: Verify docs and commands**
 
