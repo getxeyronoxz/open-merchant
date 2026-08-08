@@ -26,7 +26,9 @@ jobs:
           - language: javascript-typescript
             build-mode: none
           - language: rust
-            build-mode: manual
+            # CodeQL's Rust extractor currently supports only `none` mode.
+            # A real Cargo build remains part of local release verification.
+            build-mode: none
 
     steps:
       - name: Check out repository
@@ -37,22 +39,6 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
-
-      # Tauri's Rust application crate needs the Linux development libraries
-      # below when CodeQL performs the real Cargo build used for extraction.
-      - name: Install Tauri build prerequisites
-        if: matrix.language == 'rust'
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes \
-            build-essential \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            libwebkit2gtk-4.1-dev
-
-      - name: Build Rust workspace for CodeQL
-        if: matrix.language == 'rust'
-        run: cargo build --workspace
 
       - name: Analyze
         uses: github/codeql-action/analyze@v4
