@@ -1,5 +1,5 @@
 use thiserror::Error;
-use crate::EvidenceSource;
+use crate::{Competitor, EvidenceSource};
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 pub enum ValidationError {
@@ -30,6 +30,25 @@ pub fn validate_evidence_sources(sources: &[EvidenceSource]) -> Result<(), Valid
         }
         if source.title.trim().is_empty() {
             return Err(ValidationError::InvalidEvidence(format!("{} needs a title", source.id)));
+        }
+    }
+    Ok(())
+}
+
+pub fn validate_competitors(competitors: &[Competitor], project_currency: &str) -> Result<(), ValidationError> {
+    let mut ids = std::collections::HashSet::new();
+    for competitor in competitors {
+        if competitor.schema_version != crate::SCHEMA_VERSION {
+            return Err(ValidationError::InvalidEvidence(format!("{} has an unsupported schema version", competitor.id)));
+        }
+        if !competitor.id.starts_with("C-") || competitor.id.len() <= 2 || !ids.insert(&competitor.id) {
+            return Err(ValidationError::InvalidEvidence("competitor IDs must be unique and start with C-".into()));
+        }
+        if competitor.product.trim().is_empty() || competitor.currency != project_currency {
+            return Err(ValidationError::InvalidEvidence(format!("{} has an invalid product or currency", competitor.id)));
+        }
+        if competitor.price.is_some_and(|price| price.decimal().is_sign_negative()) {
+            return Err(ValidationError::InvalidEvidence(format!("{} has a negative price", competitor.id)));
         }
     }
     Ok(())

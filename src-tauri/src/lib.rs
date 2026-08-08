@@ -21,6 +21,8 @@ pub fn run() {
             commands::save_manifest,
             commands::load_evidence,
             commands::save_evidence,
+            commands::load_competitors,
+            commands::save_competitors,
             commands::list_recent_projects,
             commands::remove_recent_project,
         ])

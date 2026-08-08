@@ -33,6 +33,20 @@ export interface EvidenceSource {
   updatedAt: string;
 }
 
+export interface Competitor {
+  schemaVersion: number;
+  id: string;
+  product: string;
+  brand: string;
+  price: string | null;
+  currency: string;
+  marketplace: string;
+  url: string;
+  sourceId: string | null;
+  notes: string;
+  observedAt: string;
+}
+
 export interface RecentProject {
   name: string;
   path: string;
@@ -53,6 +67,8 @@ export interface DesktopClient {
   saveManifest(root: string, manifest: ProjectManifest): Promise<ProjectSnapshot>;
   loadEvidence(root: string): Promise<EvidenceSource[]>;
   saveEvidence(root: string, evidence: EvidenceSource[]): Promise<void>;
+  loadCompetitors(root: string): Promise<Competitor[]>;
+  saveCompetitors(root: string, competitors: Competitor[]): Promise<void>;
   listRecentProjects(): Promise<RecentProject[]>;
   removeRecentProject(root: string): Promise<void>;
 }
