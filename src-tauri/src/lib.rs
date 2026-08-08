@@ -26,6 +26,7 @@ pub fn run() {
             commands::competitor_statistics,
             commands::load_assumptions,
             commands::save_assumptions,
+            commands::calculate_and_save_scenarios,
             commands::list_recent_projects,
             commands::remove_recent_project,
         ])

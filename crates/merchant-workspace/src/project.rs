@@ -1,7 +1,7 @@
 use std::{fs, path::{Path, PathBuf}};
 
 use chrono::{DateTime, Utc};
-use merchant_core::{validation::{validate_assumptions, validate_competitors, validate_currency, validate_evidence_sources, validate_objective, validate_project_name}, Competitor, CostAssumptions, DecimalString, EvidenceSource, ProjectManifest, ProjectSnapshot, SCHEMA_VERSION};
+use merchant_core::{validation::{validate_assumptions, validate_competitors, validate_currency, validate_evidence_sources, validate_objective, validate_project_name}, Competitor, CostAssumptions, DecimalString, EconomicsScenario, EvidenceSource, ProjectManifest, ProjectSnapshot, SCHEMA_VERSION};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -206,6 +206,24 @@ impl Workspace {
         let json = serde_json::to_vec_pretty(assumptions).map_err(|source| WorkspaceError::Json { path: path.clone(), source })?;
         atomic::write(&path, &with_newline(json))
     }
+
+    pub fn save_scenarios(&self, scenarios: &[EconomicsScenario]) -> Result<(), WorkspaceError> {
+        let path = paths::at(&self.root, paths::SCENARIOS);
+        let mut writer = csv::WriterBuilder::new().has_headers(false).terminator(csv::Terminator::Any(b'\n')).from_writer(Vec::new());
+        writer.write_record(["schema_version", "scenario", "selling_price", "acquisition_cost", "shipping_cost", "marketplace_fee_rate", "marketplace_fee", "payment_fee_rate", "payment_fee", "other_costs", "total_cost", "gross_profit", "gross_margin_percent"]).map_err(|source| WorkspaceError::Csv { path: path.clone(), source })?;
+        for scenario in scenarios {
+            writer.write_record([
+                SCHEMA_VERSION.to_string(), scenario_name(scenario), scenario.selling_price.file_string(), scenario.acquisition_cost.file_string(), scenario.shipping_cost.file_string(), scenario.marketplace_fee_rate.file_string(), scenario.marketplace_fee.file_string(), scenario.payment_fee_rate.file_string(), scenario.payment_fee.file_string(), scenario.other_costs.file_string(), scenario.total_cost.file_string(), scenario.gross_profit.file_string(), scenario.gross_margin_percent.file_string(),
+            ]).map_err(|source| WorkspaceError::Csv { path: path.clone(), source })?;
+        }
+        writer.flush().map_err(|source| WorkspaceError::Io { path: path.clone(), source })?;
+        let contents = writer.into_inner().map_err(|error| WorkspaceError::Io { path: path.clone(), source: error.into_error() })?;
+        atomic::write(&path, &contents)
+    }
+}
+
+fn scenario_name(scenario: &EconomicsScenario) -> String {
+    match scenario.scenario { merchant_core::ScenarioName::Low => "low", merchant_core::ScenarioName::Base => "base", merchant_core::ScenarioName::High => "high" }.to_owned()
 }
 
 fn competitor_from_csv(row: CompetitorCsv) -> Result<Competitor, WorkspaceError> {

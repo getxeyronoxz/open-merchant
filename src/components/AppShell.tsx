@@ -5,7 +5,7 @@ import { ObjectiveScreen } from "../features/objective/ObjectiveScreen";
 import { EvidenceScreen } from "../features/evidence/EvidenceScreen";
 import { CompetitorsScreen } from "../features/competitors/CompetitorsScreen";
 import { EconomicsScreen } from "../features/economics/EconomicsScreen";
-import type { Competitor, CompetitorStatistics, CostAssumptions, EvidenceSource } from "../types";
+import type { Competitor, CompetitorStatistics, CostAssumptions, EconomicsScenario, EvidenceSource } from "../types";
 
 const sections = ["Objective", "Evidence", "Competitors", "Economics", "Report", "Artifacts"] as const;
 type Section = (typeof sections)[number];
@@ -17,6 +17,7 @@ export function AppShell() {
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [statistics, setStatistics] = useState<CompetitorStatistics>({ validPriceCount: 0, minimum: null, maximum: null, average: null, median: null });
   const [assumptions, setAssumptions] = useState<CostAssumptions | null>(null);
+  const [scenarios, setScenarios] = useState<EconomicsScenario[]>([]);
   useEffect(() => {
     void client.loadEvidence(project?.root ?? "").then(setEvidence).catch(() => setEvidence([]));
   }, [client, project?.root]);
@@ -57,7 +58,7 @@ export function AppShell() {
         ) : section === "Competitors" ? (
           <CompetitorsScreen currency={project.manifest.currency} competitors={competitors} evidence={evidence} statistics={statistics} onSave={async (next) => { await client.saveCompetitors(project.root, next); setCompetitors(next); setStatistics(await client.competitorStatistics(project.root)); }} />
         ) : section === "Economics" && assumptions ? (
-          <EconomicsScreen assumptions={assumptions} onSave={async (next) => { await client.saveAssumptions(project.root, next); setAssumptions(next); }} />
+          <EconomicsScreen assumptions={assumptions} scenarios={scenarios} onSave={async (next) => { await client.saveAssumptions(project.root, next); setAssumptions(next); }} onCalculate={async () => setScenarios(await client.calculateAndSaveScenarios(project.root))} />
         ) : (
           <section className="rounded-xl border border-stone-800 bg-stone-900 p-6">
             <p className="text-sm font-medium text-emerald-300">{section}</p>

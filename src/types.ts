@@ -72,6 +72,21 @@ export interface CostAssumptions {
   scenarioPrices: ScenarioPrices;
 }
 
+export interface EconomicsScenario {
+  scenario: "low" | "base" | "high";
+  sellingPrice: string;
+  acquisitionCost: string;
+  shippingCost: string;
+  marketplaceFeeRate: string;
+  marketplaceFee: string;
+  paymentFeeRate: string;
+  paymentFee: string;
+  otherCosts: string;
+  totalCost: string;
+  grossProfit: string;
+  grossMarginPercent: string;
+}
+
 export interface RecentProject {
   name: string;
   path: string;
@@ -97,6 +112,7 @@ export interface DesktopClient {
   competitorStatistics(root: string): Promise<CompetitorStatistics>;
   loadAssumptions(root: string): Promise<CostAssumptions>;
   saveAssumptions(root: string, assumptions: CostAssumptions): Promise<void>;
+  calculateAndSaveScenarios(root: string): Promise<EconomicsScenario[]>;
   listRecentProjects(): Promise<RecentProject[]>;
   removeRecentProject(root: string): Promise<void>;
 }

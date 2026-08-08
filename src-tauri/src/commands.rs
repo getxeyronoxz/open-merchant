@@ -93,6 +93,9 @@ pub fn load_assumptions(service: State<'_, MerchantService>, root: String) -> Re
 pub fn save_assumptions(service: State<'_, MerchantService>, root: String, assumptions: merchant_core::CostAssumptions) -> Result<(), CommandError> { service.save_assumptions(&root, assumptions).map_err(Into::into) }
 
 #[tauri::command]
+pub fn calculate_and_save_scenarios(service: State<'_, MerchantService>, root: String) -> Result<Vec<merchant_core::EconomicsScenario>, CommandError> { service.calculate_and_save_scenarios(&root).map_err(Into::into) }
+
+#[tauri::command]
 pub fn list_recent_projects(
     service: State<'_, MerchantService>,
 ) -> Result<Vec<RecentProject>, CommandError> {
