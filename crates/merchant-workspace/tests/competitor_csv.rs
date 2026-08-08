@@ -5,7 +5,8 @@ use merchant_workspace::Workspace;
 #[test]
 fn competitor_csv_preserves_money_unicode_commas_and_quotes() {
     let temp = tempfile::tempdir().unwrap();
-    let workspace = Workspace::create(temp.path(), "Keyboard Study", "Assess demand", "INR").unwrap();
+    let workspace =
+        Workspace::create(temp.path(), "Keyboard Study", "Assess demand", "INR").unwrap();
     let competitors = vec![Competitor {
         schema_version: SCHEMA_VERSION,
         id: "C-001".into(),

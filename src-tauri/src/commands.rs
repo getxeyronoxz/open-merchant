@@ -15,10 +15,16 @@ pub struct CommandError {
 impl From<AppError> for CommandError {
     fn from(error: AppError) -> Self {
         let code = match &error {
-            AppError::Workspace(merchant_workspace::WorkspaceError::AlreadyExists(_)) => "already-exists",
+            AppError::Workspace(merchant_workspace::WorkspaceError::AlreadyExists(_)) => {
+                "already-exists"
+            }
             AppError::Workspace(merchant_workspace::WorkspaceError::NotFound(_)) => "not-a-project",
-            AppError::Workspace(merchant_workspace::WorkspaceError::Validation(_)) => "invalid-input",
-            AppError::Workspace(merchant_workspace::WorkspaceError::InvalidProject { .. }) => "invalid-project",
+            AppError::Workspace(merchant_workspace::WorkspaceError::Validation(_)) => {
+                "invalid-input"
+            }
+            AppError::Workspace(merchant_workspace::WorkspaceError::InvalidProject { .. }) => {
+                "invalid-project"
+            }
             _ => "storage-error",
         };
         Self {
@@ -72,35 +78,115 @@ pub fn save_evidence(
 }
 
 #[tauri::command]
-pub fn load_competitors(service: State<'_, MerchantService>, root: String) -> Result<Vec<merchant_core::Competitor>, CommandError> {
+pub fn load_competitors(
+    service: State<'_, MerchantService>,
+    root: String,
+) -> Result<Vec<merchant_core::Competitor>, CommandError> {
     service.load_competitors(&root).map_err(Into::into)
 }
 
 #[tauri::command]
-pub fn save_competitors(service: State<'_, MerchantService>, root: String, competitors: Vec<merchant_core::Competitor>) -> Result<(), CommandError> {
-    service.save_competitors(&root, competitors).map_err(Into::into)
+pub fn save_competitors(
+    service: State<'_, MerchantService>,
+    root: String,
+    competitors: Vec<merchant_core::Competitor>,
+) -> Result<(), CommandError> {
+    service
+        .save_competitors(&root, competitors)
+        .map_err(Into::into)
 }
 
 #[tauri::command]
-pub fn competitor_statistics(service: State<'_, MerchantService>, root: String) -> Result<merchant_core::CompetitorStatistics, CommandError> {
+pub fn competitor_statistics(
+    service: State<'_, MerchantService>,
+    root: String,
+) -> Result<merchant_core::CompetitorStatistics, CommandError> {
     service.competitor_statistics(&root).map_err(Into::into)
 }
 
 #[tauri::command]
-pub fn load_assumptions(service: State<'_, MerchantService>, root: String) -> Result<merchant_core::CostAssumptions, CommandError> { service.load_assumptions(&root).map_err(Into::into) }
+pub fn load_assumptions(
+    service: State<'_, MerchantService>,
+    root: String,
+) -> Result<merchant_core::CostAssumptions, CommandError> {
+    service.load_assumptions(&root).map_err(Into::into)
+}
 
 #[tauri::command]
-pub fn save_assumptions(service: State<'_, MerchantService>, root: String, assumptions: merchant_core::CostAssumptions) -> Result<(), CommandError> { service.save_assumptions(&root, assumptions).map_err(Into::into) }
+pub fn save_assumptions(
+    service: State<'_, MerchantService>,
+    root: String,
+    assumptions: merchant_core::CostAssumptions,
+) -> Result<(), CommandError> {
+    service
+        .save_assumptions(&root, assumptions)
+        .map_err(Into::into)
+}
 
 #[tauri::command]
-pub fn calculate_and_save_scenarios(service: State<'_, MerchantService>, root: String) -> Result<Vec<merchant_core::EconomicsScenario>, CommandError> { service.calculate_and_save_scenarios(&root).map_err(Into::into) }
-#[tauri::command] pub fn generate_report(service: State<'_, MerchantService>, root: String) -> Result<String, CommandError> { service.generate_report(&root).map_err(Into::into) }
-#[tauri::command] pub fn save_report_sections(service: State<'_, MerchantService>, root: String, sections: merchant_core::ReportSections) -> Result<(), CommandError> { service.save_report_sections(&root, sections).map_err(Into::into) }
-#[tauri::command] pub fn load_report_sections(service: State<'_, MerchantService>, root: String) -> Result<merchant_core::ReportSections, CommandError> { service.load_report_sections(&root).map_err(Into::into) }
-#[tauri::command] pub fn list_artifacts(service: State<'_, MerchantService>, root: String) -> Result<Vec<merchant_workspace::ArtifactDescriptor>, CommandError> { service.list_artifacts(&root).map_err(Into::into) }
-#[tauri::command] pub fn read_artifact(service: State<'_, MerchantService>, root: String, relative_path: String) -> Result<String, CommandError> { service.read_artifact(&root, &relative_path).map_err(Into::into) }
-#[tauri::command] pub fn list_runs(service: State<'_, MerchantService>, root: String) -> Result<Vec<merchant_workspace::RunRecord>, CommandError> { service.list_runs(&root).map_err(Into::into) }
-#[tauri::command] pub fn list_provenance(service: State<'_, MerchantService>, root: String) -> Result<Vec<merchant_workspace::ProvenanceRecord>, CommandError> { service.list_provenance(&root).map_err(Into::into) }
+pub fn calculate_and_save_scenarios(
+    service: State<'_, MerchantService>,
+    root: String,
+) -> Result<Vec<merchant_core::EconomicsScenario>, CommandError> {
+    service
+        .calculate_and_save_scenarios(&root)
+        .map_err(Into::into)
+}
+#[tauri::command]
+pub fn generate_report(
+    service: State<'_, MerchantService>,
+    root: String,
+) -> Result<String, CommandError> {
+    service.generate_report(&root).map_err(Into::into)
+}
+#[tauri::command]
+pub fn save_report_sections(
+    service: State<'_, MerchantService>,
+    root: String,
+    sections: merchant_core::ReportSections,
+) -> Result<(), CommandError> {
+    service
+        .save_report_sections(&root, sections)
+        .map_err(Into::into)
+}
+#[tauri::command]
+pub fn load_report_sections(
+    service: State<'_, MerchantService>,
+    root: String,
+) -> Result<merchant_core::ReportSections, CommandError> {
+    service.load_report_sections(&root).map_err(Into::into)
+}
+#[tauri::command]
+pub fn list_artifacts(
+    service: State<'_, MerchantService>,
+    root: String,
+) -> Result<Vec<merchant_workspace::ArtifactDescriptor>, CommandError> {
+    service.list_artifacts(&root).map_err(Into::into)
+}
+#[tauri::command]
+pub fn read_artifact(
+    service: State<'_, MerchantService>,
+    root: String,
+    relative_path: String,
+) -> Result<String, CommandError> {
+    service
+        .read_artifact(&root, &relative_path)
+        .map_err(Into::into)
+}
+#[tauri::command]
+pub fn list_runs(
+    service: State<'_, MerchantService>,
+    root: String,
+) -> Result<Vec<merchant_workspace::RunRecord>, CommandError> {
+    service.list_runs(&root).map_err(Into::into)
+}
+#[tauri::command]
+pub fn list_provenance(
+    service: State<'_, MerchantService>,
+    root: String,
+) -> Result<Vec<merchant_workspace::ProvenanceRecord>, CommandError> {
+    service.list_provenance(&root).map_err(Into::into)
+}
 
 #[tauri::command]
 pub fn list_recent_projects(

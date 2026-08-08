@@ -15,7 +15,10 @@ fn creating_and_opening_projects_updates_recent_paths() {
         })
         .unwrap();
 
-    assert_eq!(service.list_recent_projects().unwrap()[0].path, snapshot.root);
+    assert_eq!(
+        service.list_recent_projects().unwrap()[0].path,
+        snapshot.root
+    );
     assert_eq!(
         service.open_project(&snapshot.root).unwrap().manifest.name,
         snapshot.manifest.name
@@ -56,10 +59,16 @@ fn saving_a_manifest_through_the_service_survives_reopen() {
         .unwrap();
     snapshot.manifest.objective = "Updated commercial question".into();
 
-    service.save_manifest(&snapshot.root, snapshot.manifest).unwrap();
+    service
+        .save_manifest(&snapshot.root, snapshot.manifest)
+        .unwrap();
 
     assert_eq!(
-        service.open_project(&snapshot.root).unwrap().manifest.objective,
+        service
+            .open_project(&snapshot.root)
+            .unwrap()
+            .manifest
+            .objective,
         "Updated commercial question"
     );
 }

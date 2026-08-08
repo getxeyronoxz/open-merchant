@@ -14,13 +14,24 @@ pub struct CompetitorStatistics {
 }
 
 pub fn competitor_statistics(competitors: &[Competitor]) -> CompetitorStatistics {
-    let mut prices = competitors.iter().filter_map(|competitor| competitor.price).collect::<Vec<_>>();
+    let mut prices = competitors
+        .iter()
+        .filter_map(|competitor| competitor.price)
+        .collect::<Vec<_>>();
     prices.sort();
     if prices.is_empty() {
-        return CompetitorStatistics { valid_price_count: 0, minimum: None, maximum: None, average: None, median: None };
+        return CompetitorStatistics {
+            valid_price_count: 0,
+            minimum: None,
+            maximum: None,
+            average: None,
+            median: None,
+        };
     }
     let count = prices.len();
-    let total = prices.iter().fold(Decimal::ZERO, |sum, price| sum + price.decimal());
+    let total = prices
+        .iter()
+        .fold(Decimal::ZERO, |sum, price| sum + price.decimal());
     let average = rounded(total / Decimal::from(count));
     let median = if count % 2 == 1 {
         prices[count / 2]
@@ -37,5 +48,7 @@ pub fn competitor_statistics(competitors: &[Competitor]) -> CompetitorStatistics
 }
 
 fn rounded(value: Decimal) -> DecimalString {
-    DecimalString::from_decimal(value.round_dp_with_strategy(2, RoundingStrategy::MidpointAwayFromZero))
+    DecimalString::from_decimal(
+        value.round_dp_with_strategy(2, RoundingStrategy::MidpointAwayFromZero),
+    )
 }

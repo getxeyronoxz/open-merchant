@@ -1,15 +1,18 @@
 pub const SCHEMA_VERSION: u32 = 1;
 
-pub mod model;
-pub mod validation;
-pub mod statistics;
 pub mod economics;
+pub mod model;
 pub mod report;
+pub mod statistics;
+pub mod validation;
 
-pub use model::{Competitor, CostAssumptions, DecimalString, EvidenceSource, Observation, ProjectManifest, ProjectSnapshot, ReportInput, ReportSections, ScenarioPrices};
-pub use statistics::{competitor_statistics, CompetitorStatistics};
 pub use economics::{calculate_scenarios, EconomicsScenario, ScenarioName};
+pub use model::{
+    Competitor, CostAssumptions, DecimalString, EvidenceSource, Observation, ProjectManifest,
+    ProjectSnapshot, ReportInput, ReportSections, ScenarioPrices,
+};
 pub use report::render_opportunity_report;
+pub use statistics::{competitor_statistics, CompetitorStatistics};
 
 #[derive(Clone, Debug, thiserror::Error, PartialEq, Eq)]
 pub enum DomainError {
