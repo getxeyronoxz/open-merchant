@@ -23,6 +23,8 @@ export function createFakeDesktopClient(): FakeDesktopClient {
     generateReport: vi.fn<DesktopClient["generateReport"]>().mockResolvedValue(""),
     listArtifacts: vi.fn<DesktopClient["listArtifacts"]>().mockResolvedValue([]),
     readArtifact: vi.fn<DesktopClient["readArtifact"]>(),
+    listRuns: vi.fn<DesktopClient["listRuns"]>().mockResolvedValue([]),
+    listProvenance: vi.fn<DesktopClient["listProvenance"]>().mockResolvedValue([]),
     listRecentProjects: vi.fn<DesktopClient["listRecentProjects"]>().mockResolvedValue([]),
     removeRecentProject: vi.fn<DesktopClient["removeRecentProject"]>(),
   };

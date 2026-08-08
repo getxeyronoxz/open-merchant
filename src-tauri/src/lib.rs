@@ -31,6 +31,8 @@ pub fn run() {
             commands::save_report_sections,
             commands::list_artifacts,
             commands::read_artifact,
+            commands::list_runs,
+            commands::list_provenance,
             commands::list_recent_projects,
             commands::remove_recent_project,
         ])
