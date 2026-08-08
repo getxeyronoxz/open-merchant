@@ -96,6 +96,7 @@ pub fn save_assumptions(service: State<'_, MerchantService>, root: String, assum
 pub fn calculate_and_save_scenarios(service: State<'_, MerchantService>, root: String) -> Result<Vec<merchant_core::EconomicsScenario>, CommandError> { service.calculate_and_save_scenarios(&root).map_err(Into::into) }
 #[tauri::command] pub fn generate_report(service: State<'_, MerchantService>, root: String) -> Result<String, CommandError> { service.generate_report(&root).map_err(Into::into) }
 #[tauri::command] pub fn save_report_sections(service: State<'_, MerchantService>, root: String, sections: merchant_core::ReportSections) -> Result<(), CommandError> { service.save_report_sections(&root, sections).map_err(Into::into) }
+#[tauri::command] pub fn load_report_sections(service: State<'_, MerchantService>, root: String) -> Result<merchant_core::ReportSections, CommandError> { service.load_report_sections(&root).map_err(Into::into) }
 #[tauri::command] pub fn list_artifacts(service: State<'_, MerchantService>, root: String) -> Result<Vec<merchant_workspace::ArtifactDescriptor>, CommandError> { service.list_artifacts(&root).map_err(Into::into) }
 #[tauri::command] pub fn read_artifact(service: State<'_, MerchantService>, root: String, relative_path: String) -> Result<String, CommandError> { service.read_artifact(&root, &relative_path).map_err(Into::into) }
 #[tauri::command] pub fn list_runs(service: State<'_, MerchantService>, root: String) -> Result<Vec<merchant_workspace::RunRecord>, CommandError> { service.list_runs(&root).map_err(Into::into) }

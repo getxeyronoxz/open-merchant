@@ -112,6 +112,7 @@ impl MerchantService {
         Ok(markdown)
     }
     pub fn save_report_sections(&self, root: &str, sections: ReportSections) -> Result<(), AppError> { Ok(Workspace::open(root)?.save_report_sections(&sections)?) }
+    pub fn load_report_sections(&self, root: &str) -> Result<ReportSections, AppError> { Ok(Workspace::open(root)?.load_report_sections()?) }
 
     pub fn list_artifacts(&self, root: &str) -> Result<Vec<ArtifactDescriptor>, AppError> { Ok(Workspace::open(root)?.list_artifacts()?) }
     pub fn read_artifact(&self, root: &str, relative_path: &str) -> Result<String, AppError> { Ok(Workspace::open(root)?.read_artifact(relative_path)?) }

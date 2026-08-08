@@ -87,6 +87,14 @@ export interface EconomicsScenario {
   grossMarginPercent: string;
 }
 
+export interface ReportSections {
+  schemaVersion: number;
+  decisionSummary: string;
+  marketObservations: string[];
+  risks: string[];
+  opportunities: string[];
+}
+
 export interface ArtifactDescriptor {
   relativePath: string;
   kind: string;
@@ -124,6 +132,8 @@ export interface DesktopClient {
   loadAssumptions(root: string): Promise<CostAssumptions>;
   saveAssumptions(root: string, assumptions: CostAssumptions): Promise<void>;
   calculateAndSaveScenarios(root: string): Promise<EconomicsScenario[]>;
+  loadReportSections(root: string): Promise<ReportSections>;
+  saveReportSections(root: string, sections: ReportSections): Promise<void>;
   generateReport(root: string): Promise<string>;
   listArtifacts(root: string): Promise<ArtifactDescriptor[]>;
   readArtifact(root: string, relativePath: string): Promise<string>;
