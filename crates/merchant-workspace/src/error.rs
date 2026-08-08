@@ -22,6 +22,12 @@ pub enum WorkspaceError {
         #[source]
         source: serde_json::Error,
     },
+    #[error("Cannot read workspace CSV {path}: {source}")]
+    Csv {
+        path: PathBuf,
+        #[source]
+        source: csv::Error,
+    },
     #[error("Invalid project input: {0}")]
     Validation(String),
 }

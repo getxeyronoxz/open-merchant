@@ -72,6 +72,16 @@ pub fn save_evidence(
 }
 
 #[tauri::command]
+pub fn load_competitors(service: State<'_, MerchantService>, root: String) -> Result<Vec<merchant_core::Competitor>, CommandError> {
+    service.load_competitors(&root).map_err(Into::into)
+}
+
+#[tauri::command]
+pub fn save_competitors(service: State<'_, MerchantService>, root: String, competitors: Vec<merchant_core::Competitor>) -> Result<(), CommandError> {
+    service.save_competitors(&root, competitors).map_err(Into::into)
+}
+
+#[tauri::command]
 pub fn list_recent_projects(
     service: State<'_, MerchantService>,
 ) -> Result<Vec<RecentProject>, CommandError> {

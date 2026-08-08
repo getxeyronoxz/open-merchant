@@ -1,7 +1,8 @@
 use std::{fs, path::{Path, PathBuf}};
 
-use chrono::Utc;
-use merchant_core::{validation::{validate_currency, validate_evidence_sources, validate_objective, validate_project_name}, EvidenceSource, ProjectManifest, ProjectSnapshot, SCHEMA_VERSION};
+use chrono::{DateTime, Utc};
+use merchant_core::{validation::{validate_competitors, validate_currency, validate_evidence_sources, validate_objective, validate_project_name}, Competitor, DecimalString, EvidenceSource, ProjectManifest, ProjectSnapshot, SCHEMA_VERSION};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{atomic, paths, WorkspaceError};
@@ -9,6 +10,39 @@ use crate::{atomic, paths, WorkspaceError};
 #[derive(Clone, Debug)]
 pub struct Workspace {
     root: PathBuf,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct CompetitorCsv {
+    schema_version: u32,
+    id: String,
+    product: String,
+    brand: String,
+    price: String,
+    currency: String,
+    marketplace: String,
+    url: String,
+    source_id: String,
+    notes: String,
+    observed_at: String,
+}
+
+impl From<&Competitor> for CompetitorCsv {
+    fn from(competitor: &Competitor) -> Self {
+        Self {
+            schema_version: competitor.schema_version,
+            id: competitor.id.clone(),
+            product: competitor.product.clone(),
+            brand: competitor.brand.clone(),
+            price: competitor.price.map(DecimalString::file_string).unwrap_or_default(),
+            currency: competitor.currency.clone(),
+            marketplace: competitor.marketplace.clone(),
+            url: competitor.url.clone(),
+            source_id: competitor.source_id.clone().unwrap_or_default(),
+            notes: competitor.notes.clone(),
+            observed_at: competitor.observed_at.to_rfc3339(),
+        }
+    }
 }
 
 impl Workspace {
@@ -123,6 +157,60 @@ impl Workspace {
         }
         atomic::write(&path, contents.as_bytes())
     }
+
+    pub fn load_competitors(&self) -> Result<Vec<Competitor>, WorkspaceError> {
+        let path = paths::at(&self.root, paths::COMPETITORS);
+        let mut reader = csv::ReaderBuilder::new().from_path(&path).map_err(|source| WorkspaceError::Csv {
+            path: path.clone(),
+            source,
+        })?;
+        let competitors = reader.deserialize::<CompetitorCsv>()
+            .map(|row| row.map_err(|source| WorkspaceError::Csv { path: path.clone(), source }))
+            .map(|row| row.and_then(competitor_from_csv))
+            .collect::<Result<Vec<_>, WorkspaceError>>()?;
+        let currency = self.load_snapshot()?.manifest.currency;
+        validate_competitors(&competitors, &currency).map_err(|error| WorkspaceError::Validation(error.to_string()))?;
+        Ok(competitors)
+    }
+
+    pub fn save_competitors(&self, competitors: &[Competitor]) -> Result<(), WorkspaceError> {
+        let path = paths::at(&self.root, paths::COMPETITORS);
+        let currency = self.load_snapshot()?.manifest.currency;
+        validate_competitors(competitors, &currency).map_err(|error| WorkspaceError::Validation(error.to_string()))?;
+        let mut writer = csv::WriterBuilder::new().has_headers(true).terminator(csv::Terminator::Any(b'\n')).from_writer(Vec::new());
+        for competitor in competitors {
+            writer.serialize(CompetitorCsv::from(competitor)).map_err(|source| WorkspaceError::Csv {
+                path: path.clone(),
+                source,
+            })?;
+        }
+        writer.flush().map_err(|source| WorkspaceError::Io { path: path.clone(), source })?;
+        let contents = writer.into_inner().map_err(|error| WorkspaceError::Io {
+            path: path.clone(),
+            source: error.into_error(),
+        })?;
+        atomic::write(&path, &contents)
+    }
+}
+
+fn competitor_from_csv(row: CompetitorCsv) -> Result<Competitor, WorkspaceError> {
+    let price = if row.price.trim().is_empty() { None } else { Some(DecimalString::parse(&row.price).map_err(|error| WorkspaceError::Validation(error.to_string()))?) };
+    let observed_at = DateTime::parse_from_rfc3339(&row.observed_at)
+        .map_err(|error| WorkspaceError::Validation(format!("invalid competitor timestamp: {error}")))?
+        .with_timezone(&Utc);
+    Ok(Competitor {
+        schema_version: row.schema_version,
+        id: row.id,
+        product: row.product,
+        brand: row.brand,
+        price,
+        currency: row.currency,
+        marketplace: row.marketplace,
+        url: row.url,
+        source_id: (!row.source_id.is_empty()).then_some(row.source_id),
+        notes: row.notes,
+        observed_at,
+    })
 }
 
 fn initialize_files(root: &Path, manifest: &ProjectManifest) -> Result<(), WorkspaceError> {

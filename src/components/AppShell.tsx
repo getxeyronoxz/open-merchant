@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { useProject } from "../context/ProjectContext";
 import { ObjectiveScreen } from "../features/objective/ObjectiveScreen";
 import { EvidenceScreen } from "../features/evidence/EvidenceScreen";
-import type { EvidenceSource } from "../types";
+import { CompetitorsScreen } from "../features/competitors/CompetitorsScreen";
+import type { Competitor, EvidenceSource } from "../types";
 
 const sections = ["Objective", "Evidence", "Competitors", "Economics", "Report", "Artifacts"] as const;
 type Section = (typeof sections)[number];
@@ -12,8 +13,12 @@ export function AppShell() {
   const { client, closeProject, project, setProject } = useProject();
   const [section, setSection] = useState<Section>("Objective");
   const [evidence, setEvidence] = useState<EvidenceSource[]>([]);
+  const [competitors, setCompetitors] = useState<Competitor[]>([]);
   useEffect(() => {
     void client.loadEvidence(project?.root ?? "").then(setEvidence).catch(() => setEvidence([]));
+  }, [client, project?.root]);
+  useEffect(() => {
+    void client.loadCompetitors(project?.root ?? "").then(setCompetitors).catch(() => setCompetitors([]));
   }, [client, project?.root]);
   if (!project) return null;
 
@@ -42,6 +47,8 @@ export function AppShell() {
           />
         ) : section === "Evidence" ? (
           <EvidenceScreen evidence={evidence} onSave={async (next) => { await client.saveEvidence(project.root, next); setEvidence(next); }} />
+        ) : section === "Competitors" ? (
+          <CompetitorsScreen currency={project.manifest.currency} competitors={competitors} evidence={evidence} onSave={async (next) => { await client.saveCompetitors(project.root, next); setCompetitors(next); }} />
         ) : (
           <section className="rounded-xl border border-stone-800 bg-stone-900 p-6">
             <p className="text-sm font-medium text-emerald-300">{section}</p>
