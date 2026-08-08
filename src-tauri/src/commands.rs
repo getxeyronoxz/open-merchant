@@ -133,6 +133,13 @@ pub fn calculate_and_save_scenarios(
         .map_err(Into::into)
 }
 #[tauri::command]
+pub fn load_scenarios(
+    service: State<'_, MerchantService>,
+    root: String,
+) -> Result<Vec<merchant_core::EconomicsScenario>, CommandError> {
+    service.load_scenarios(&root).map_err(Into::into)
+}
+#[tauri::command]
 pub fn generate_report(
     service: State<'_, MerchantService>,
     root: String,

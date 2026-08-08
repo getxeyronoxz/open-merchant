@@ -123,6 +123,10 @@ impl MerchantService {
         Ok(scenarios)
     }
 
+    pub fn load_scenarios(&self, root: &str) -> Result<Vec<EconomicsScenario>, AppError> {
+        Ok(Workspace::open(root)?.load_scenarios()?)
+    }
+
     pub fn generate_report(&self, root: &str) -> Result<String, AppError> {
         let workspace = Workspace::open(root)?;
         let started_at = chrono::Utc::now();

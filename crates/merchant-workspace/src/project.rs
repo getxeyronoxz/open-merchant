@@ -10,7 +10,7 @@ use merchant_core::{
         validate_objective, validate_project_name,
     },
     Competitor, CostAssumptions, DecimalString, EconomicsScenario, EvidenceSource, ProjectManifest,
-    ProjectSnapshot, ReportSections, SCHEMA_VERSION,
+    ProjectSnapshot, ReportSections, ScenarioName, SCHEMA_VERSION,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -35,6 +35,23 @@ struct CompetitorCsv {
     source_id: String,
     notes: String,
     observed_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ScenarioCsv {
+    schema_version: u32,
+    scenario: ScenarioName,
+    selling_price: DecimalString,
+    acquisition_cost: DecimalString,
+    shipping_cost: DecimalString,
+    marketplace_fee_rate: DecimalString,
+    marketplace_fee: DecimalString,
+    payment_fee_rate: DecimalString,
+    payment_fee: DecimalString,
+    other_costs: DecimalString,
+    total_cost: DecimalString,
+    gross_profit: DecimalString,
+    gross_margin_percent: DecimalString,
 }
 
 impl From<&Competitor> for CompetitorCsv {
@@ -323,6 +340,45 @@ impl Workspace {
             source: error.into_error(),
         })?;
         atomic::write(&path, &contents)
+    }
+
+    pub fn load_scenarios(&self) -> Result<Vec<EconomicsScenario>, WorkspaceError> {
+        let path = paths::at(&self.root, paths::SCENARIOS);
+        let mut reader = csv::ReaderBuilder::new()
+            .from_path(&path)
+            .map_err(|source| WorkspaceError::Csv {
+                path: path.clone(),
+                source,
+            })?;
+        reader
+            .deserialize::<ScenarioCsv>()
+            .map(|row| {
+                let row = row.map_err(|source| WorkspaceError::Csv {
+                    path: path.clone(),
+                    source,
+                })?;
+                if row.schema_version != SCHEMA_VERSION {
+                    return Err(WorkspaceError::Validation(format!(
+                        "Scenario has unsupported schema version: {}",
+                        row.schema_version
+                    )));
+                }
+                Ok(EconomicsScenario {
+                    scenario: row.scenario,
+                    selling_price: row.selling_price,
+                    acquisition_cost: row.acquisition_cost,
+                    shipping_cost: row.shipping_cost,
+                    marketplace_fee_rate: row.marketplace_fee_rate,
+                    marketplace_fee: row.marketplace_fee,
+                    payment_fee_rate: row.payment_fee_rate,
+                    payment_fee: row.payment_fee,
+                    other_costs: row.other_costs,
+                    total_cost: row.total_cost,
+                    gross_profit: row.gross_profit,
+                    gross_margin_percent: row.gross_margin_percent,
+                })
+            })
+            .collect()
     }
 
     pub fn load_report_sections(&self) -> Result<ReportSections, WorkspaceError> {

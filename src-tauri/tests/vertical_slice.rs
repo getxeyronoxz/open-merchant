@@ -111,6 +111,13 @@ fn a_saved_project_reopens_with_its_research_economics_report_and_artifacts() {
         restarted_service.load_assumptions(&snapshot.root).unwrap(),
         assumptions()
     );
+    assert_eq!(
+        restarted_service
+            .load_scenarios(&snapshot.root)
+            .unwrap()
+            .len(),
+        3
+    );
 }
 
 fn assumptions() -> CostAssumptions {
