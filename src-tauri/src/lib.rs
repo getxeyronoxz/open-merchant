@@ -19,6 +19,8 @@ pub fn run() {
             commands::create_project,
             commands::open_project,
             commands::save_manifest,
+            commands::load_evidence,
+            commands::save_evidence,
             commands::list_recent_projects,
             commands::remove_recent_project,
         ])

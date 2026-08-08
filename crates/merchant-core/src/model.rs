@@ -20,3 +20,27 @@ pub struct ProjectSnapshot {
     pub root: String,
     pub manifest: ProjectManifest,
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct Observation {
+    pub id: String,
+    pub label: String,
+    pub value: String,
+    pub unit: Option<String>,
+    pub note: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct EvidenceSource {
+    pub schema_version: u32,
+    pub id: String,
+    pub url: String,
+    pub title: String,
+    pub notes: String,
+    pub observations: Vec<Observation>,
+    pub observed_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}

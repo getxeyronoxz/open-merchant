@@ -13,6 +13,26 @@ export interface ProjectSnapshot {
   manifest: ProjectManifest;
 }
 
+export interface Observation {
+  id: string;
+  label: string;
+  value: string;
+  unit: string | null;
+  note: string;
+}
+
+export interface EvidenceSource {
+  schemaVersion: number;
+  id: string;
+  url: string;
+  title: string;
+  notes: string;
+  observations: Observation[];
+  observedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface RecentProject {
   name: string;
   path: string;
@@ -31,6 +51,8 @@ export interface DesktopClient {
   createProject(input: CreateProjectInput): Promise<ProjectSnapshot>;
   openProject(root: string): Promise<ProjectSnapshot>;
   saveManifest(root: string, manifest: ProjectManifest): Promise<ProjectSnapshot>;
+  loadEvidence(root: string): Promise<EvidenceSource[]>;
+  saveEvidence(root: string, evidence: EvidenceSource[]): Promise<void>;
   listRecentProjects(): Promise<RecentProject[]>;
   removeRecentProject(root: string): Promise<void>;
 }

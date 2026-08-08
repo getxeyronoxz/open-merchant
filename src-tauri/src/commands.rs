@@ -55,6 +55,23 @@ pub fn save_manifest(
 }
 
 #[tauri::command]
+pub fn load_evidence(
+    service: State<'_, MerchantService>,
+    root: String,
+) -> Result<Vec<merchant_core::EvidenceSource>, CommandError> {
+    service.load_evidence(&root).map_err(Into::into)
+}
+
+#[tauri::command]
+pub fn save_evidence(
+    service: State<'_, MerchantService>,
+    root: String,
+    evidence: Vec<merchant_core::EvidenceSource>,
+) -> Result<(), CommandError> {
+    service.save_evidence(&root, evidence).map_err(Into::into)
+}
+
+#[tauri::command]
 pub fn list_recent_projects(
     service: State<'_, MerchantService>,
 ) -> Result<Vec<RecentProject>, CommandError> {

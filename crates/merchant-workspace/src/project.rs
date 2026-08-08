@@ -1,7 +1,7 @@
 use std::{fs, path::{Path, PathBuf}};
 
 use chrono::Utc;
-use merchant_core::{validation::{validate_currency, validate_objective, validate_project_name}, ProjectManifest, ProjectSnapshot, SCHEMA_VERSION};
+use merchant_core::{validation::{validate_currency, validate_evidence_sources, validate_objective, validate_project_name}, EvidenceSource, ProjectManifest, ProjectSnapshot, SCHEMA_VERSION};
 use uuid::Uuid;
 
 use crate::{atomic, paths, WorkspaceError};
@@ -92,6 +92,36 @@ impl Workspace {
         })?;
         atomic::write(&path, &with_newline(json))?;
         Ok(saved)
+    }
+
+    pub fn load_evidence(&self) -> Result<Vec<EvidenceSource>, WorkspaceError> {
+        let path = paths::at(&self.root, paths::SOURCES);
+        let contents = fs::read_to_string(&path).map_err(|source| WorkspaceError::Io {
+            path: path.clone(),
+            source,
+        })?;
+        let sources = contents
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| serde_json::from_str(line).map_err(|source| WorkspaceError::Json { path: path.clone(), source }))
+            .collect::<Result<Vec<EvidenceSource>, WorkspaceError>>()?;
+        validate_evidence_sources(&sources).map_err(|error| WorkspaceError::Validation(error.to_string()))?;
+        Ok(sources)
+    }
+
+    pub fn save_evidence(&self, sources: &[EvidenceSource]) -> Result<(), WorkspaceError> {
+        validate_evidence_sources(sources).map_err(|error| WorkspaceError::Validation(error.to_string()))?;
+        let path = paths::at(&self.root, paths::SOURCES);
+        let mut contents = String::new();
+        for source in sources {
+            let line = serde_json::to_string(source).map_err(|error| WorkspaceError::Json {
+                path: path.clone(),
+                source: error,
+            })?;
+            contents.push_str(&line);
+            contents.push('\n');
+        }
+        atomic::write(&path, contents.as_bytes())
     }
 }
 
