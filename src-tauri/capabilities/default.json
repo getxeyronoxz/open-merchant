@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Minimum capability for the local main window.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "dialog:default"]
 }
