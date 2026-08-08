@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use merchant_core::{competitor_statistics, Competitor, CompetitorStatistics, CostAssumptions, EvidenceSource, ProjectSnapshot};
+use merchant_core::{calculate_scenarios, competitor_statistics, Competitor, CompetitorStatistics, CostAssumptions, EconomicsScenario, EvidenceSource, ProjectSnapshot};
 use merchant_workspace::{Workspace, WorkspaceError};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -88,6 +88,13 @@ impl MerchantService {
 
     pub fn save_assumptions(&self, root: &str, assumptions: CostAssumptions) -> Result<(), AppError> { Ok(Workspace::open(root)?.save_assumptions(&assumptions)?) }
 
+    pub fn calculate_and_save_scenarios(&self, root: &str) -> Result<Vec<EconomicsScenario>, AppError> {
+        let workspace = Workspace::open(root)?;
+        let scenarios = calculate_scenarios(&workspace.load_assumptions()?).map_err(|error| AppError::Domain(error.to_string()))?;
+        workspace.save_scenarios(&scenarios)?;
+        Ok(scenarios)
+    }
+
     pub fn list_recent_projects(&self) -> Result<Vec<RecentProject>, AppError> {
         self.recents.list()
     }
@@ -115,4 +122,6 @@ pub enum AppError {
     },
     #[error("Recent-projects store has no parent directory: {path}")]
     InvalidRecentStore { path: PathBuf },
+    #[error("Calculation cannot run: {0}")]
+    Domain(String),
 }
