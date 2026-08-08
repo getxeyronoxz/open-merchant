@@ -24,6 +24,7 @@ export const tauriDesktopClient: DesktopClient = {
   saveEvidence: (root, evidence) => invoke("save_evidence", { root, evidence }),
   loadCompetitors: (root) => invoke("load_competitors", { root }),
   saveCompetitors: (root, competitors) => invoke("save_competitors", { root, competitors }),
+  competitorStatistics: (root) => invoke("competitor_statistics", { root }),
   listRecentProjects: () => invoke<RecentProject[]>("list_recent_projects"),
   removeRecentProject: (root: string) =>
     invoke<void>("remove_recent_project", { root }),

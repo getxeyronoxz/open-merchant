@@ -23,6 +23,7 @@ pub fn run() {
             commands::save_evidence,
             commands::load_competitors,
             commands::save_competitors,
+            commands::competitor_statistics,
             commands::list_recent_projects,
             commands::remove_recent_project,
         ])

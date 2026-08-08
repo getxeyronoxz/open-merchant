@@ -20,6 +20,8 @@ impl DecimalString {
 
     pub fn decimal(self) -> Decimal { self.0 }
 
+    pub fn from_decimal(value: Decimal) -> Self { Self(value) }
+
     pub fn file_string(self) -> String { format!("{:.2}", self.0.round_dp(2)) }
 }
 

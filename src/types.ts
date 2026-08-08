@@ -47,6 +47,14 @@ export interface Competitor {
   observedAt: string;
 }
 
+export interface CompetitorStatistics {
+  validPriceCount: number;
+  minimum: string | null;
+  maximum: string | null;
+  average: string | null;
+  median: string | null;
+}
+
 export interface RecentProject {
   name: string;
   path: string;
@@ -69,6 +77,7 @@ export interface DesktopClient {
   saveEvidence(root: string, evidence: EvidenceSource[]): Promise<void>;
   loadCompetitors(root: string): Promise<Competitor[]>;
   saveCompetitors(root: string, competitors: Competitor[]): Promise<void>;
+  competitorStatistics(root: string): Promise<CompetitorStatistics>;
   listRecentProjects(): Promise<RecentProject[]>;
   removeRecentProject(root: string): Promise<void>;
 }
