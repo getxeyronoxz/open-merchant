@@ -61,7 +61,7 @@ The user collects and enters research manually. Open Merchant structures the evi
 - Automated domain, workspace, report, and focused UI tests
 - Windows production build and a basic unsigned NSIS installer
 - Example mechanical-keyboard project
-- README, MIT license, screenshots, and demo-ready sample data
+- README, AGPL-3.0-only license, screenshots, and demo-ready sample data
 
 ### 4.2 Explicitly Excluded
 
@@ -558,7 +558,7 @@ The README warns that Windows may display a reputation warning for an unsigned p
 
 The repository includes:
 
-- MIT license
+- AGPL-3.0-only license
 - Architecture and workspace-format overview
 - Windows prerequisites and development commands
 - Test and build commands
