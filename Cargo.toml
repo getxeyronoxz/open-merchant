@@ -1,0 +1,3 @@
+[workspace]
+members = ["crates/merchant-core", "crates/merchant-workspace", "src-tauri"]
+resolver = "2"

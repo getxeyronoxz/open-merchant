@@ -1,0 +1,7 @@
+[package]
+name = "merchant-workspace"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+merchant-core = { path = "../merchant-core" }
