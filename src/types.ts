@@ -94,6 +94,10 @@ export interface ArtifactDescriptor {
   exists: boolean;
 }
 
+export interface ArtifactFingerprint { path: string; sha256: string; }
+export interface RunRecord { schemaVersion: number; runId: string; operation: "projectCreated" | "economicsGenerated" | "reportGenerated"; startedAt: string; completedAt: string; status: "succeeded" | "failed"; appVersion: string; inputArtifacts: ArtifactFingerprint[]; outputArtifacts: ArtifactFingerprint[]; sourceIds: string[]; errorSummary: string | null; }
+export interface ProvenanceRecord { schemaVersion: number; artifactPath: string; sha256: string; generatedAt: string; runId: string; }
+
 export interface RecentProject {
   name: string;
   path: string;
@@ -123,6 +127,8 @@ export interface DesktopClient {
   generateReport(root: string): Promise<string>;
   listArtifacts(root: string): Promise<ArtifactDescriptor[]>;
   readArtifact(root: string, relativePath: string): Promise<string>;
+  listRuns(root: string): Promise<RunRecord[]>;
+  listProvenance(root: string): Promise<ProvenanceRecord[]>;
   listRecentProjects(): Promise<RecentProject[]>;
   removeRecentProject(root: string): Promise<void>;
 }

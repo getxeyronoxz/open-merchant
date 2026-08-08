@@ -98,6 +98,8 @@ pub fn calculate_and_save_scenarios(service: State<'_, MerchantService>, root: S
 #[tauri::command] pub fn save_report_sections(service: State<'_, MerchantService>, root: String, sections: merchant_core::ReportSections) -> Result<(), CommandError> { service.save_report_sections(&root, sections).map_err(Into::into) }
 #[tauri::command] pub fn list_artifacts(service: State<'_, MerchantService>, root: String) -> Result<Vec<merchant_workspace::ArtifactDescriptor>, CommandError> { service.list_artifacts(&root).map_err(Into::into) }
 #[tauri::command] pub fn read_artifact(service: State<'_, MerchantService>, root: String, relative_path: String) -> Result<String, CommandError> { service.read_artifact(&root, &relative_path).map_err(Into::into) }
+#[tauri::command] pub fn list_runs(service: State<'_, MerchantService>, root: String) -> Result<Vec<merchant_workspace::RunRecord>, CommandError> { service.list_runs(&root).map_err(Into::into) }
+#[tauri::command] pub fn list_provenance(service: State<'_, MerchantService>, root: String) -> Result<Vec<merchant_workspace::ProvenanceRecord>, CommandError> { service.list_provenance(&root).map_err(Into::into) }
 
 #[tauri::command]
 pub fn list_recent_projects(

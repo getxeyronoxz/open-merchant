@@ -31,6 +31,8 @@ export const tauriDesktopClient: DesktopClient = {
   generateReport: (root) => invoke("generate_report", { root }),
   listArtifacts: (root) => invoke("list_artifacts", { root }),
   readArtifact: (root, relativePath) => invoke("read_artifact", { root, relativePath }),
+  listRuns: (root) => invoke("list_runs", { root }),
+  listProvenance: (root) => invoke("list_provenance", { root }),
   listRecentProjects: () => invoke<RecentProject[]>("list_recent_projects"),
   removeRecentProject: (root: string) =>
     invoke<void>("remove_recent_project", { root }),
