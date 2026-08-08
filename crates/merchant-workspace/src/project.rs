@@ -1,7 +1,7 @@
 use std::{fs, path::{Path, PathBuf}};
 
 use chrono::{DateTime, Utc};
-use merchant_core::{validation::{validate_assumptions, validate_competitors, validate_currency, validate_evidence_sources, validate_objective, validate_project_name}, Competitor, CostAssumptions, DecimalString, EconomicsScenario, EvidenceSource, ProjectManifest, ProjectSnapshot, SCHEMA_VERSION};
+use merchant_core::{validation::{validate_assumptions, validate_competitors, validate_currency, validate_evidence_sources, validate_objective, validate_project_name}, Competitor, CostAssumptions, DecimalString, EconomicsScenario, EvidenceSource, ProjectManifest, ProjectSnapshot, ReportSections, SCHEMA_VERSION};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -220,6 +220,10 @@ impl Workspace {
         let contents = writer.into_inner().map_err(|error| WorkspaceError::Io { path: path.clone(), source: error.into_error() })?;
         atomic::write(&path, &contents)
     }
+
+    pub fn load_report_sections(&self) -> Result<ReportSections, WorkspaceError> { let path = paths::at(&self.root, paths::REPORT_SECTIONS); let raw = fs::read_to_string(&path).map_err(|source| WorkspaceError::Io { path: path.clone(), source })?; serde_json::from_str(&raw).map_err(|source| WorkspaceError::Json { path, source }) }
+    pub fn save_report_sections(&self, sections: &ReportSections) -> Result<(), WorkspaceError> { let path = paths::at(&self.root, paths::REPORT_SECTIONS); let json = serde_json::to_vec_pretty(sections).map_err(|source| WorkspaceError::Json { path: path.clone(), source })?; atomic::write(&path, &with_newline(json)) }
+    pub fn write_opportunity_report(&self, markdown: &str) -> Result<(), WorkspaceError> { atomic::write(&paths::at(&self.root, paths::OPPORTUNITY_REPORT), markdown.as_bytes()) }
 }
 
 fn scenario_name(scenario: &EconomicsScenario) -> String {
@@ -275,10 +279,9 @@ fn initialize_files(root: &Path, manifest: &ProjectManifest) -> Result<(), Works
         source,
     })?;
     atomic::write(&assumptions_path, &with_newline(assumptions))?;
-    atomic::write(
-        &paths::at(root, paths::REPORT_SECTIONS),
-        b"{\n  \"schemaVersion\": 1,\n  \"decisionSummary\": \"\",\n  \"marketObservations\": [],\n  \"risks\": [],\n  \"opportunities\": []\n}\n",
-    )?;
+    let report_sections_path = paths::at(root, paths::REPORT_SECTIONS);
+    let report_sections = serde_json::to_vec_pretty(&ReportSections::empty()).map_err(|source| WorkspaceError::Json { path: report_sections_path.clone(), source })?;
+    atomic::write(&report_sections_path, &with_newline(report_sections))?;
     Ok(())
 }
 

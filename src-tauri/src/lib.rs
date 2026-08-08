@@ -27,6 +27,8 @@ pub fn run() {
             commands::load_assumptions,
             commands::save_assumptions,
             commands::calculate_and_save_scenarios,
+            commands::generate_report,
+            commands::save_report_sections,
             commands::list_recent_projects,
             commands::remove_recent_project,
         ])

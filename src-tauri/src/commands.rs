@@ -94,6 +94,8 @@ pub fn save_assumptions(service: State<'_, MerchantService>, root: String, assum
 
 #[tauri::command]
 pub fn calculate_and_save_scenarios(service: State<'_, MerchantService>, root: String) -> Result<Vec<merchant_core::EconomicsScenario>, CommandError> { service.calculate_and_save_scenarios(&root).map_err(Into::into) }
+#[tauri::command] pub fn generate_report(service: State<'_, MerchantService>, root: String) -> Result<String, CommandError> { service.generate_report(&root).map_err(Into::into) }
+#[tauri::command] pub fn save_report_sections(service: State<'_, MerchantService>, root: String, sections: merchant_core::ReportSections) -> Result<(), CommandError> { service.save_report_sections(&root, sections).map_err(Into::into) }
 
 #[tauri::command]
 pub fn list_recent_projects(

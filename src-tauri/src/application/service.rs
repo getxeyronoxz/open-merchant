@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use merchant_core::{calculate_scenarios, competitor_statistics, Competitor, CompetitorStatistics, CostAssumptions, EconomicsScenario, EvidenceSource, ProjectSnapshot};
+use merchant_core::{calculate_scenarios, competitor_statistics, render_opportunity_report, Competitor, CompetitorStatistics, CostAssumptions, EconomicsScenario, EvidenceSource, ProjectSnapshot, ReportInput, ReportSections};
 use merchant_workspace::{Workspace, WorkspaceError};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -94,6 +94,9 @@ impl MerchantService {
         workspace.save_scenarios(&scenarios)?;
         Ok(scenarios)
     }
+
+    pub fn generate_report(&self, root: &str) -> Result<String, AppError> { let workspace = Workspace::open(root)?; let assumptions = workspace.load_assumptions()?; let scenarios = calculate_scenarios(&assumptions).map_err(|error| AppError::Domain(error.to_string()))?; workspace.save_scenarios(&scenarios)?; let input = ReportInput { manifest: workspace.load_snapshot()?.manifest, sections: workspace.load_report_sections()?, evidence: workspace.load_evidence()?, assumptions, scenarios, run_id: format!("RUN-{}", uuid::Uuid::new_v4()), generated_at: chrono::Utc::now() }; let markdown = render_opportunity_report(&input); workspace.write_opportunity_report(&markdown)?; Ok(markdown) }
+    pub fn save_report_sections(&self, root: &str, sections: ReportSections) -> Result<(), AppError> { Ok(Workspace::open(root)?.save_report_sections(&sections)?) }
 
     pub fn list_recent_projects(&self) -> Result<Vec<RecentProject>, AppError> {
         self.recents.list()

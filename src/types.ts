@@ -113,6 +113,7 @@ export interface DesktopClient {
   loadAssumptions(root: string): Promise<CostAssumptions>;
   saveAssumptions(root: string, assumptions: CostAssumptions): Promise<void>;
   calculateAndSaveScenarios(root: string): Promise<EconomicsScenario[]>;
+  generateReport(root: string): Promise<string>;
   listRecentProjects(): Promise<RecentProject[]>;
   removeRecentProject(root: string): Promise<void>;
 }
