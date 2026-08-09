@@ -53,16 +53,16 @@ pub struct ProvenanceRecord {
 
 impl Workspace {
     pub fn append_run(&self, run: &RunRecord) -> Result<(), WorkspaceError> {
-        append_jsonl(&self.root().join(paths::RUNS), run)
+        append_jsonl(&self.artifact_path(paths::RUNS)?, run)
     }
     pub fn append_provenance(&self, provenance: &ProvenanceRecord) -> Result<(), WorkspaceError> {
-        append_jsonl(&self.root().join(paths::PROVENANCE), provenance)
+        append_jsonl(&self.artifact_path(paths::PROVENANCE)?, provenance)
     }
     pub fn list_runs(&self) -> Result<Vec<RunRecord>, WorkspaceError> {
-        read_jsonl(&self.root().join(paths::RUNS))
+        read_jsonl(&self.artifact_path(paths::RUNS)?)
     }
     pub fn list_provenance(&self) -> Result<Vec<ProvenanceRecord>, WorkspaceError> {
-        read_jsonl(&self.root().join(paths::PROVENANCE))
+        read_jsonl(&self.artifact_path(paths::PROVENANCE)?)
     }
     pub fn fingerprint_artifact(
         &self,
@@ -71,7 +71,7 @@ impl Workspace {
         if !paths::ALL_ARTIFACTS.contains(&relative_path) {
             return Err(WorkspaceError::UnknownArtifact(relative_path.to_owned()));
         }
-        fingerprint(&self.root().join(relative_path), relative_path)
+        fingerprint(&self.artifact_path(relative_path)?, relative_path)
     }
 }
 
@@ -106,13 +106,6 @@ fn read_jsonl<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<Vec<T>, Works
         .collect()
 }
 fn fingerprint(path: &Path, relative_path: &str) -> Result<ArtifactFingerprint, WorkspaceError> {
-    let metadata = fs::symlink_metadata(path).map_err(|source| WorkspaceError::Io {
-        path: path.to_path_buf(),
-        source,
-    })?;
-    if metadata.file_type().is_symlink() {
-        return Err(WorkspaceError::SymlinkedArtifact(path.to_path_buf()));
-    }
     let bytes = fs::read(path).map_err(|source| WorkspaceError::Io {
         path: path.to_path_buf(),
         source,
