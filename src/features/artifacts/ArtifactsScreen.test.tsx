@@ -25,4 +25,26 @@ describe("ArtifactsScreen", () => {
     expect(await screen.findByText("Report generated")).toBeInTheDocument();
     expect(screen.getByText("opportunity-report.md")).toBeInTheDocument();
   });
+
+  it("shows a recovery message for an interrupted report run", async () => {
+    const user = userEvent.setup();
+    const client = createFakeDesktopClient();
+    client.listRuns.mockResolvedValue([{
+      schemaVersion: 1,
+      runId: "RUN-002",
+      operation: "reportGenerated",
+      startedAt: "2026-08-09T12:00:00Z",
+      completedAt: "2026-08-09T12:00:00Z",
+      status: "failed",
+      appVersion: "0.1.0",
+      inputArtifacts: [],
+      outputArtifacts: [],
+      sourceIds: [],
+      errorSummary: "Previous report generation was interrupted before completion. Review the workspace artifacts, then generate the report again.",
+    }]);
+    render(<ArtifactsScreen client={client} projectRoot="C:/Research/keyboards" />);
+    await user.click(screen.getByRole("button", { name: "History" }));
+    expect(await screen.findByText("Report interrupted")).toBeInTheDocument();
+    expect(screen.getByText(/Previous report generation was interrupted/)).toBeInTheDocument();
+  });
 });
