@@ -4,6 +4,15 @@ All notable changes to Open Merchant are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Refreshed the Open Merchant application icon across the Windows desktop bundle.
+
+### Fixed
+
+- Use crash-safe replacement when saving workspace artifacts and the local recent-project list.
+- Preserve interrupted report generations in local run history, including any artifacts saved before the interruption, and show recovery guidance in the History tab.
+
 ## [0.1.0] - 2026-08-08
 
 ### Added

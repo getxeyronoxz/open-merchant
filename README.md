@@ -59,6 +59,8 @@ mechanical-keyboards-india/
 
 `runs.jsonl` records meaningful generation operations. `provenance.jsonl` links generated output files to their run IDs and SHA-256 fingerprints. The app’s artifact viewer reads only this known project layout; it does not expose arbitrary files from the computer.
 
+Open Merchant uses crash-safe replacement when saving its own workspace artifacts and recent-project list. If report generation is interrupted, its failed run remains visible in History with recovery guidance; any artifacts written before the interruption are retained for inspection instead of being silently removed.
+
 ## Deterministic calculations
 
 All commerce calculations run in tested application code using fixed decimal values—not an LLM and not JavaScript floating-point arithmetic.
@@ -82,8 +84,8 @@ The React desktop UI calls a narrow Tauri application layer. Portable Rust crate
 ## Testing
 
 ```powershell
-cargo test --workspace
-npm test -- --run
+cargo test --workspace --all-targets
+npm run test:run
 ```
 
 The Rust suite covers workspace persistence, validation, decimal economics, competitor statistics, report generation, provenance, and a complete create → report → reopen workflow. The frontend suite covers the project workflow and key editing screens.
@@ -114,4 +116,4 @@ Copyright © 2026 Xeyronox.
 
 ## Contributing and support
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for local development and pull-request guidance, [SUPPORT.md](SUPPORT.md) for help and issue routing, and [SECURITY.md](SECURITY.md) for private vulnerability reporting. Community participation is governed by the [Code of Conduct](CODE_OF_CONDUCT.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local development and pull-request guidance, [CHANGELOG.md](CHANGELOG.md) for release notes, [SUPPORT.md](SUPPORT.md) for help and issue routing, and [SECURITY.md](SECURITY.md) for private vulnerability reporting. Community participation is governed by the [Code of Conduct](CODE_OF_CONDUCT.md).
