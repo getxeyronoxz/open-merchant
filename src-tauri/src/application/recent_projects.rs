@@ -4,6 +4,7 @@ use std::{
 };
 
 use chrono::{DateTime, Utc};
+use merchant_workspace::write_file_atomically;
 use serde::{Deserialize, Serialize};
 
 use super::AppError;
@@ -62,6 +63,14 @@ impl RecentProjectsStore {
     }
 
     fn save(&self, projects: &[RecentProject]) -> Result<(), AppError> {
+        self.save_with(projects, write_file_atomically)
+    }
+
+    fn save_with(
+        &self,
+        projects: &[RecentProject],
+        write: impl FnOnce(&Path, &[u8]) -> std::io::Result<()>,
+    ) -> Result<(), AppError> {
         let parent = self
             .path
             .parent()
@@ -76,18 +85,7 @@ impl RecentProjectsStore {
             path: self.path.clone(),
             source,
         })?;
-        let temporary = self.path.with_extension("json.tmp");
-        fs::write(&temporary, contents).map_err(|source| AppError::Io {
-            path: temporary.clone(),
-            source,
-        })?;
-        if self.path.exists() {
-            fs::remove_file(&self.path).map_err(|source| AppError::Io {
-                path: self.path.clone(),
-                source,
-            })?;
-        }
-        fs::rename(&temporary, &self.path).map_err(|source| AppError::Io {
+        write(&self.path, &contents).map_err(|source| AppError::Io {
             path: self.path.clone(),
             source,
         })
@@ -97,5 +95,31 @@ impl RecentProjectsStore {
 impl AsRef<Path> for RecentProjectsStore {
     fn as_ref(&self) -> &Path {
         &self.path
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{fs, io};
+
+    use super::*;
+
+    #[test]
+    fn failed_recent_project_replacement_preserves_existing_json() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("recents.json");
+        fs::write(
+            &path,
+            r#"[{"name":"Saved","path":"C:\\Saved","lastOpenedAt":"2026-08-09T00:00:00Z"}]"#,
+        )
+        .unwrap();
+        let store = RecentProjectsStore::new(&path);
+
+        let result = store.save_with(&[], |_, _| {
+            Err(io::Error::other("simulated replacement interruption"))
+        });
+
+        assert!(matches!(result, Err(AppError::Io { .. })));
+        assert!(fs::read_to_string(path).unwrap().contains("Saved"));
     }
 }

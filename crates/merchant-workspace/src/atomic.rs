@@ -25,9 +25,9 @@ fn write_with_replacement(
     contents: &[u8],
     replace: impl FnOnce(&Path, &Path) -> io::Result<()>,
 ) -> io::Result<()> {
-    let parent = path
-        .parent()
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "file has no parent directory"))?;
+    let parent = path.parent().ok_or_else(|| {
+        io::Error::new(io::ErrorKind::InvalidInput, "file has no parent directory")
+    })?;
     fs::create_dir_all(parent)?;
 
     let file_name = path
