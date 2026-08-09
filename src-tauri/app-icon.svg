@@ -1,7 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#0c1012"/>
-  <path d="M142 193h228l-17 211H159l-17-211Z" fill="#173d32" stroke="#73e0af" stroke-width="18" stroke-linejoin="round"/>
-  <path d="M204 204v-29c0-68 104-68 104 0v29" fill="none" stroke="#73e0af" stroke-width="18" stroke-linecap="round"/>
-  <path d="M209 267h94v69h-94z" fill="#0c1012"/>
-  <path d="M230 283v37M282 283v37" stroke="#73e0af" stroke-width="16" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="signal" x1="134" y1="128" x2="382" y2="384" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8AF2C7"/>
+      <stop offset="1" stop-color="#1ACF91"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#0C1012"/>
+  <rect x="48" y="48" width="416" height="416" rx="96" fill="#111B18" stroke="#28483C" stroke-width="12"/>
+  <path d="M142 364V158C142 139 166 130 179 146L256 244L333 146C346 130 370 139 370 158V364" fill="none" stroke="url(#signal)" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M170 376H342" stroke="#8AF2C7" stroke-width="16" stroke-linecap="round" opacity=".82"/>
 </svg>
