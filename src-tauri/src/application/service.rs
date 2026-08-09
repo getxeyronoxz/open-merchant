@@ -14,6 +14,9 @@ use thiserror::Error;
 
 use super::{RecentProject, RecentProjectsStore};
 
+const INTERRUPTED_REPORT_MESSAGE: &str =
+    "Previous report generation was interrupted before completion. Review the workspace artifacts, then generate the report again.";
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateProjectRequest {
@@ -130,51 +133,81 @@ impl MerchantService {
     pub fn generate_report(&self, root: &str) -> Result<String, AppError> {
         let workspace = Workspace::open(root)?;
         let started_at = chrono::Utc::now();
+        let generated_at = chrono::Utc::now();
         let run_id = format!("RUN-{}", uuid::Uuid::new_v4());
         let source = workspace.snapshot_report_inputs()?;
-        let scenarios = calculate_scenarios(&source.assumptions)
-            .map_err(|error| AppError::Domain(error.to_string()))?;
-        let scenarios_fingerprint = workspace.save_scenarios(&scenarios)?;
-        let input = ReportInput {
-            manifest: source.manifest,
-            sections: source.sections,
-            evidence: source.evidence.clone(),
-            competitor_statistics: competitor_statistics(&source.competitors),
-            assumptions: source.assumptions,
-            scenarios,
-            run_id: run_id.clone(),
-            generated_at: chrono::Utc::now(),
-        };
-        let markdown = render_opportunity_report(&input);
-        let report_fingerprint = workspace.write_opportunity_report(&markdown)?;
-        let output_artifacts = vec![scenarios_fingerprint, report_fingerprint];
-        workspace.append_run(&RunRecord {
-            schema_version: merchant_core::SCHEMA_VERSION,
-            run_id: run_id.clone(),
-            operation: RunOperation::ReportGenerated,
+        let input_artifacts = source.input_artifacts.clone();
+        let source_ids = source
+            .evidence
+            .iter()
+            .map(|source| source.id.clone())
+            .collect::<Vec<_>>();
+        workspace.append_run(&report_run(
+            &run_id,
             started_at,
-            completed_at: chrono::Utc::now(),
-            status: RunStatus::Succeeded,
-            app_version: env!("CARGO_PKG_VERSION").into(),
-            input_artifacts: source.input_artifacts,
-            output_artifacts: output_artifacts.clone(),
-            source_ids: source
-                .evidence
-                .into_iter()
-                .map(|source| source.id)
-                .collect(),
-            error_summary: None,
-        })?;
-        for artifact in output_artifacts {
-            workspace.append_provenance(&ProvenanceRecord {
-                schema_version: merchant_core::SCHEMA_VERSION,
-                artifact_path: artifact.path,
-                sha256: artifact.sha256,
-                generated_at: input.generated_at,
+            input_artifacts.clone(),
+            source_ids.clone(),
+            RunStatus::Failed,
+            vec![],
+            Some(INTERRUPTED_REPORT_MESSAGE.into()),
+        ))?;
+
+        let mut output_artifacts = Vec::new();
+        let generation = (|| -> Result<String, AppError> {
+            let scenarios = calculate_scenarios(&source.assumptions)
+                .map_err(|error| AppError::Domain(error.to_string()))?;
+            output_artifacts.push(workspace.save_scenarios(&scenarios)?);
+            let input = ReportInput {
+                manifest: source.manifest.clone(),
+                sections: source.sections.clone(),
+                evidence: source.evidence.clone(),
+                competitor_statistics: competitor_statistics(&source.competitors),
+                assumptions: source.assumptions.clone(),
+                scenarios,
                 run_id: run_id.clone(),
-            })?;
+                generated_at,
+            };
+            let markdown = render_opportunity_report(&input);
+            output_artifacts.push(workspace.write_opportunity_report(&markdown)?);
+            for artifact in &output_artifacts {
+                workspace.append_provenance(&ProvenanceRecord {
+                    schema_version: merchant_core::SCHEMA_VERSION,
+                    artifact_path: artifact.path.clone(),
+                    sha256: artifact.sha256.clone(),
+                    generated_at,
+                    run_id: run_id.clone(),
+                })?;
+            }
+            Ok(markdown)
+        })();
+
+        match generation {
+            Ok(markdown) => {
+                workspace.replace_run(&report_run(
+                    &run_id,
+                    started_at,
+                    input_artifacts,
+                    source_ids,
+                    RunStatus::Succeeded,
+                    output_artifacts,
+                    None,
+                ))?;
+                Ok(markdown)
+            }
+            Err(error) => {
+                let failed = report_run(
+                    &run_id,
+                    started_at,
+                    input_artifacts,
+                    source_ids,
+                    RunStatus::Failed,
+                    output_artifacts,
+                    Some(format!("{INTERRUPTED_REPORT_MESSAGE} {error}")),
+                );
+                let _ = workspace.replace_run(&failed);
+                Err(error)
+            }
         }
-        Ok(markdown)
     }
     pub fn save_report_sections(
         &self,
@@ -209,6 +242,30 @@ impl MerchantService {
 
     pub fn remove_recent_project(&self, root: &str) -> Result<(), AppError> {
         self.recents.remove(root)
+    }
+}
+
+fn report_run(
+    run_id: &str,
+    started_at: chrono::DateTime<chrono::Utc>,
+    input_artifacts: Vec<merchant_workspace::ArtifactFingerprint>,
+    source_ids: Vec<String>,
+    status: RunStatus,
+    output_artifacts: Vec<merchant_workspace::ArtifactFingerprint>,
+    error_summary: Option<String>,
+) -> RunRecord {
+    RunRecord {
+        schema_version: merchant_core::SCHEMA_VERSION,
+        run_id: run_id.into(),
+        operation: RunOperation::ReportGenerated,
+        started_at,
+        completed_at: chrono::Utc::now(),
+        status,
+        app_version: env!("CARGO_PKG_VERSION").into(),
+        input_artifacts,
+        output_artifacts,
+        source_ids,
+        error_summary,
     }
 }
 
