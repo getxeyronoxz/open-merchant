@@ -32,6 +32,8 @@ pub enum WorkspaceError {
     Validation(String),
     #[error("Unknown workspace artifact: {0}")]
     UnknownArtifact(String),
+    #[error("Run history entry does not exist: {0}")]
+    RunNotFound(String),
     #[error("Workspace artifact must not be a symbolic link: {0}")]
     SymlinkedArtifact(PathBuf),
     #[error("Workspace artifact exceeds the 2 MiB text-viewer limit: {0}")]

@@ -55,6 +55,16 @@ impl Workspace {
     pub fn append_run(&self, run: &RunRecord) -> Result<(), WorkspaceError> {
         append_jsonl(&self.artifact_path(paths::RUNS)?, run)
     }
+    pub fn replace_run(&self, replacement: &RunRecord) -> Result<(), WorkspaceError> {
+        let path = self.artifact_path(paths::RUNS)?;
+        let mut runs: Vec<RunRecord> = read_jsonl(&path)?;
+        let run = runs
+            .iter_mut()
+            .find(|run| run.run_id == replacement.run_id)
+            .ok_or_else(|| WorkspaceError::RunNotFound(replacement.run_id.clone()))?;
+        *run = replacement.clone();
+        write_jsonl(&path, &runs)
+    }
     pub fn append_provenance(&self, provenance: &ProvenanceRecord) -> Result<(), WorkspaceError> {
         append_jsonl(&self.artifact_path(paths::PROVENANCE)?, provenance)
     }
@@ -88,6 +98,19 @@ fn append_jsonl<T: Serialize>(path: &Path, record: &T) -> Result<(), WorkspaceEr
     );
     existing.push('\n');
     atomic::write(path, existing.as_bytes())
+}
+fn write_jsonl<T: Serialize>(path: &Path, records: &[T]) -> Result<(), WorkspaceError> {
+    let mut contents = String::new();
+    for record in records {
+        contents.push_str(&serde_json::to_string(record).map_err(|source| {
+            WorkspaceError::Json {
+                path: path.to_path_buf(),
+                source,
+            }
+        })?);
+        contents.push('\n');
+    }
+    atomic::write(path, contents.as_bytes())
 }
 fn read_jsonl<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<Vec<T>, WorkspaceError> {
     fs::read_to_string(path)

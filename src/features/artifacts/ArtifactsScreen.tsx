@@ -1,12 +1,134 @@
 import { useEffect, useState } from "react";
+
 import type { ArtifactDescriptor, DesktopClient, RunRecord } from "../../types";
 
 export function ArtifactsScreen({ client, projectRoot }: { client: DesktopClient; projectRoot: string }) {
   const [tab, setTab] = useState<"artifacts" | "history">("artifacts");
-  const [artifacts, setArtifacts] = useState<ArtifactDescriptor[]>([]); const [runs, setRuns] = useState<RunRecord[]>([]); const [content, setContent] = useState<string | null>(null); const [error, setError] = useState<string | null>(null);
-  useEffect(() => { void client.listArtifacts(projectRoot).then(setArtifacts).catch((reason) => setError(reason instanceof Error ? reason.message : "Artifacts could not be loaded.")); void client.listRuns(projectRoot).then(setRuns).catch(() => undefined); }, [client, projectRoot]);
-  const select = async (artifact: ArtifactDescriptor) => { if (!artifact.exists) return; try { setError(null); setContent(await client.readArtifact(projectRoot, artifact.relativePath)); } catch (reason) { setError(reason instanceof Error ? reason.message : "Artifact could not be read."); } };
-  return <section className="rounded-xl border border-stone-800 bg-stone-900 p-6"><p className="text-sm font-medium text-emerald-300">Local artifacts</p><h2 className="mt-1 text-2xl font-semibold">Inspect the files your workspace owns</h2><div className="mt-5 flex gap-2"><button className={`rounded px-3 py-2 text-sm ${tab === "artifacts" ? "bg-emerald-400 font-semibold text-stone-950" : "bg-stone-800"}`} onClick={() => setTab("artifacts")} type="button">Artifacts</button><button className={`rounded px-3 py-2 text-sm ${tab === "history" ? "bg-emerald-400 font-semibold text-stone-950" : "bg-stone-800"}`} onClick={() => setTab("history")} type="button">History</button></div>{tab === "artifacts" ? <div className="mt-5 grid gap-5 lg:grid-cols-[280px_1fr]"><ul className="rounded-lg border border-stone-800 bg-stone-950/50 p-2">{artifacts.map((artifact) => <li key={artifact.relativePath}><button className="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm hover:bg-stone-800 disabled:text-stone-600" disabled={!artifact.exists} onClick={() => void select(artifact)} type="button"><span>{artifact.relativePath.split("/").at(-1)}</span><span className="text-xs">{artifact.exists ? artifact.kind : "Not generated"}</span></button></li>)}</ul><div className="min-h-72 rounded-lg border border-stone-800 bg-stone-950 p-4"><pre className="whitespace-pre-wrap break-words text-sm text-stone-300">{content ?? "Select a local artifact to inspect its text."}</pre>{error ? <p className="mt-3 text-sm text-rose-300">{error}</p> : null}</div></div> : <History runs={runs} />}</section>;
+  const [artifacts, setArtifacts] = useState<ArtifactDescriptor[]>([]);
+  const [runs, setRuns] = useState<RunRecord[]>([]);
+  const [content, setContent] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void client
+      .listArtifacts(projectRoot)
+      .then(setArtifacts)
+      .catch((reason) => setError(reason instanceof Error ? reason.message : "Artifacts could not be loaded."));
+    void client.listRuns(projectRoot).then(setRuns).catch(() => undefined);
+  }, [client, projectRoot]);
+
+  const select = async (artifact: ArtifactDescriptor) => {
+    if (!artifact.exists) return;
+
+    try {
+      setError(null);
+      setContent(await client.readArtifact(projectRoot, artifact.relativePath));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Artifact could not be read.");
+    }
+  };
+
+  return (
+    <section className="rounded-xl border border-stone-800 bg-stone-900 p-6">
+      <p className="text-sm font-medium text-emerald-300">Local artifacts</p>
+      <h2 className="mt-1 text-2xl font-semibold">Inspect the files your workspace owns</h2>
+
+      <div className="mt-5 flex gap-2">
+        <button
+          className={`rounded px-3 py-2 text-sm ${tab === "artifacts" ? "bg-emerald-400 font-semibold text-stone-950" : "bg-stone-800"}`}
+          onClick={() => setTab("artifacts")}
+          type="button"
+        >
+          Artifacts
+        </button>
+        <button
+          className={`rounded px-3 py-2 text-sm ${tab === "history" ? "bg-emerald-400 font-semibold text-stone-950" : "bg-stone-800"}`}
+          onClick={() => setTab("history")}
+          type="button"
+        >
+          History
+        </button>
+      </div>
+
+      {tab === "artifacts" ? (
+        <div className="mt-5 grid gap-5 lg:grid-cols-[280px_1fr]">
+          <ul className="rounded-lg border border-stone-800 bg-stone-950/50 p-2">
+            {artifacts.map((artifact) => (
+              <li key={artifact.relativePath}>
+                <button
+                  className="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm hover:bg-stone-800 disabled:text-stone-600"
+                  disabled={!artifact.exists}
+                  onClick={() => void select(artifact)}
+                  type="button"
+                >
+                  <span>{artifact.relativePath.split("/").at(-1)}</span>
+                  <span className="text-xs">{artifact.exists ? artifact.kind : "Not generated"}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="min-h-72 rounded-lg border border-stone-800 bg-stone-950 p-4">
+            <pre className="whitespace-pre-wrap break-words text-sm text-stone-300">
+              {content ?? "Select a local artifact to inspect its text."}
+            </pre>
+            {error ? <p className="mt-3 text-sm text-rose-300">{error}</p> : null}
+          </div>
+        </div>
+      ) : (
+        <History runs={runs} />
+      )}
+    </section>
+  );
 }
 
-function History({ runs }: { runs: RunRecord[] }) { return <div className="mt-5 grid gap-3">{runs.length === 0 ? <p className="text-sm text-stone-400">No meaningful operations have been recorded yet.</p> : runs.map((run) => <article className="rounded-lg border border-stone-800 bg-stone-950/50 p-4" key={run.runId}><div className="flex justify-between gap-4"><div><h3 className="font-medium">{run.operation === "reportGenerated" ? "Report generated" : run.operation}</h3><p className="mt-1 text-sm text-stone-400">{new Date(run.completedAt).toLocaleString()} · {run.status}</p></div><span className="text-xs text-stone-500">{run.runId}</span></div><ul className="mt-3 text-sm text-stone-300">{run.outputArtifacts.map((artifact) => <li key={artifact.path}>{artifact.path.split("/").at(-1)}</li>)}</ul></article>)}</div>; }
+function History({ runs }: { runs: RunRecord[] }) {
+  if (runs.length === 0) {
+    return <p className="mt-5 text-sm text-stone-400">No meaningful operations have been recorded yet.</p>;
+  }
+
+  return (
+    <div className="mt-5 grid gap-3">
+      {runs.map((run) => {
+        const isInterruptedReport = run.operation === "reportGenerated" && run.status === "failed";
+
+        return (
+          <article
+            className={`rounded-lg border p-4 ${isInterruptedReport ? "border-rose-900/70 bg-rose-950/20" : "border-stone-800 bg-stone-950/50"}`}
+            key={run.runId}
+          >
+            <div className="flex justify-between gap-4">
+              <div>
+                <h3 className={`font-medium ${isInterruptedReport ? "text-rose-200" : "text-stone-100"}`}>
+                  {isInterruptedReport ? "Report interrupted" : run.operation === "reportGenerated" ? "Report generated" : run.operation}
+                </h3>
+                <p className="mt-1 text-sm text-stone-400">
+                  {isInterruptedReport
+                    ? `Started ${new Date(run.startedAt).toLocaleString()}`
+                    : `${new Date(run.completedAt).toLocaleString()} · ${run.status}`}
+                </p>
+              </div>
+              <span className="text-xs text-stone-500">{run.runId}</span>
+            </div>
+
+            {isInterruptedReport ? (
+              <p className="mt-3 text-sm leading-6 text-rose-100/90">
+                {run.errorSummary ?? "Report generation did not complete. Review the workspace artifacts, then generate the report again."}
+              </p>
+            ) : null}
+
+            {run.outputArtifacts.length > 0 ? (
+              <div className="mt-3">
+                {isInterruptedReport ? <p className="text-xs font-medium uppercase tracking-wide text-rose-200/80">Artifacts saved before interruption</p> : null}
+                <ul className="mt-1 text-sm text-stone-300">
+                  {run.outputArtifacts.map((artifact) => (
+                    <li key={artifact.path}>{artifact.path.split("/").at(-1)}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </article>
+        );
+      })}
+    </div>
+  );
+}

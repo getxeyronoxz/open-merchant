@@ -1,8 +1,61 @@
 use chrono::Utc;
 use merchant_core::{Competitor, CostAssumptions, DecimalString, ScenarioPrices, SCHEMA_VERSION};
+use merchant_workspace::RunStatus;
 use open_merchant_lib::application::{CreateProjectRequest, MerchantService, RecentProjectsStore};
 use sha2::{Digest, Sha256};
-use std::fs;
+use std::{fs, path::Path};
+
+#[test]
+fn failed_report_generation_persists_a_recoverable_run_after_reopen() {
+    let temp = tempfile::tempdir().unwrap();
+    let recents_path = temp.path().join("recents.json");
+    let service = MerchantService::new(RecentProjectsStore::new(recents_path.clone()));
+    let snapshot = service
+        .create_project(CreateProjectRequest {
+            parent_directory: temp.path().to_string_lossy().into_owned(),
+            name: "Keyboard Study".into(),
+            objective: "Assess whether keyboards are commercially attractive".into(),
+            currency: "INR".into(),
+        })
+        .unwrap();
+    service
+        .save_assumptions(
+            &snapshot.root,
+            CostAssumptions {
+                schema_version: SCHEMA_VERSION,
+                currency: "INR".into(),
+                acquisition_cost: DecimalString::parse("1800").unwrap(),
+                shipping_cost: DecimalString::parse("120").unwrap(),
+                marketplace_fee_rate: DecimalString::parse("12").unwrap(),
+                payment_fee_rate: DecimalString::parse("2").unwrap(),
+                other_costs: DecimalString::parse("80").unwrap(),
+                scenario_prices: ScenarioPrices {
+                    low: Some(DecimalString::parse("3000").unwrap()),
+                    base: Some(DecimalString::parse("4000").unwrap()),
+                    high: Some(DecimalString::parse("5000").unwrap()),
+                },
+            },
+        )
+        .unwrap();
+    let scenarios = Path::new(&snapshot.root).join("economics/scenarios.csv");
+    fs::remove_file(&scenarios).unwrap();
+    fs::create_dir(&scenarios).unwrap();
+
+    assert!(service.generate_report(&snapshot.root).is_err());
+
+    let restarted = MerchantService::new(RecentProjectsStore::new(recents_path));
+    restarted.open_project(&snapshot.root).unwrap();
+    let runs = restarted.list_runs(&snapshot.root).unwrap();
+
+    assert_eq!(runs.len(), 1);
+    assert_eq!(runs[0].status, RunStatus::Failed);
+    assert!(runs[0]
+        .error_summary
+        .as_deref()
+        .unwrap()
+        .starts_with("Previous report generation was interrupted before completion."));
+    assert!(runs[0].output_artifacts.is_empty());
+}
 
 #[test]
 fn generating_a_report_records_its_run_and_output_provenance() {
@@ -57,6 +110,8 @@ fn generating_a_report_records_its_run_and_output_provenance() {
         runs[0].operation,
         merchant_workspace::RunOperation::ReportGenerated
     );
+    assert_eq!(runs[0].status, RunStatus::Succeeded);
+    assert_eq!(runs[0].error_summary, None);
     assert_eq!(runs[0].output_artifacts.len(), 2);
     assert!(runs[0]
         .output_artifacts
@@ -105,6 +160,9 @@ fn generating_a_report_records_its_run_and_output_provenance() {
     assert_eq!(runs.len(), 2);
     assert_eq!(provenance.len(), 4);
     assert_ne!(runs[0].run_id, runs[1].run_id);
+    assert!(runs
+        .iter()
+        .all(|run| run.status == RunStatus::Succeeded && run.error_summary.is_none()));
     for artifact in &runs[1].input_artifacts {
         assert_eq!(
             artifact.sha256,
