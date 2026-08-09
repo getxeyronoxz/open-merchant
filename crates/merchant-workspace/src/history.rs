@@ -102,12 +102,12 @@ fn append_jsonl<T: Serialize>(path: &Path, record: &T) -> Result<(), WorkspaceEr
 fn write_jsonl<T: Serialize>(path: &Path, records: &[T]) -> Result<(), WorkspaceError> {
     let mut contents = String::new();
     for record in records {
-        contents.push_str(
-            &serde_json::to_string(record).map_err(|source| WorkspaceError::Json {
+        contents.push_str(&serde_json::to_string(record).map_err(|source| {
+            WorkspaceError::Json {
                 path: path.to_path_buf(),
                 source,
-            })?,
-        );
+            }
+        })?);
         contents.push('\n');
     }
     atomic::write(path, contents.as_bytes())
