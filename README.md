@@ -21,7 +21,7 @@ The working sample project is [Mechanical Keyboards India](examples/mechanical-k
 ## Development
 
 ```powershell
-npm install
+npm ci
 npm run tauri dev
 ```
 
@@ -111,3 +111,7 @@ Open Merchant is licensed under the GNU Affero General Public License v3.0
 only (`AGPL-3.0-only`).
 
 Copyright © 2026 Xeyronox.
+
+## Contributing and support
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local development and pull-request guidance, [SUPPORT.md](SUPPORT.md) for help and issue routing, and [SECURITY.md](SECURITY.md) for private vulnerability reporting. Community participation is governed by the [Code of Conduct](CODE_OF_CONDUCT.md).
