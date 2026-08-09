@@ -17,6 +17,28 @@ pub fn render_opportunity_report(input: &ReportInput) -> String {
         &input.sections.market_observations,
         "No observations recorded.",
     );
+    markdown.push_str("## Competitor price statistics\n\n");
+    if let (Some(minimum), Some(maximum), Some(average), Some(median)) = (
+        input.competitor_statistics.minimum,
+        input.competitor_statistics.maximum,
+        input.competitor_statistics.average,
+        input.competitor_statistics.median,
+    ) {
+        let statistics = &input.competitor_statistics;
+        markdown.push_str(&format!(
+            "- Priced competitors: {}\n- Price range: {} {}–{}\n- Average price: {} {}\n- Median price: {} {}\n\n",
+            statistics.valid_price_count,
+            input.manifest.currency,
+            minimum,
+            maximum,
+            input.manifest.currency,
+            average,
+            input.manifest.currency,
+            median,
+        ));
+    } else {
+        markdown.push_str("No valid competitor prices recorded.\n\n");
+    }
     markdown.push_str("## Pricing and unit economics\n\n");
     if input.scenarios.is_empty() {
         markdown.push_str("No scenarios calculated.\n\n");

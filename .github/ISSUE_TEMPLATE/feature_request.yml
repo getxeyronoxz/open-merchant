@@ -1,0 +1,31 @@
+name: Feature request
+description: Propose a focused improvement to Open Merchant.
+title: "feature: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: "What is difficult today?"
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Desired workflow
+      description: "Describe the steps a user would take."
+    validations:
+      required: true
+  - type: textarea
+    id: gap
+    attributes:
+      label: Why V0 cannot solve it today
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+    validations:
+      required: true

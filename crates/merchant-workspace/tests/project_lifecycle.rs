@@ -1,3 +1,6 @@
+use std::fs;
+
+use merchant_core::{ReportSections, SCHEMA_VERSION};
 use merchant_workspace::Workspace;
 
 #[test]
@@ -70,4 +73,76 @@ fn saving_manifest_survives_reopen() {
             .objective,
         "Updated commercial question"
     );
+}
+
+#[test]
+fn create_uses_windows_safe_folders_for_unicode_and_reserved_names() {
+    let temp = tempfile::tempdir().unwrap();
+    let unicode = Workspace::create(temp.path(), "भारत 😀", "Assess demand", "INR").unwrap();
+    let reserved = Workspace::create(temp.path(), "CON", "Assess demand", "INR").unwrap();
+
+    assert_eq!(
+        unicode.root().file_name().unwrap().to_str(),
+        Some("project-92d-93e-930-924-20-1f600")
+    );
+    assert_eq!(
+        reserved.root().file_name().unwrap().to_str(),
+        Some("con-project")
+    );
+    assert!(Workspace::open(unicode.root()).is_ok());
+    assert!(Workspace::open(reserved.root()).is_ok());
+}
+
+#[test]
+fn create_uses_bounded_folders_for_long_ascii_and_unicode_names() {
+    let temp = tempfile::tempdir().unwrap();
+    let ascii = Workspace::create(temp.path(), &"x".repeat(300), "Assess demand", "INR").unwrap();
+    let unicode = Workspace::create(temp.path(), &"₹".repeat(200), "Assess demand", "INR").unwrap();
+
+    for workspace in [ascii, unicode] {
+        assert!(workspace.root().file_name().unwrap().len() <= 120);
+        assert!(Workspace::open(workspace.root()).is_ok());
+    }
+}
+
+#[test]
+fn report_sections_reject_unsupported_schemas_without_overwriting_user_data() {
+    let temp = tempfile::tempdir().unwrap();
+    let workspace =
+        Workspace::create(temp.path(), "Keyboard Study", "Assess demand", "INR").unwrap();
+    let path = workspace.root().join("reports/report-sections.json");
+    let original = fs::read_to_string(&path).unwrap();
+    let unsupported = ReportSections {
+        schema_version: SCHEMA_VERSION + 1,
+        decision_summary: "Future-format data".into(),
+        market_observations: vec![],
+        risks: vec![],
+        opportunities: vec![],
+    };
+
+    assert!(workspace.save_report_sections(&unsupported).is_err());
+    assert_eq!(fs::read_to_string(&path).unwrap(), original);
+
+    fs::write(&path, serde_json::to_string(&unsupported).unwrap()).unwrap();
+    assert!(workspace.load_report_sections().is_err());
+}
+
+#[test]
+fn report_sections_reject_unknown_fields_without_overwriting_user_data() {
+    let temp = tempfile::tempdir().unwrap();
+    let workspace =
+        Workspace::create(temp.path(), "Keyboard Study", "Assess demand", "INR").unwrap();
+    let path = workspace.root().join("reports/report-sections.json");
+    let contents = r#"{
+  "schemaVersion": 1,
+  "decisionSummary": "Keep this data",
+  "marketObservations": [],
+  "risks": [],
+  "opportunities": [],
+  "futureField": "must not be silently discarded"
+}"#;
+    fs::write(&path, contents).unwrap();
+
+    assert!(workspace.load_report_sections().is_err());
+    assert_eq!(fs::read_to_string(&path).unwrap(), contents);
 }

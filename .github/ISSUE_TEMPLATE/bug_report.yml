@@ -1,0 +1,56 @@
+name: Bug report
+description: Report a reproducible problem in Open Merchant.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Please remove any private project data, credentials, or commercially sensitive information before submitting."
+  - type: input
+    id: version
+    attributes:
+      label: Open Merchant version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: "Windows 11 24H2"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      placeholder: "1. ...\n2. ...\n3. ..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Safe logs or screenshots
+      description: "Do not include project files or commercially sensitive information."
+  - type: dropdown
+    id: project-data
+    attributes:
+      label: Is user project data involved?
+      options:
+        - "No"
+        - "Yes, but I can provide a sanitized reproduction"
+        - "Yes, and it contains sensitive data"
+    validations:
+      required: true

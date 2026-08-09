@@ -41,3 +41,21 @@ fn empty_prices_produce_none_not_zero() {
     assert!(stats.average.is_none());
     assert!(stats.median.is_none());
 }
+
+#[test]
+fn ignores_missing_prices_and_calculates_unordered_decimal_duplicates_including_zero() {
+    let competitors = vec![
+        competitor("C-001", Some("50.01")),
+        competitor("C-002", None),
+        competitor("C-003", Some("19.99")),
+        competitor("C-004", Some("0")),
+        competitor("C-005", Some("19.99")),
+    ];
+
+    let stats = competitor_statistics(&competitors);
+    assert_eq!(stats.valid_price_count, 4);
+    assert_eq!(stats.minimum.unwrap().file_string(), "0.00");
+    assert_eq!(stats.maximum.unwrap().file_string(), "50.01");
+    assert_eq!(stats.average.unwrap().file_string(), "22.50");
+    assert_eq!(stats.median.unwrap().file_string(), "19.99");
+}

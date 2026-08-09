@@ -25,4 +25,5 @@ thiserror = "2"
 uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
+sha2 = "0.10"
 tempfile = "3"

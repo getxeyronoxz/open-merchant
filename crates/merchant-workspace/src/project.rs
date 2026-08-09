@@ -1,6 +1,6 @@
 use std::{
     fs,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 
 use chrono::{DateTime, Utc};
@@ -13,13 +13,24 @@ use merchant_core::{
     ProjectSnapshot, ReportSections, ScenarioName, SCHEMA_VERSION,
 };
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
-use crate::{atomic, paths, WorkspaceError};
+use crate::{atomic, paths, ArtifactFingerprint, WorkspaceError};
 
 #[derive(Clone, Debug)]
 pub struct Workspace {
     root: PathBuf,
+}
+
+#[derive(Clone, Debug)]
+pub struct ReportWorkspaceSnapshot {
+    pub manifest: ProjectManifest,
+    pub evidence: Vec<EvidenceSource>,
+    pub competitors: Vec<Competitor>,
+    pub assumptions: CostAssumptions,
+    pub sections: ReportSections,
+    pub input_artifacts: Vec<ArtifactFingerprint>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -131,8 +142,143 @@ impl Workspace {
         &self.root
     }
 
+    pub(crate) fn artifact_path(&self, relative_path: &str) -> Result<PathBuf, WorkspaceError> {
+        let root = fs::canonicalize(&self.root).map_err(|source| WorkspaceError::Io {
+            path: self.root.clone(),
+            source,
+        })?;
+        let mut path = self.root.clone();
+        let components = Path::new(relative_path).components().collect::<Vec<_>>();
+        for (index, component) in components.iter().enumerate() {
+            let Component::Normal(component) = component else {
+                return Err(WorkspaceError::UnknownArtifact(relative_path.to_owned()));
+            };
+            path.push(component);
+            match fs::symlink_metadata(&path) {
+                Ok(metadata) if is_reparse_point(&metadata) => {
+                    return Err(WorkspaceError::SymlinkedArtifact(path));
+                }
+                Ok(_) => {}
+                Err(source)
+                    if source.kind() == std::io::ErrorKind::NotFound
+                        && index + 1 == components.len() =>
+                {
+                    return Ok(path);
+                }
+                Err(source) => {
+                    return Err(WorkspaceError::Io {
+                        path: path.clone(),
+                        source,
+                    })
+                }
+            }
+        }
+        let canonical_path = fs::canonicalize(&path).map_err(|source| WorkspaceError::Io {
+            path: path.clone(),
+            source,
+        })?;
+        if !canonical_path.starts_with(&root) {
+            return Err(WorkspaceError::SymlinkedArtifact(path));
+        }
+        Ok(path)
+    }
+
+    pub fn snapshot_report_inputs(&self) -> Result<ReportWorkspaceSnapshot, WorkspaceError> {
+        let (manifest_path, manifest_raw, manifest_fingerprint) =
+            self.snapshot_text(paths::MANIFEST)?;
+        let manifest =
+            serde_json::from_str::<ProjectManifest>(&manifest_raw).map_err(|source| {
+                WorkspaceError::Json {
+                    path: manifest_path.clone(),
+                    source,
+                }
+            })?;
+        validate_manifest(&manifest_path, &manifest)?;
+
+        let (sources_path, sources_raw, sources_fingerprint) =
+            self.snapshot_text(paths::SOURCES)?;
+        let evidence = sources_raw
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| {
+                serde_json::from_str(line).map_err(|source| WorkspaceError::Json {
+                    path: sources_path.clone(),
+                    source,
+                })
+            })
+            .collect::<Result<Vec<EvidenceSource>, WorkspaceError>>()?;
+        validate_evidence_sources(&evidence)
+            .map_err(|error| WorkspaceError::Validation(error.to_string()))?;
+
+        let (competitors_path, competitors_raw, competitors_fingerprint) =
+            self.snapshot_text(paths::COMPETITORS)?;
+        let competitors = csv::ReaderBuilder::new()
+            .from_reader(competitors_raw.as_bytes())
+            .deserialize::<CompetitorCsv>()
+            .map(|row| {
+                row.map_err(|source| WorkspaceError::Csv {
+                    path: competitors_path.clone(),
+                    source,
+                })
+            })
+            .map(|row| row.and_then(competitor_from_csv))
+            .collect::<Result<Vec<_>, WorkspaceError>>()?;
+        validate_competitors(&competitors, &manifest.currency)
+            .map_err(|error| WorkspaceError::Validation(error.to_string()))?;
+
+        let (assumptions_path, assumptions_raw, assumptions_fingerprint) =
+            self.snapshot_text(paths::ASSUMPTIONS)?;
+        let assumptions =
+            serde_json::from_str::<CostAssumptions>(&assumptions_raw).map_err(|source| {
+                WorkspaceError::Json {
+                    path: assumptions_path.clone(),
+                    source,
+                }
+            })?;
+        validate_assumptions(&assumptions, &manifest.currency)
+            .map_err(|error| WorkspaceError::Validation(error.to_string()))?;
+
+        let (sections_path, sections_raw, sections_fingerprint) =
+            self.snapshot_text(paths::REPORT_SECTIONS)?;
+        let sections = serde_json::from_str::<ReportSections>(&sections_raw).map_err(|source| {
+            WorkspaceError::Json {
+                path: sections_path.clone(),
+                source,
+            }
+        })?;
+        validate_report_sections(&sections_path, &sections)?;
+
+        Ok(ReportWorkspaceSnapshot {
+            manifest,
+            evidence,
+            competitors,
+            assumptions,
+            sections,
+            input_artifacts: vec![
+                manifest_fingerprint,
+                sources_fingerprint,
+                competitors_fingerprint,
+                assumptions_fingerprint,
+                sections_fingerprint,
+            ],
+        })
+    }
+
+    fn snapshot_text(
+        &self,
+        relative_path: &str,
+    ) -> Result<(PathBuf, String, ArtifactFingerprint), WorkspaceError> {
+        let path = self.artifact_path(relative_path)?;
+        let contents = fs::read_to_string(&path).map_err(|source| WorkspaceError::Io {
+            path: path.clone(),
+            source,
+        })?;
+        let fingerprint = fingerprint_contents(relative_path, contents.as_bytes());
+        Ok((path, contents, fingerprint))
+    }
+
     pub fn load_snapshot(&self) -> Result<ProjectSnapshot, WorkspaceError> {
-        let path = paths::at(&self.root, paths::MANIFEST);
+        let path = self.artifact_path(paths::MANIFEST)?;
         let raw = fs::read_to_string(&path).map_err(|source| WorkspaceError::Io {
             path: path.clone(),
             source,
@@ -153,10 +299,10 @@ impl Workspace {
         &self,
         manifest: &ProjectManifest,
     ) -> Result<ProjectManifest, WorkspaceError> {
-        validate_manifest(&paths::at(&self.root, paths::MANIFEST), manifest)?;
+        validate_manifest(&self.artifact_path(paths::MANIFEST)?, manifest)?;
         let mut saved = manifest.clone();
         saved.updated_at = Utc::now();
-        let path = paths::at(&self.root, paths::MANIFEST);
+        let path = self.artifact_path(paths::MANIFEST)?;
         let json = serde_json::to_vec_pretty(&saved).map_err(|source| WorkspaceError::Json {
             path: path.clone(),
             source,
@@ -166,7 +312,7 @@ impl Workspace {
     }
 
     pub fn load_evidence(&self) -> Result<Vec<EvidenceSource>, WorkspaceError> {
-        let path = paths::at(&self.root, paths::SOURCES);
+        let path = self.artifact_path(paths::SOURCES)?;
         let contents = fs::read_to_string(&path).map_err(|source| WorkspaceError::Io {
             path: path.clone(),
             source,
@@ -189,7 +335,7 @@ impl Workspace {
     pub fn save_evidence(&self, sources: &[EvidenceSource]) -> Result<(), WorkspaceError> {
         validate_evidence_sources(sources)
             .map_err(|error| WorkspaceError::Validation(error.to_string()))?;
-        let path = paths::at(&self.root, paths::SOURCES);
+        let path = self.artifact_path(paths::SOURCES)?;
         let mut contents = String::new();
         for source in sources {
             let line = serde_json::to_string(source).map_err(|error| WorkspaceError::Json {
@@ -203,7 +349,7 @@ impl Workspace {
     }
 
     pub fn load_competitors(&self) -> Result<Vec<Competitor>, WorkspaceError> {
-        let path = paths::at(&self.root, paths::COMPETITORS);
+        let path = self.artifact_path(paths::COMPETITORS)?;
         let mut reader = csv::ReaderBuilder::new()
             .from_path(&path)
             .map_err(|source| WorkspaceError::Csv {
@@ -227,7 +373,7 @@ impl Workspace {
     }
 
     pub fn save_competitors(&self, competitors: &[Competitor]) -> Result<(), WorkspaceError> {
-        let path = paths::at(&self.root, paths::COMPETITORS);
+        let path = self.artifact_path(paths::COMPETITORS)?;
         let currency = self.load_snapshot()?.manifest.currency;
         validate_competitors(competitors, &currency)
             .map_err(|error| WorkspaceError::Validation(error.to_string()))?;
@@ -255,7 +401,7 @@ impl Workspace {
     }
 
     pub fn load_assumptions(&self) -> Result<CostAssumptions, WorkspaceError> {
-        let path = paths::at(&self.root, paths::ASSUMPTIONS);
+        let path = self.artifact_path(paths::ASSUMPTIONS)?;
         let contents = fs::read_to_string(&path).map_err(|source| WorkspaceError::Io {
             path: path.clone(),
             source,
@@ -272,7 +418,7 @@ impl Workspace {
     }
 
     pub fn save_assumptions(&self, assumptions: &CostAssumptions) -> Result<(), WorkspaceError> {
-        let path = paths::at(&self.root, paths::ASSUMPTIONS);
+        let path = self.artifact_path(paths::ASSUMPTIONS)?;
         validate_assumptions(assumptions, &self.load_snapshot()?.manifest.currency)
             .map_err(|error| WorkspaceError::Validation(error.to_string()))?;
         let json =
@@ -283,8 +429,11 @@ impl Workspace {
         atomic::write(&path, &with_newline(json))
     }
 
-    pub fn save_scenarios(&self, scenarios: &[EconomicsScenario]) -> Result<(), WorkspaceError> {
-        let path = paths::at(&self.root, paths::SCENARIOS);
+    pub fn save_scenarios(
+        &self,
+        scenarios: &[EconomicsScenario],
+    ) -> Result<ArtifactFingerprint, WorkspaceError> {
+        let path = self.artifact_path(paths::SCENARIOS)?;
         let mut writer = csv::WriterBuilder::new()
             .has_headers(false)
             .terminator(csv::Terminator::Any(b'\n'))
@@ -339,11 +488,12 @@ impl Workspace {
             path: path.clone(),
             source: error.into_error(),
         })?;
-        atomic::write(&path, &contents)
+        atomic::write(&path, &contents)?;
+        Ok(fingerprint_contents(paths::SCENARIOS, &contents))
     }
 
     pub fn load_scenarios(&self) -> Result<Vec<EconomicsScenario>, WorkspaceError> {
-        let path = paths::at(&self.root, paths::SCENARIOS);
+        let path = self.artifact_path(paths::SCENARIOS)?;
         let mut reader = csv::ReaderBuilder::new()
             .from_path(&path)
             .map_err(|source| WorkspaceError::Csv {
@@ -382,26 +532,37 @@ impl Workspace {
     }
 
     pub fn load_report_sections(&self) -> Result<ReportSections, WorkspaceError> {
-        let path = paths::at(&self.root, paths::REPORT_SECTIONS);
+        let path = self.artifact_path(paths::REPORT_SECTIONS)?;
         let raw = fs::read_to_string(&path).map_err(|source| WorkspaceError::Io {
             path: path.clone(),
             source,
         })?;
-        serde_json::from_str(&raw).map_err(|source| WorkspaceError::Json { path, source })
+        let sections = serde_json::from_str(&raw).map_err(|source| WorkspaceError::Json {
+            path: path.clone(),
+            source,
+        })?;
+        validate_report_sections(&path, &sections)?;
+        Ok(sections)
     }
     pub fn save_report_sections(&self, sections: &ReportSections) -> Result<(), WorkspaceError> {
-        let path = paths::at(&self.root, paths::REPORT_SECTIONS);
+        let path = self.artifact_path(paths::REPORT_SECTIONS)?;
+        validate_report_sections(&path, sections)?;
         let json = serde_json::to_vec_pretty(sections).map_err(|source| WorkspaceError::Json {
             path: path.clone(),
             source,
         })?;
         atomic::write(&path, &with_newline(json))
     }
-    pub fn write_opportunity_report(&self, markdown: &str) -> Result<(), WorkspaceError> {
-        atomic::write(
-            &paths::at(&self.root, paths::OPPORTUNITY_REPORT),
+    pub fn write_opportunity_report(
+        &self,
+        markdown: &str,
+    ) -> Result<ArtifactFingerprint, WorkspaceError> {
+        let path = self.artifact_path(paths::OPPORTUNITY_REPORT)?;
+        atomic::write(&path, markdown.as_bytes())?;
+        Ok(fingerprint_contents(
+            paths::OPPORTUNITY_REPORT,
             markdown.as_bytes(),
-        )
+        ))
     }
 }
 
@@ -412,6 +573,13 @@ fn scenario_name(scenario: &EconomicsScenario) -> String {
         merchant_core::ScenarioName::High => "high",
     }
     .to_owned()
+}
+
+fn fingerprint_contents(relative_path: &str, contents: &[u8]) -> ArtifactFingerprint {
+    ArtifactFingerprint {
+        path: relative_path.to_owned(),
+        sha256: format!("{:x}", Sha256::digest(contents)),
+    }
 }
 
 fn competitor_from_csv(row: CompetitorCsv) -> Result<Competitor, WorkspaceError> {
@@ -514,6 +682,19 @@ fn validate_manifest(path: &Path, manifest: &ProjectManifest) -> Result<(), Work
     validate_currency(&manifest.currency).map_err(|error| invalid_manifest(path, error.to_string()))
 }
 
+fn validate_report_sections(path: &Path, sections: &ReportSections) -> Result<(), WorkspaceError> {
+    if sections.schema_version != SCHEMA_VERSION {
+        return Err(WorkspaceError::InvalidProject {
+            path: path.to_path_buf(),
+            message: format!(
+                "report sections schema version {} is not supported",
+                sections.schema_version
+            ),
+        });
+    }
+    Ok(())
+}
+
 fn invalid_manifest(path: &Path, message: String) -> WorkspaceError {
     WorkspaceError::InvalidProject {
         path: path.to_path_buf(),
@@ -533,7 +714,62 @@ fn project_folder_name(name: &str) -> String {
             previous_was_separator = true;
         }
     }
-    slug.trim_matches('-').to_owned()
+    let slug = slug.trim_matches('-').to_owned();
+    let slug = if slug.is_empty() {
+        let code_points = name
+            .trim()
+            .chars()
+            .map(|character| format!("{:x}", character as u32))
+            .collect::<Vec<_>>()
+            .join("-");
+        format!("project-{code_points}")
+    } else {
+        slug
+    };
+    let slug = if is_windows_reserved_name(&slug) {
+        format!("{slug}-project")
+    } else {
+        slug
+    };
+    bounded_folder_name(&slug, name.trim())
+}
+
+fn bounded_folder_name(slug: &str, original_name: &str) -> String {
+    const MAX_COMPONENT_BYTES: usize = 120;
+    const HASH_BYTES: usize = 12;
+
+    if slug.len() <= MAX_COMPONENT_BYTES {
+        return slug.to_owned();
+    }
+    let hash = format!("{:x}", Sha256::digest(original_name.as_bytes()));
+    let prefix_length = MAX_COMPONENT_BYTES - HASH_BYTES - 1;
+    format!("{}-{}", &slug[..prefix_length], &hash[..HASH_BYTES])
+}
+
+fn is_windows_reserved_name(name: &str) -> bool {
+    let upper = name.to_ascii_uppercase();
+    matches!(upper.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+        || ["COM", "LPT"].iter().any(|prefix| {
+            upper.strip_prefix(prefix).is_some_and(|suffix| {
+                matches!(suffix, "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9")
+            })
+        })
+}
+
+fn is_reparse_point(metadata: &fs::Metadata) -> bool {
+    if metadata.file_type().is_symlink() {
+        return true;
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+
+        metadata.file_attributes() & 0x400 != 0
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
 }
 
 fn with_newline(mut contents: Vec<u8>) -> Vec<u8> {
@@ -551,5 +787,28 @@ mod tests {
             project_folder_name("Mechanical Keyboards: India!"),
             "mechanical-keyboards-india"
         );
+    }
+
+    #[test]
+    fn avoids_empty_and_reserved_windows_folder_names() {
+        assert_eq!(
+            project_folder_name("भारत 😀"),
+            "project-92d-93e-930-924-20-1f600"
+        );
+        assert_eq!(project_folder_name("CON"), "con-project");
+        assert_eq!(project_folder_name("LPT9"), "lpt9-project");
+    }
+
+    #[test]
+    fn bounds_long_portable_folder_names_with_a_stable_suffix() {
+        let long_ascii = "x".repeat(300);
+        let long_unicode = "₹".repeat(200);
+        let ascii_slug = project_folder_name(&long_ascii);
+        let unicode_slug = project_folder_name(&long_unicode);
+
+        assert!(ascii_slug.len() <= 120);
+        assert!(unicode_slug.len() <= 120);
+        assert_eq!(ascii_slug, project_folder_name(&long_ascii));
+        assert_ne!(ascii_slug, unicode_slug);
     }
 }

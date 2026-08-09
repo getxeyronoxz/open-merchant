@@ -131,26 +131,23 @@ impl MerchantService {
         let workspace = Workspace::open(root)?;
         let started_at = chrono::Utc::now();
         let run_id = format!("RUN-{}", uuid::Uuid::new_v4());
-        let assumptions = workspace.load_assumptions()?;
-        let evidence = workspace.load_evidence()?;
-        let scenarios = calculate_scenarios(&assumptions)
+        let source = workspace.snapshot_report_inputs()?;
+        let scenarios = calculate_scenarios(&source.assumptions)
             .map_err(|error| AppError::Domain(error.to_string()))?;
-        workspace.save_scenarios(&scenarios)?;
+        let scenarios_fingerprint = workspace.save_scenarios(&scenarios)?;
         let input = ReportInput {
-            manifest: workspace.load_snapshot()?.manifest,
-            sections: workspace.load_report_sections()?,
-            evidence: evidence.clone(),
-            assumptions,
+            manifest: source.manifest,
+            sections: source.sections,
+            evidence: source.evidence.clone(),
+            competitor_statistics: competitor_statistics(&source.competitors),
+            assumptions: source.assumptions,
             scenarios,
             run_id: run_id.clone(),
             generated_at: chrono::Utc::now(),
         };
         let markdown = render_opportunity_report(&input);
-        workspace.write_opportunity_report(&markdown)?;
-        let output_artifacts = ["economics/scenarios.csv", "reports/opportunity-report.md"]
-            .into_iter()
-            .map(|path| workspace.fingerprint_artifact(path))
-            .collect::<Result<Vec<_>, _>>()?;
+        let report_fingerprint = workspace.write_opportunity_report(&markdown)?;
+        let output_artifacts = vec![scenarios_fingerprint, report_fingerprint];
         workspace.append_run(&RunRecord {
             schema_version: merchant_core::SCHEMA_VERSION,
             run_id: run_id.clone(),
@@ -159,17 +156,13 @@ impl MerchantService {
             completed_at: chrono::Utc::now(),
             status: RunStatus::Succeeded,
             app_version: env!("CARGO_PKG_VERSION").into(),
-            input_artifacts: [
-                "sources/sources.jsonl",
-                "market/competitors.csv",
-                "economics/assumptions.json",
-                "reports/report-sections.json",
-            ]
-            .into_iter()
-            .map(|path| workspace.fingerprint_artifact(path))
-            .collect::<Result<Vec<_>, _>>()?,
+            input_artifacts: source.input_artifacts,
             output_artifacts: output_artifacts.clone(),
-            source_ids: evidence.into_iter().map(|source| source.id).collect(),
+            source_ids: source
+                .evidence
+                .into_iter()
+                .map(|source| source.id)
+                .collect(),
             error_summary: None,
         })?;
         for artifact in output_artifacts {
