@@ -106,6 +106,13 @@ fn read_jsonl<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<Vec<T>, Works
         .collect()
 }
 fn fingerprint(path: &Path, relative_path: &str) -> Result<ArtifactFingerprint, WorkspaceError> {
+    let metadata = fs::symlink_metadata(path).map_err(|source| WorkspaceError::Io {
+        path: path.to_path_buf(),
+        source,
+    })?;
+    if metadata.file_type().is_symlink() {
+        return Err(WorkspaceError::SymlinkedArtifact(path.to_path_buf()));
+    }
     let bytes = fs::read(path).map_err(|source| WorkspaceError::Io {
         path: path.to_path_buf(),
         source,

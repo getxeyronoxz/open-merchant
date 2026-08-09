@@ -387,10 +387,16 @@ impl Workspace {
             path: path.clone(),
             source,
         })?;
-        serde_json::from_str(&raw).map_err(|source| WorkspaceError::Json { path, source })
+        let sections = serde_json::from_str(&raw).map_err(|source| WorkspaceError::Json {
+            path: path.clone(),
+            source,
+        })?;
+        validate_report_sections(&path, &sections)?;
+        Ok(sections)
     }
     pub fn save_report_sections(&self, sections: &ReportSections) -> Result<(), WorkspaceError> {
         let path = paths::at(&self.root, paths::REPORT_SECTIONS);
+        validate_report_sections(&path, sections)?;
         let json = serde_json::to_vec_pretty(sections).map_err(|source| WorkspaceError::Json {
             path: path.clone(),
             source,
@@ -514,6 +520,19 @@ fn validate_manifest(path: &Path, manifest: &ProjectManifest) -> Result<(), Work
     validate_currency(&manifest.currency).map_err(|error| invalid_manifest(path, error.to_string()))
 }
 
+fn validate_report_sections(path: &Path, sections: &ReportSections) -> Result<(), WorkspaceError> {
+    if sections.schema_version != SCHEMA_VERSION {
+        return Err(WorkspaceError::InvalidProject {
+            path: path.to_path_buf(),
+            message: format!(
+                "report sections schema version {} is not supported",
+                sections.schema_version
+            ),
+        });
+    }
+    Ok(())
+}
+
 fn invalid_manifest(path: &Path, message: String) -> WorkspaceError {
     WorkspaceError::InvalidProject {
         path: path.to_path_buf(),
@@ -533,7 +552,33 @@ fn project_folder_name(name: &str) -> String {
             previous_was_separator = true;
         }
     }
-    slug.trim_matches('-').to_owned()
+    let slug = slug.trim_matches('-').to_owned();
+    let slug = if slug.is_empty() {
+        let code_points = name
+            .trim()
+            .chars()
+            .map(|character| format!("{:x}", character as u32))
+            .collect::<Vec<_>>()
+            .join("-");
+        format!("project-{code_points}")
+    } else {
+        slug
+    };
+    if is_windows_reserved_name(&slug) {
+        format!("{slug}-project")
+    } else {
+        slug
+    }
+}
+
+fn is_windows_reserved_name(name: &str) -> bool {
+    let upper = name.to_ascii_uppercase();
+    matches!(upper.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+        || ["COM", "LPT"].iter().any(|prefix| {
+            upper.strip_prefix(prefix).is_some_and(|suffix| {
+                matches!(suffix, "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9")
+            })
+        })
 }
 
 fn with_newline(mut contents: Vec<u8>) -> Vec<u8> {
@@ -551,5 +596,15 @@ mod tests {
             project_folder_name("Mechanical Keyboards: India!"),
             "mechanical-keyboards-india"
         );
+    }
+
+    #[test]
+    fn avoids_empty_and_reserved_windows_folder_names() {
+        assert_eq!(
+            project_folder_name("भारत 😀"),
+            "project-92d-93e-930-924-20-1f600"
+        );
+        assert_eq!(project_folder_name("CON"), "con-project");
+        assert_eq!(project_folder_name("LPT9"), "lpt9-project");
     }
 }

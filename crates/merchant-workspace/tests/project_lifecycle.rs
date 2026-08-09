@@ -1,3 +1,6 @@
+use std::fs;
+
+use merchant_core::{ReportSections, SCHEMA_VERSION};
 use merchant_workspace::Workspace;
 
 #[test]
@@ -70,4 +73,44 @@ fn saving_manifest_survives_reopen() {
             .objective,
         "Updated commercial question"
     );
+}
+
+#[test]
+fn create_uses_windows_safe_folders_for_unicode_and_reserved_names() {
+    let temp = tempfile::tempdir().unwrap();
+    let unicode = Workspace::create(temp.path(), "भारत 😀", "Assess demand", "INR").unwrap();
+    let reserved = Workspace::create(temp.path(), "CON", "Assess demand", "INR").unwrap();
+
+    assert_eq!(
+        unicode.root().file_name().unwrap().to_str(),
+        Some("project-92d-93e-930-924-20-1f600")
+    );
+    assert_eq!(
+        reserved.root().file_name().unwrap().to_str(),
+        Some("con-project")
+    );
+    assert!(Workspace::open(unicode.root()).is_ok());
+    assert!(Workspace::open(reserved.root()).is_ok());
+}
+
+#[test]
+fn report_sections_reject_unsupported_schemas_without_overwriting_user_data() {
+    let temp = tempfile::tempdir().unwrap();
+    let workspace =
+        Workspace::create(temp.path(), "Keyboard Study", "Assess demand", "INR").unwrap();
+    let path = workspace.root().join("reports/report-sections.json");
+    let original = fs::read_to_string(&path).unwrap();
+    let unsupported = ReportSections {
+        schema_version: SCHEMA_VERSION + 1,
+        decision_summary: "Future-format data".into(),
+        market_observations: vec![],
+        risks: vec![],
+        opportunities: vec![],
+    };
+
+    assert!(workspace.save_report_sections(&unsupported).is_err());
+    assert_eq!(fs::read_to_string(&path).unwrap(), original);
+
+    fs::write(&path, serde_json::to_string(&unsupported).unwrap()).unwrap();
+    assert!(workspace.load_report_sections().is_err());
 }
