@@ -133,6 +133,7 @@ impl MerchantService {
         let run_id = format!("RUN-{}", uuid::Uuid::new_v4());
         let assumptions = workspace.load_assumptions()?;
         let evidence = workspace.load_evidence()?;
+        let competitor_statistics = competitor_statistics(&workspace.load_competitors()?);
         let scenarios = calculate_scenarios(&assumptions)
             .map_err(|error| AppError::Domain(error.to_string()))?;
         workspace.save_scenarios(&scenarios)?;
@@ -140,6 +141,7 @@ impl MerchantService {
             manifest: workspace.load_snapshot()?.manifest,
             sections: workspace.load_report_sections()?,
             evidence: evidence.clone(),
+            competitor_statistics,
             assumptions,
             scenarios,
             run_id: run_id.clone(),

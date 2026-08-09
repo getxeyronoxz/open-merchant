@@ -1,7 +1,7 @@
 use chrono::Utc;
 use merchant_core::{
-    render_opportunity_report, CostAssumptions, EvidenceSource, ProjectManifest, ReportInput,
-    ReportSections, SCHEMA_VERSION,
+    render_opportunity_report, CompetitorStatistics, CostAssumptions, EvidenceSource,
+    ProjectManifest, ReportInput, ReportSections, SCHEMA_VERSION,
 };
 use uuid::Uuid;
 
@@ -19,6 +19,13 @@ fn report_never_invents_empty_narrative() {
         },
         sections: ReportSections::empty(),
         evidence: Vec::<EvidenceSource>::new(),
+        competitor_statistics: CompetitorStatistics {
+            valid_price_count: 0,
+            minimum: None,
+            maximum: None,
+            average: None,
+            median: None,
+        },
         assumptions: CostAssumptions::empty("INR"),
         scenarios: vec![],
         run_id: "RUN-001".into(),

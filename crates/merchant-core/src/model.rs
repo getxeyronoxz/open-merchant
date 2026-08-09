@@ -163,6 +163,7 @@ pub struct ReportInput {
     pub manifest: ProjectManifest,
     pub sections: ReportSections,
     pub evidence: Vec<EvidenceSource>,
+    pub competitor_statistics: crate::CompetitorStatistics,
     pub assumptions: CostAssumptions,
     pub scenarios: Vec<crate::EconomicsScenario>,
     pub run_id: String,
