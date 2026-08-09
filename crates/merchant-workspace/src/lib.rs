@@ -8,4 +8,4 @@ mod project;
 pub use artifacts::ArtifactDescriptor;
 pub use error::WorkspaceError;
 pub use history::{ArtifactFingerprint, ProvenanceRecord, RunOperation, RunRecord, RunStatus};
-pub use project::Workspace;
+pub use project::{ReportWorkspaceSnapshot, Workspace};

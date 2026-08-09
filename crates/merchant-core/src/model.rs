@@ -138,7 +138,7 @@ pub struct CostAssumptions {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ReportSections {
     pub schema_version: u32,
     pub decision_summary: String,

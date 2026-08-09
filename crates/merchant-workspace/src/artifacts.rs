@@ -17,23 +17,27 @@ pub struct ArtifactDescriptor {
 
 impl Workspace {
     pub fn list_artifacts(&self) -> Result<Vec<ArtifactDescriptor>, WorkspaceError> {
-        Ok(paths::ALL_ARTIFACTS
+        paths::ALL_ARTIFACTS
             .iter()
-            .map(|relative_path| ArtifactDescriptor {
-                relative_path: (*relative_path).to_owned(),
-                kind: kind(relative_path).to_owned(),
-                generated: matches!(*relative_path, paths::SCENARIOS | paths::OPPORTUNITY_REPORT),
-                exists: fs::symlink_metadata(self.root().join(relative_path))
-                    .is_ok_and(|metadata| metadata.file_type().is_file()),
+            .map(|relative_path| {
+                Ok(ArtifactDescriptor {
+                    relative_path: (*relative_path).to_owned(),
+                    kind: kind(relative_path).to_owned(),
+                    generated: matches!(
+                        *relative_path,
+                        paths::SCENARIOS | paths::OPPORTUNITY_REPORT
+                    ),
+                    exists: self.artifact_path(relative_path)?.is_file(),
+                })
             })
-            .collect())
+            .collect::<Result<Vec<_>, WorkspaceError>>()
     }
 
     pub fn read_artifact(&self, relative_path: &str) -> Result<String, WorkspaceError> {
         if !paths::ALL_ARTIFACTS.contains(&relative_path) {
             return Err(WorkspaceError::UnknownArtifact(relative_path.to_owned()));
         }
-        let path = self.root().join(relative_path);
+        let path = self.artifact_path(relative_path)?;
         let metadata = fs::symlink_metadata(&path).map_err(|source| WorkspaceError::Io {
             path: path.clone(),
             source,

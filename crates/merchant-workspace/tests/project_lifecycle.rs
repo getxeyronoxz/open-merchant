@@ -94,6 +94,18 @@ fn create_uses_windows_safe_folders_for_unicode_and_reserved_names() {
 }
 
 #[test]
+fn create_uses_bounded_folders_for_long_ascii_and_unicode_names() {
+    let temp = tempfile::tempdir().unwrap();
+    let ascii = Workspace::create(temp.path(), &"x".repeat(300), "Assess demand", "INR").unwrap();
+    let unicode = Workspace::create(temp.path(), &"₹".repeat(200), "Assess demand", "INR").unwrap();
+
+    for workspace in [ascii, unicode] {
+        assert!(workspace.root().file_name().unwrap().len() <= 120);
+        assert!(Workspace::open(workspace.root()).is_ok());
+    }
+}
+
+#[test]
 fn report_sections_reject_unsupported_schemas_without_overwriting_user_data() {
     let temp = tempfile::tempdir().unwrap();
     let workspace =
@@ -113,4 +125,24 @@ fn report_sections_reject_unsupported_schemas_without_overwriting_user_data() {
 
     fs::write(&path, serde_json::to_string(&unsupported).unwrap()).unwrap();
     assert!(workspace.load_report_sections().is_err());
+}
+
+#[test]
+fn report_sections_reject_unknown_fields_without_overwriting_user_data() {
+    let temp = tempfile::tempdir().unwrap();
+    let workspace =
+        Workspace::create(temp.path(), "Keyboard Study", "Assess demand", "INR").unwrap();
+    let path = workspace.root().join("reports/report-sections.json");
+    let contents = r#"{
+  "schemaVersion": 1,
+  "decisionSummary": "Keep this data",
+  "marketObservations": [],
+  "risks": [],
+  "opportunities": [],
+  "futureField": "must not be silently discarded"
+}"#;
+    fs::write(&path, contents).unwrap();
+
+    assert!(workspace.load_report_sections().is_err());
+    assert_eq!(fs::read_to_string(&path).unwrap(), contents);
 }

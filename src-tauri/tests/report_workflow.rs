@@ -74,6 +74,17 @@ fn generating_a_report_records_its_run_and_output_provenance() {
             sha256(snapshot.root.as_ref(), &artifact.path)
         );
     }
+    assert!(runs[0]
+        .input_artifacts
+        .iter()
+        .any(|artifact| artifact.path == "merchant-project.json"));
+    let original_assumptions_hash = runs[0]
+        .input_artifacts
+        .iter()
+        .find(|artifact| artifact.path == "economics/assumptions.json")
+        .unwrap()
+        .sha256
+        .clone();
 
     let provenance = service.list_provenance(&snapshot.root).unwrap();
     assert_eq!(provenance.len(), 2);
@@ -94,6 +105,21 @@ fn generating_a_report_records_its_run_and_output_provenance() {
     assert_eq!(runs.len(), 2);
     assert_eq!(provenance.len(), 4);
     assert_ne!(runs[0].run_id, runs[1].run_id);
+    for artifact in &runs[1].input_artifacts {
+        assert_eq!(
+            artifact.sha256,
+            sha256(snapshot.root.as_ref(), &artifact.path)
+        );
+    }
+    assert_ne!(
+        original_assumptions_hash,
+        runs[1]
+            .input_artifacts
+            .iter()
+            .find(|artifact| artifact.path == "economics/assumptions.json")
+            .unwrap()
+            .sha256
+    );
     for artifact in &runs[1].output_artifacts {
         assert_eq!(
             artifact.sha256,
