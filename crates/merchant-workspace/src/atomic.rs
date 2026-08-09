@@ -37,3 +37,25 @@ pub fn write(path: &Path, contents: &[u8]) -> Result<(), WorkspaceError> {
         source,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{fs, io};
+
+    use super::*;
+
+    #[test]
+    fn failed_replacement_preserves_the_last_valid_file() {
+        let directory = tempfile::tempdir().unwrap();
+        let destination = directory.path().join("merchant-project.json");
+        fs::write(&destination, b"last valid state").unwrap();
+
+        let error = write_with_replacement(&destination, b"new state", |_, _| {
+            Err(io::Error::other("simulated replacement interruption"))
+        })
+        .unwrap_err();
+
+        assert_eq!(error.kind(), io::ErrorKind::Other);
+        assert_eq!(fs::read(&destination).unwrap(), b"last valid state");
+    }
+}
