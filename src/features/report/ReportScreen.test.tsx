@@ -77,6 +77,8 @@ describe("ReportScreen", () => {
     await user.click(screen.getByRole("button", { name: "Save report notes" }));
     await user.clear(screen.getByLabelText("Decision summary"));
     await user.type(screen.getByLabelText("Decision summary"), "Newer unsaved summary");
+    expect(screen.getByRole("button", { name: "Saving report notes…" })).toBeDisabled();
+    expect(saveSections).toHaveBeenCalledTimes(1);
     await act(async () => finishSave());
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Save report notes" })).not.toBeDisabled());

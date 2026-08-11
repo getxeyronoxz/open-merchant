@@ -3,6 +3,19 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { EvidenceScreen } from "./EvidenceScreen";
+import type { EvidenceSource } from "../../types";
+
+const existingSource: EvidenceSource = {
+  schemaVersion: 1,
+  id: "S-001",
+  url: "https://example.com/existing",
+  title: "Existing source",
+  notes: "",
+  observations: [],
+  observedAt: "2026-08-11T12:00:00Z",
+  createdAt: "2026-08-11T12:00:00Z",
+  updatedAt: "2026-08-11T12:00:00Z",
+};
 
 describe("EvidenceScreen", () => {
   it("adds an evidence record and persists it", async () => {
@@ -69,5 +82,20 @@ describe("EvidenceScreen", () => {
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Save source" })).not.toBeDisabled());
     expect(screen.getByLabelText("Source title")).toHaveValue("Newer unsaved title");
+  });
+
+  it("prevents an editor save while a source removal is pending", async () => {
+    const user = userEvent.setup();
+    let finishRemoval!: () => void;
+    const saveEvidence = vi.fn().mockReturnValue(new Promise<void>((resolve) => { finishRemoval = resolve; }));
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<EvidenceScreen evidence={[existingSource]} onSave={saveEvidence} />);
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    expect(screen.getByRole("button", { name: "Save source" })).toBeDisabled();
+    expect(saveEvidence).toHaveBeenCalledTimes(1);
+    await act(async () => finishRemoval());
+    confirm.mockRestore();
   });
 });

@@ -51,12 +51,17 @@ export function EconomicsScreen({
 
   const updateDraft = (next: CostAssumptions) => {
     draftRevision.current += 1;
-    setSaveStatus("idle");
+    if (!pendingSave.current) {
+      setSaveStatus("idle");
+    }
     setDraft(next);
   };
 
   const save = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (pendingSave.current) {
+      return;
+    }
     const next = {
       ...draft,
       acquisitionCost: canonical(draft.acquisitionCost) ?? "0.00",

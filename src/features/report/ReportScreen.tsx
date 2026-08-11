@@ -60,12 +60,17 @@ export function ReportScreen({
   const updateDraft = (next: ReportSections) => {
     draftRevision.current += 1;
     setDraft(next);
-    setSaveState("idle");
+    if (!pendingSave.current) {
+      setSaveState("idle");
+    }
     setSaveError(null);
   };
 
   const save = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (pendingSave.current) {
+      return;
+    }
     const next = {
       ...draft,
       marketObservations: draft.marketObservations.map((line) => line.trim()).filter(Boolean),

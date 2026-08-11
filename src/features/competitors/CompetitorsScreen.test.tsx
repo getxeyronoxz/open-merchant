@@ -119,4 +119,19 @@ describe("CompetitorsScreen", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Save competitor" })).not.toBeDisabled());
     expect(screen.getByLabelText("Product")).toHaveValue("Newer unsaved product");
   });
+
+  it("prevents an editor save while a competitor removal is pending", async () => {
+    const user = userEvent.setup();
+    let finishRemoval!: () => void;
+    const save = vi.fn().mockReturnValue(new Promise<void>((resolve) => { finishRemoval = resolve; }));
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<CompetitorsScreen currency="INR" competitors={[linkedCompetitor]} evidence={[linkedEvidence]} onSave={save} />);
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    expect(screen.getByRole("button", { name: "Save competitor" })).toBeDisabled();
+    expect(save).toHaveBeenCalledTimes(1);
+    await act(async () => finishRemoval());
+    confirm.mockRestore();
+  });
 });

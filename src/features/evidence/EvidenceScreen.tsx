@@ -183,7 +183,7 @@ export function EvidenceScreen({
               ))}
             </div>
             <div className="mt-5 flex flex-wrap items-center gap-3">
-              <Button disabled={status === "saving"} icon="save" type="submit" variant="primary">
+              <Button disabled={mutationActive} icon="save" type="submit" variant="primary">
                 {status === "saving" ? "Saving source…" : "Save source"}
               </Button>
               <Button disabled={status === "saving"} onClick={() => setDraft(null)} type="button">Cancel</Button>

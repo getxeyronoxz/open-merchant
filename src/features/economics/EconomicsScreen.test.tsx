@@ -64,6 +64,8 @@ describe("EconomicsScreen", () => {
     await user.click(screen.getByRole("button", { name: "Save assumptions" }));
     await user.clear(screen.getByLabelText("Acquisition cost"));
     await user.type(screen.getByLabelText("Acquisition cost"), "2500");
+    expect(screen.getByRole("button", { name: "Saving assumptions…" })).toBeDisabled();
+    expect(save).toHaveBeenCalledTimes(1);
     await act(async () => finishSave());
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Save assumptions" })).not.toBeDisabled());
