@@ -7,6 +7,7 @@ All notable changes to Open Merchant are documented in this file.
 ### Changed
 
 - Refreshed the Open Merchant application icon across the Windows desktop bundle.
+- Modernized the complete V0 interface with a collapsible workspace rail, clearer forms and tables, accessible workflow feedback, and responsive competitor, economics, report, and artifact views.
 
 ### Fixed
 
