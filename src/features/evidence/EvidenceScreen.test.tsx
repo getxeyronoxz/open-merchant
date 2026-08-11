@@ -92,10 +92,14 @@ describe("EvidenceScreen", () => {
     render(<EvidenceScreen evidence={[existingSource]} onSave={saveEvidence} />);
 
     await user.click(screen.getByRole("button", { name: "Edit" }));
+    await user.clear(screen.getByLabelText("Source title"));
+    await user.type(screen.getByLabelText("Source title"), "Unsaved source edit");
     await user.click(screen.getByRole("button", { name: "Remove" }));
     expect(screen.getByRole("button", { name: "Save source" })).toBeDisabled();
     expect(saveEvidence).toHaveBeenCalledTimes(1);
     await act(async () => finishRemoval());
+    expect(screen.getByRole("status")).toHaveTextContent("Source removed · editor changes not saved");
+    expect(screen.getByLabelText("Source title")).toHaveValue("Unsaved source edit");
     confirm.mockRestore();
   });
 });

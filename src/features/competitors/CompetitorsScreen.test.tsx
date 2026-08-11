@@ -128,10 +128,14 @@ describe("CompetitorsScreen", () => {
     render(<CompetitorsScreen currency="INR" competitors={[linkedCompetitor]} evidence={[linkedEvidence]} onSave={save} />);
 
     await user.click(screen.getByRole("button", { name: "Edit" }));
+    await user.clear(screen.getByLabelText("Product"));
+    await user.type(screen.getByLabelText("Product"), "Unsaved competitor edit");
     await user.click(screen.getByRole("button", { name: "Remove" }));
     expect(screen.getByRole("button", { name: "Save competitor" })).toBeDisabled();
     expect(save).toHaveBeenCalledTimes(1);
     await act(async () => finishRemoval());
+    expect(screen.getByRole("status")).toHaveTextContent("Competitor removed · editor changes not saved");
+    expect(screen.getByLabelText("Product")).toHaveValue("Unsaved competitor edit");
     confirm.mockRestore();
   });
 });

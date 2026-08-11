@@ -4,7 +4,7 @@ import { Button, EmptyState, InsetPanel, PageHeader, Panel, StatCard, StatusMess
 import type { Competitor, CompetitorStatistics, EvidenceSource } from "../../types";
 import { formatFixedCurrency } from "../../lib/formatCurrency";
 
-type CompetitorStatus = "idle" | "saving" | "saved" | "unsaved" | "removing" | "error";
+type CompetitorStatus = "idle" | "saving" | "saved" | "unsaved" | "removing" | "removed" | "error";
 
 function nextCompetitorId(competitors: Competitor[]) {
   const highest = competitors.reduce((max, competitor) => Math.max(max, Number(/^C-(\d+)$/.exec(competitor.id)?.[1] ?? 0)), 0);
@@ -103,7 +103,7 @@ export function CompetitorsScreen({
     setError(null);
     try {
       await onSave(competitors.filter((item) => item.id !== competitor.id));
-      setStatus("saved");
+      setStatus("removed");
     } catch (reason) {
       setStatus("error");
       setError(reason instanceof Error ? reason.message : "The competitor could not be removed.");
@@ -120,10 +120,12 @@ export function CompetitorsScreen({
         ? "Competitor saved · newer edits not saved"
       : status === "removing"
         ? "Removing competitor"
+        : status === "removed"
+          ? draft ? "Competitor removed · editor changes not saved" : "Competitor removed"
         : status === "error"
           ? "Competitor action failed"
           : null;
-  const statusTone = status === "saved" ? "success" : status === "error" ? "error" : status === "idle" ? "neutral" : "working";
+  const statusTone = status === "saved" || status === "removed" ? "success" : status === "error" ? "error" : status === "idle" ? "neutral" : "working";
   const mutationActive = status === "saving" || status === "removing";
   const statisticValues = [
     ["Minimum", statistics?.minimum],

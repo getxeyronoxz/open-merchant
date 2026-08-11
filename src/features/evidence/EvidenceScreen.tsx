@@ -3,7 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import { Button, EmptyState, InsetPanel, PageHeader, Panel, StatusMessage } from "../../components/ui";
 import type { EvidenceSource, Observation } from "../../types";
 
-type EvidenceStatus = "idle" | "saving" | "saved" | "unsaved" | "removing" | "error";
+type EvidenceStatus = "idle" | "saving" | "saved" | "unsaved" | "removing" | "removed" | "error";
 
 function nextSourceId(evidence: EvidenceSource[]) {
   const highest = evidence.reduce((max, source) => {
@@ -104,7 +104,7 @@ export function EvidenceScreen({
     setError(null);
     try {
       await onSave(evidence.filter((item) => item.id !== source.id));
-      setStatus("saved");
+      setStatus("removed");
     } catch (reason) {
       setStatus("error");
       setError(reason instanceof Error ? reason.message : "The source could not be removed.");
@@ -121,10 +121,12 @@ export function EvidenceScreen({
         ? "Source saved · newer edits not saved"
       : status === "removing"
         ? "Removing source"
+        : status === "removed"
+          ? draft ? "Source removed · editor changes not saved" : "Source removed"
         : status === "error"
           ? "Source action failed"
           : null;
-  const statusTone = status === "saved" ? "success" : status === "error" ? "error" : status === "idle" ? "neutral" : "working";
+  const statusTone = status === "saved" || status === "removed" ? "success" : status === "error" ? "error" : status === "idle" ? "neutral" : "working";
   const mutationActive = status === "saving" || status === "removing";
 
   return (
