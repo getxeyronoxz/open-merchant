@@ -14,7 +14,7 @@ export function StatusMessage({ children, className = "", tone = "neutral" }: { 
     <span
       aria-live="polite"
       className={`inline-flex items-center gap-1.5 text-sm font-medium ${toneClass} ${className}`}
-      role={tone === "error" ? "alert" : "status"}
+      role="status"
     >
       {icon ? <Icon className="size-4" name={icon} /> : null}
       {children}
