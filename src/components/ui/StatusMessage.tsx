@@ -4,7 +4,7 @@ import { Icon } from "./Icon";
 
 export type StatusTone = "neutral" | "working" | "success" | "error";
 
-export function StatusMessage({ children, className = "", tone = "neutral" }: { children?: ReactNode; className?: string; tone?: StatusTone }) {
+export function StatusMessage({ children, className = "", label, tone = "neutral" }: { children?: ReactNode; className?: string; label?: string; tone?: StatusTone }) {
   if (!children) return <span aria-live="polite" className="sr-only" />;
 
   const toneClass = tone === "success" ? "text-emerald-300" : tone === "error" ? "text-rose-300" : "text-stone-400";
@@ -13,6 +13,7 @@ export function StatusMessage({ children, className = "", tone = "neutral" }: { 
   return (
     <span
       aria-live="polite"
+      aria-label={label}
       className={`inline-flex items-center gap-1.5 text-sm font-medium ${toneClass} ${className}`}
       role="status"
     >
