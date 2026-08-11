@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useProject } from "../../context/ProjectContext";
 import type { RecentProject } from "../../types";
 import { Button, EmptyState, InsetPanel, Panel, StatusMessage } from "../../components/ui";
-
-type HomeAction = "choosing-create-folder" | "creating" | "opening" | null;
 
 export function HomeScreen() {
   const { client, setProject } = useProject();
@@ -14,8 +12,11 @@ export function HomeScreen() {
   const [currency, setCurrency] = useState("INR");
   const [recents, setRecents] = useState<RecentProject[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [activeAction, setActiveAction] = useState<HomeAction>(null);
+  const [choosingCreateFolder, setChoosingCreateFolder] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [opening, setOpening] = useState(false);
   const [removingPath, setRemovingPath] = useState<string | null>(null);
+  const projectTransition = useRef(0);
 
   const refreshRecents = async () => {
     try {
@@ -31,21 +32,22 @@ export function HomeScreen() {
 
   const startCreate = async () => {
     setError(null);
-    setActiveAction("choosing-create-folder");
+    setChoosingCreateFolder(true);
     try {
       const selected = await client.chooseDirectory("Choose where to create your project");
       if (selected) setParentDirectory(selected);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The folder picker could not be opened.");
     } finally {
-      setActiveAction(null);
+      setChoosingCreateFolder(false);
     }
   };
 
   const createWorkspace = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!parentDirectory) return;
-    setActiveAction("creating");
+    const transition = ++projectTransition.current;
+    setCreating(true);
     setError(null);
     try {
       const project = await client.createProject({
@@ -54,25 +56,27 @@ export function HomeScreen() {
         objective: objective.trim(),
         currency: currency.trim(),
       });
-      setProject(project);
+      if (transition === projectTransition.current) setProject(project);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The workspace could not be created.");
     } finally {
-      setActiveAction(null);
+      setCreating(false);
     }
   };
 
   const openWorkspace = async (root?: string) => {
     setError(null);
-    setActiveAction("opening");
+    const transition = ++projectTransition.current;
+    setOpening(true);
     try {
       const selected = root ?? (await client.chooseDirectory("Choose an Open Merchant project folder"));
       if (!selected) return;
-      setProject(await client.openProject(selected));
+      const project = await client.openProject(selected);
+      if (transition === projectTransition.current) setProject(project);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "That folder is not an Open Merchant project.");
     } finally {
-      setActiveAction(null);
+      setOpening(false);
     }
   };
 
@@ -89,13 +93,11 @@ export function HomeScreen() {
     }
   };
 
-  const actionStatus = activeAction === "creating"
-    ? "Creating workspace"
-    : activeAction === "opening"
-      ? "Opening project"
-      : activeAction === "choosing-create-folder"
-        ? "Choosing folder"
-        : null;
+  const actionStatus = [
+    choosingCreateFolder ? "Choosing folder" : null,
+    creating ? "Creating workspace" : null,
+    opening ? "Opening project" : null,
+  ].filter(Boolean).join(" · ") || null;
 
   return (
     <main className="min-h-screen bg-[var(--surface-app)] px-6 py-10 text-stone-50 sm:px-10 sm:py-14">
@@ -113,8 +115,8 @@ export function HomeScreen() {
                 <h2 className="text-xl font-semibold tracking-tight">Start a research project</h2>
                 <p className="mt-1 text-sm text-stone-500">Create a local workspace or open an existing project folder.</p>
               </div>
-              <Button disabled={activeAction === "choosing-create-folder"} icon="plus" onClick={() => void startCreate()} type="button" variant="primary">
-                {activeAction === "choosing-create-folder" ? "Choosing folder…" : "Create project"}
+              <Button disabled={choosingCreateFolder} icon="plus" onClick={() => void startCreate()} type="button" variant="primary">
+                {choosingCreateFolder ? "Choosing folder…" : "Create project"}
               </Button>
             </div>
 
@@ -136,8 +138,8 @@ export function HomeScreen() {
                   Currency
                   <input className="min-h-11 px-3 py-2 text-base uppercase" value={currency} maxLength={3} onChange={(event) => setCurrency(event.target.value.toUpperCase())} required />
                 </label>
-                <Button className="mt-1 w-full" disabled={activeAction === "creating"} icon="folder" type="submit" variant="primary">
-                  {activeAction === "creating" ? "Creating workspace…" : "Create workspace"}
+                <Button className="mt-1 w-full" disabled={creating} icon="folder" type="submit" variant="primary">
+                  {creating ? "Creating workspace…" : "Create workspace"}
                 </Button>
               </form>
             ) : (
@@ -145,8 +147,8 @@ export function HomeScreen() {
             )}
 
             <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-stone-800 pt-6">
-              <Button disabled={activeAction === "opening"} icon="folder" onClick={() => void openWorkspace()} type="button">
-                {activeAction === "opening" ? "Opening project…" : "Open project folder"}
+              <Button disabled={opening} icon="folder" onClick={() => void openWorkspace()} type="button">
+                {opening ? "Opening project…" : "Open project folder"}
               </Button>
               <StatusMessage tone="working">{actionStatus}</StatusMessage>
             </div>

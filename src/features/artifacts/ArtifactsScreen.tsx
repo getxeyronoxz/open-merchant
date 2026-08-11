@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { EmptyState, PageHeader, Panel, StatusMessage, Tabs } from "../../components/ui";
 import type { ArtifactDescriptor, DesktopClient, RunRecord } from "../../types";
@@ -22,12 +22,16 @@ export function ArtifactsScreen({ client, projectRoot }: { client: DesktopClient
   const [artifactStatus, setArtifactStatus] = useState<ArtifactStatus>("loading");
   const [artifactError, setArtifactError] = useState<string | null>(null);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const readRequest = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
     setArtifactStatus("loading");
     setArtifactError(null);
     setHistoryError(null);
+    setSelectedPath(null);
+    setContent(null);
+    readRequest.current += 1;
 
     void client
       .listArtifacts(projectRoot)
@@ -59,13 +63,18 @@ export function ArtifactsScreen({ client, projectRoot }: { client: DesktopClient
   const select = async (artifact: ArtifactDescriptor) => {
     if (!artifact.exists) return;
 
+    const request = ++readRequest.current;
     setSelectedPath(artifact.relativePath);
+    setContent(null);
     setArtifactError(null);
     setArtifactStatus("reading");
     try {
-      setContent(await client.readArtifact(projectRoot, artifact.relativePath));
+      const nextContent = await client.readArtifact(projectRoot, artifact.relativePath);
+      if (request !== readRequest.current) return;
+      setContent(nextContent);
       setArtifactStatus("ready");
     } catch (reason) {
+      if (request !== readRequest.current) return;
       setArtifactError(reason instanceof Error ? reason.message : "Artifact could not be read.");
       setArtifactStatus("error");
     }
@@ -90,13 +99,14 @@ export function ArtifactsScreen({ client, projectRoot }: { client: DesktopClient
       <div className="mt-5">
         <Tabs
           active={tab}
+          id="workspace-files"
           onChange={(value) => setTab(value as "artifacts" | "history")}
           tabs={[{ label: "Artifacts", value: "artifacts" }, { label: "History", value: "history" }]}
         />
       </div>
 
       {tab === "artifacts" ? (
-        <div className="mt-5 grid min-w-0 gap-5 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)]">
+        <div aria-labelledby="workspace-files-tab-artifacts" className="mt-5 grid min-w-0 gap-5 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)]" id="workspace-files-panel-artifacts" role="tabpanel" tabIndex={0}>
           {artifactStatus !== "loading" && artifacts.length === 0 ? (
             <EmptyState
               description="Generated workspace files will appear here when they are available."
@@ -128,7 +138,7 @@ export function ArtifactsScreen({ client, projectRoot }: { client: DesktopClient
           )}
 
           <div className="min-h-72 min-w-0 rounded-[var(--radius-lg)] border border-stone-800 bg-stone-950 p-4 sm:p-5">
-            {content ? (
+            {content !== null ? (
               <pre className="max-h-[520px] overflow-auto whitespace-pre-wrap break-words font-mono text-sm leading-6 text-stone-300">{content}</pre>
             ) : artifactStatus === "reading" ? (
               <p className="text-sm text-stone-500">Loading the selected artifact…</p>
@@ -143,9 +153,13 @@ export function ArtifactsScreen({ client, projectRoot }: { client: DesktopClient
           </div>
         </div>
       ) : historyError ? (
-        <p className="mt-5 text-sm text-rose-300" role="alert">{historyError}</p>
+        <div aria-labelledby="workspace-files-tab-history" id="workspace-files-panel-history" role="tabpanel" tabIndex={0}>
+          <p className="mt-5 text-sm text-rose-300" role="alert">{historyError}</p>
+        </div>
       ) : (
-        <History runs={runs} />
+        <div aria-labelledby="workspace-files-tab-history" id="workspace-files-panel-history" role="tabpanel" tabIndex={0}>
+          <History runs={runs} />
+        </div>
       )}
     </Panel>
   );

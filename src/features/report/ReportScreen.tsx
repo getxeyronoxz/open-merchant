@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 import { Button, EmptyState, InsetPanel, PageHeader, Panel, StatusMessage } from "../../components/ui";
@@ -49,10 +49,16 @@ export function ReportScreen({
   const [generateState, setGenerateState] = useState<WorkflowStatus>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const draftRevision = useRef(0);
+  const submittedRevision = useRef(0);
+  const pendingSave = useRef<Promise<void> | null>(null);
 
-  useEffect(() => setDraft(sections), [sections]);
+  useEffect(() => {
+    if (draftRevision.current <= submittedRevision.current) setDraft(sections);
+  }, [sections]);
 
   const updateDraft = (next: ReportSections) => {
+    draftRevision.current += 1;
     setDraft(next);
     setSaveState("idle");
     setSaveError(null);
@@ -66,16 +72,26 @@ export function ReportScreen({
       risks: draft.risks.map((line) => line.trim()).filter(Boolean),
       opportunities: draft.opportunities.map((line) => line.trim()).filter(Boolean),
     };
+    const revision = draftRevision.current;
+    submittedRevision.current = revision;
 
     setSaveError(null);
     setSaveState("working");
+    const saveRequest = Promise.resolve().then(() => onSaveSections(next));
+    pendingSave.current = saveRequest;
     try {
-      await onSaveSections(next);
-      setDraft(next);
-      setSaveState("success");
+      await saveRequest;
+      if (draftRevision.current === revision) {
+        setDraft(next);
+        setSaveState("success");
+      } else {
+        setSaveState("idle");
+      }
     } catch (reason) {
       setSaveError(reason instanceof Error ? reason.message : "The report notes could not be saved.");
       setSaveState("error");
+    } finally {
+      if (pendingSave.current === saveRequest) pendingSave.current = null;
     }
   };
 
@@ -83,6 +99,13 @@ export function ReportScreen({
     setGenerationError(null);
     setGenerateState("working");
     try {
+      const saveInProgress = pendingSave.current;
+      if (saveInProgress) {
+        await saveInProgress;
+        if (draftRevision.current > submittedRevision.current) {
+          throw new Error("Save your latest report notes before generating the report.");
+        }
+      }
       setMarkdown(await onGenerate());
       setGenerateState("success");
     } catch (reason) {

@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { Button, EmptyState, InsetPanel, PageHeader, Panel, StatusMessage } from "../../components/ui";
 import type { EvidenceSource, Observation } from "../../types";
 
-type EvidenceStatus = "idle" | "saving" | "saved" | "removing" | "error";
+type EvidenceStatus = "idle" | "saving" | "saved" | "unsaved" | "removing" | "error";
 
 function nextSourceId(evidence: EvidenceSource[]) {
   const highest = evidence.reduce((max, source) => {
@@ -47,17 +47,24 @@ export function EvidenceScreen({
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<EvidenceStatus>("idle");
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const draftRevision = useRef(0);
   const draftHost = useMemo(() => sourceHost(draft?.url ?? ""), [draft?.url]);
 
   const startAdd = () => {
     setError(null);
     setStatus("idle");
+    draftRevision.current = 0;
     setDraft(emptySource(nextSourceId(evidence)));
+  };
+
+  const updateDraft = (next: EvidenceSource) => {
+    draftRevision.current += 1;
+    setDraft(next);
   };
 
   const addObservation = () => {
     if (!draft) return;
-    setDraft({
+    updateDraft({
       ...draft,
       observations: [
         ...draft.observations,
@@ -70,6 +77,7 @@ export function EvidenceScreen({
     event.preventDefault();
     if (!draft) return;
     const saved = { ...draft, updatedAt: new Date().toISOString() };
+    const submittedRevision = draftRevision.current;
     const next = evidence.some((source) => source.id === saved.id)
       ? evidence.map((source) => source.id === saved.id ? saved : source)
       : [...evidence, saved];
@@ -77,8 +85,12 @@ export function EvidenceScreen({
     setError(null);
     try {
       await onSave(next);
-      setDraft(null);
-      setStatus("saved");
+      if (draftRevision.current === submittedRevision) {
+        setDraft(null);
+        setStatus("saved");
+      } else {
+        setStatus("unsaved");
+      }
     } catch (reason) {
       setStatus("error");
       setError(reason instanceof Error ? reason.message : "The source could not be saved.");
@@ -105,17 +117,20 @@ export function EvidenceScreen({
     ? "Saving source"
     : status === "saved"
       ? "Source saved"
+      : status === "unsaved"
+        ? "Source saved · newer edits not saved"
       : status === "removing"
         ? "Removing source"
         : status === "error"
           ? "Source action failed"
           : null;
   const statusTone = status === "saved" ? "success" : status === "error" ? "error" : status === "idle" ? "neutral" : "working";
+  const mutationActive = status === "saving" || status === "removing";
 
   return (
     <Panel>
       <PageHeader
-        action={<Button icon="plus" onClick={startAdd} type="button" variant="primary">Add source</Button>}
+        action={<Button disabled={mutationActive} icon="plus" onClick={startAdd} type="button" variant="primary">Add source</Button>}
         description="Capture the page, context, and observed values behind each commercial claim."
         eyebrow="Evidence"
         status={<StatusMessage tone={statusTone}>{statusText}</StatusMessage>}
@@ -135,16 +150,16 @@ export function EvidenceScreen({
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-semibold text-stone-200">
                 Source URL
-                <input className="min-h-10 px-3 py-2" type="url" value={draft.url} onChange={(event) => setDraft({ ...draft, url: event.target.value })} required />
+                <input className="min-h-10 px-3 py-2" type="url" value={draft.url} onChange={(event) => updateDraft({ ...draft, url: event.target.value })} required />
               </label>
               <label className="grid gap-2 text-sm font-semibold text-stone-200">
                 Source title
-                <input className="min-h-10 px-3 py-2" value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} required />
+                <input className="min-h-10 px-3 py-2" value={draft.title} onChange={(event) => updateDraft({ ...draft, title: event.target.value })} required />
               </label>
             </div>
             <label className="mt-4 grid gap-2 text-sm font-semibold text-stone-200">
               Notes
-              <textarea className="min-h-24 resize-y px-3 py-2.5 leading-6" value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} />
+              <textarea className="min-h-24 resize-y px-3 py-2.5 leading-6" value={draft.notes} onChange={(event) => updateDraft({ ...draft, notes: event.target.value })} />
             </label>
 
             <div className="mt-5 rounded-[var(--radius-md)] border border-stone-800 bg-stone-950/35 p-4">
@@ -160,7 +175,7 @@ export function EvidenceScreen({
                 <ObservationFields
                   key={observation.id}
                   observation={observation}
-                  onChange={(updated) => setDraft({
+                  onChange={(updated) => updateDraft({
                     ...draft,
                     observations: draft.observations.map((item, itemIndex) => itemIndex === index ? updated : item),
                   })}
@@ -193,8 +208,8 @@ export function EvidenceScreen({
                   <p className="mt-2 text-xs text-stone-500">Observed {new Date(source.observedAt).toLocaleDateString()} · {source.observations.length} observed values</p>
                 </div>
                 <div className="flex gap-1">
-                  <Button onClick={() => { setError(null); setStatus("idle"); setDraft(source); }} size="sm" type="button" variant="ghost">Edit</Button>
-                  <Button disabled={removingId === source.id} onClick={() => void removeSource(source)} size="sm" type="button" variant="danger">{removingId === source.id ? "Removing…" : "Remove"}</Button>
+                  <Button disabled={mutationActive} onClick={() => { setError(null); setStatus("idle"); draftRevision.current = 0; setDraft(source); }} size="sm" type="button" variant="ghost">Edit</Button>
+                  <Button disabled={mutationActive} onClick={() => void removeSource(source)} size="sm" type="button" variant="danger">{removingId === source.id ? "Removing…" : "Remove"}</Button>
                 </div>
               </div>
             </li>
@@ -203,7 +218,7 @@ export function EvidenceScreen({
       ) : !draft ? (
         <div className="mt-6">
           <EmptyState
-            action={<Button icon="plus" onClick={startAdd} size="sm" type="button" variant="secondary">Add first source</Button>}
+            action={<Button disabled={mutationActive} icon="plus" onClick={startAdd} size="sm" type="button" variant="secondary">Add first source</Button>}
             description="Add the listing, search result, supplier page, or report behind your research."
             icon="evidence"
             title="No evidence recorded yet"

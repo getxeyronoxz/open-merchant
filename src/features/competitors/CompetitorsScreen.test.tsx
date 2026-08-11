@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -52,6 +52,11 @@ describe("CompetitorsScreen", () => {
     expect(screen.getAllByText("₹6,999.00")).toHaveLength(2);
   });
 
+  it("formats backend decimal statistics without converting them to binary floats", () => {
+    render(<CompetitorsScreen currency="INR" competitors={[]} evidence={[]} onSave={vi.fn()} statistics={{ validPriceCount: 1, minimum: "9007199254740993.01", maximum: "9007199254740993.01", average: "9007199254740993.01", median: "9007199254740993.01" }} />);
+    expect(screen.getAllByText("₹9,00,71,99,25,47,40,993.01")).toHaveLength(4);
+  });
+
   it("shows linked evidence context without changing backend statistics", () => {
     render(
       <CompetitorsScreen
@@ -96,5 +101,22 @@ describe("CompetitorsScreen", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Competitor file is locked.");
     expect(screen.getByLabelText("Product")).toHaveValue("Keep this competitor");
     expect(screen.getByRole("button", { name: "Save competitor" })).not.toBeDisabled();
+  });
+
+  it("keeps edits made while a competitor save is pending", async () => {
+    const user = userEvent.setup();
+    let finishSave!: () => void;
+    const save = vi.fn().mockReturnValue(new Promise<void>((resolve) => { finishSave = resolve; }));
+    render(<CompetitorsScreen currency="INR" competitors={[]} evidence={[]} onSave={save} />);
+
+    await user.click(screen.getByRole("button", { name: "Add competitor" }));
+    await user.type(screen.getByLabelText("Product"), "Submitted product");
+    await user.click(screen.getByRole("button", { name: "Save competitor" }));
+    await user.clear(screen.getByLabelText("Product"));
+    await user.type(screen.getByLabelText("Product"), "Newer unsaved product");
+    await act(async () => finishSave());
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save competitor" })).not.toBeDisabled());
+    expect(screen.getByLabelText("Product")).toHaveValue("Newer unsaved product");
   });
 });

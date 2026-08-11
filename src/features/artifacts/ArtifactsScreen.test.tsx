@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
@@ -67,5 +67,57 @@ describe("ArtifactsScreen", () => {
     await user.click(screen.getByRole("tab", { name: "History" }));
     expect(screen.getByRole("tab", { name: "History" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("No run history yet")).toBeInTheDocument();
+  });
+
+  it("keeps selected artifact content correct when reads resolve out of order", async () => {
+    const user = userEvent.setup();
+    const client = createFakeDesktopClient();
+    let finishFirst!: (content: string) => void;
+    let finishSecond!: (content: string) => void;
+    client.listArtifacts.mockResolvedValue([
+      { relativePath: "reports/first.md", kind: "markdown", generated: true, exists: true },
+      { relativePath: "reports/second.md", kind: "markdown", generated: true, exists: true },
+    ]);
+    client.readArtifact
+      .mockReturnValueOnce(new Promise((resolve) => { finishFirst = resolve; }))
+      .mockReturnValueOnce(new Promise((resolve) => { finishSecond = resolve; }));
+    render(<ArtifactsScreen client={client} projectRoot="C:/Research/keyboards" />);
+
+    await user.click(await screen.findByRole("button", { name: /first.md/ }));
+    await user.click(screen.getByRole("button", { name: /second.md/ }));
+    await act(async () => finishSecond("Second content"));
+    expect(await screen.findByText("Second content")).toBeInTheDocument();
+    await act(async () => finishFirst("Stale first content"));
+    expect(screen.getByText("Second content")).toBeInTheDocument();
+    expect(screen.queryByText("Stale first content")).not.toBeInTheDocument();
+  });
+
+  it("shows an empty artifact as loaded content", async () => {
+    const user = userEvent.setup();
+    const client = createFakeDesktopClient();
+    client.listArtifacts.mockResolvedValue([{ relativePath: "reports/empty.md", kind: "markdown", generated: true, exists: true }]);
+    client.readArtifact.mockResolvedValue("");
+    render(<ArtifactsScreen client={client} projectRoot="C:/Research/keyboards" />);
+
+    await user.click(await screen.findByRole("button", { name: /empty.md/ }));
+    expect(await screen.findByRole("status", { name: "Artifact status" })).toHaveTextContent("Artifact loaded");
+    expect(screen.queryByText("Select an artifact")).not.toBeInTheDocument();
+  });
+
+  it("supports keyboard tab navigation and labelled tab panels", async () => {
+    const user = userEvent.setup();
+    const client = createFakeDesktopClient();
+    render(<ArtifactsScreen client={client} projectRoot="C:/Research/keyboards" />);
+    const artifactsTab = screen.getByRole("tab", { name: "Artifacts" });
+    const historyTab = screen.getByRole("tab", { name: "History" });
+
+    expect(artifactsTab).toHaveAttribute("tabindex", "0");
+    expect(historyTab).toHaveAttribute("tabindex", "-1");
+    artifactsTab.focus();
+    await user.keyboard("{ArrowRight}");
+
+    expect(historyTab).toHaveFocus();
+    expect(historyTab).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", historyTab.id);
   });
 });

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -51,5 +51,23 @@ describe("EvidenceScreen", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Workspace is temporarily unavailable.");
     expect(screen.getByLabelText("Source title")).toHaveValue("Keep this draft");
     expect(screen.getByRole("button", { name: "Save source" })).not.toBeDisabled();
+  });
+
+  it("keeps edits made while a source save is pending", async () => {
+    const user = userEvent.setup();
+    let finishSave!: () => void;
+    const saveEvidence = vi.fn().mockReturnValue(new Promise<void>((resolve) => { finishSave = resolve; }));
+    render(<EvidenceScreen evidence={[]} onSave={saveEvidence} />);
+
+    await user.click(screen.getByRole("button", { name: "Add source" }));
+    await user.type(screen.getByLabelText("Source URL"), "https://example.com/keyboard");
+    await user.type(screen.getByLabelText("Source title"), "Submitted title");
+    await user.click(screen.getByRole("button", { name: "Save source" }));
+    await user.clear(screen.getByLabelText("Source title"));
+    await user.type(screen.getByLabelText("Source title"), "Newer unsaved title");
+    await act(async () => finishSave());
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save source" })).not.toBeDisabled());
+    expect(screen.getByLabelText("Source title")).toHaveValue("Newer unsaved title");
   });
 });

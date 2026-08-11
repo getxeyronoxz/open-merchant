@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { Button, EmptyState, InsetPanel, PageHeader, Panel, StatCard, StatusMessage, TableContainer } from "../../components/ui";
 import type { Competitor, CompetitorStatistics, EvidenceSource } from "../../types";
+import { formatFixedCurrency } from "../../lib/formatCurrency";
 
-type CompetitorStatus = "idle" | "saving" | "saved" | "removing" | "error";
+type CompetitorStatus = "idle" | "saving" | "saved" | "unsaved" | "removing" | "error";
 
 function nextCompetitorId(competitors: Competitor[]) {
   const highest = competitors.reduce((max, competitor) => Math.max(max, Number(/^C-(\d+)$/.exec(competitor.id)?.[1] ?? 0)), 0);
@@ -39,19 +40,30 @@ export function CompetitorsScreen({
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<CompetitorStatus>("idle");
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const draftRevision = useRef(0);
   const evidenceById = useMemo(() => new Map(evidence.map((source) => [source.id, source])), [evidence]);
 
   const startAdd = () => {
     setError(null);
     setStatus("idle");
     setPriceInput("");
+    draftRevision.current = 0;
     setDraft(newCompetitor(nextCompetitorId(competitors), currency));
   };
   const startEdit = (competitor: Competitor) => {
     setError(null);
     setStatus("idle");
     setPriceInput(competitor.price ?? "");
+    draftRevision.current = 0;
     setDraft(competitor);
+  };
+  const updateDraft = (next: Competitor) => {
+    draftRevision.current += 1;
+    setDraft(next);
+  };
+  const updatePrice = (value: string) => {
+    draftRevision.current += 1;
+    setPriceInput(value);
   };
 
   const saveCompetitor = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -64,6 +76,7 @@ export function CompetitorsScreen({
       return;
     }
     const saved = { ...draft, price, observedAt: new Date().toISOString() };
+    const submittedRevision = draftRevision.current;
     const next = competitors.some((competitor) => competitor.id === saved.id)
       ? competitors.map((competitor) => competitor.id === saved.id ? saved : competitor)
       : [...competitors, saved];
@@ -71,8 +84,12 @@ export function CompetitorsScreen({
     setError(null);
     try {
       await onSave(next);
-      setDraft(null);
-      setStatus("saved");
+      if (draftRevision.current === submittedRevision) {
+        setDraft(null);
+        setStatus("saved");
+      } else {
+        setStatus("unsaved");
+      }
     } catch (reason) {
       setStatus("error");
       setError(reason instanceof Error ? reason.message : "The competitor could not be saved.");
@@ -99,12 +116,15 @@ export function CompetitorsScreen({
     ? "Saving competitor"
     : status === "saved"
       ? "Competitor saved"
+      : status === "unsaved"
+        ? "Competitor saved · newer edits not saved"
       : status === "removing"
         ? "Removing competitor"
         : status === "error"
           ? "Competitor action failed"
           : null;
   const statusTone = status === "saved" ? "success" : status === "error" ? "error" : status === "idle" ? "neutral" : "working";
+  const mutationActive = status === "saving" || status === "removing";
   const statisticValues = [
     ["Minimum", statistics?.minimum],
     ["Median", statistics?.median],
@@ -115,7 +135,7 @@ export function CompetitorsScreen({
   return (
     <Panel>
       <PageHeader
-        action={<Button icon="plus" onClick={startAdd} type="button" variant="primary">Add competitor</Button>}
+        action={<Button disabled={mutationActive} icon="plus" onClick={startAdd} type="button" variant="primary">Add competitor</Button>}
         description="Compare products against saved sources and keep pricing evidence inspectable."
         eyebrow="Competitors"
         status={<StatusMessage tone={statusTone}>{statusText}</StatusMessage>}
@@ -125,7 +145,7 @@ export function CompetitorsScreen({
       {statistics?.validPriceCount ? (
         <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {statisticValues.map(([label, value]) => (
-            <StatCard detail={`${statistics.validPriceCount} priced ${statistics.validPriceCount === 1 ? "record" : "records"}`} key={label} label={label} value={value ? formatCurrency(value, currency) : "—"} />
+            <StatCard detail={`${statistics.validPriceCount} priced ${statistics.validPriceCount === 1 ? "record" : "records"}`} key={label} label={label} value={value ? formatFixedCurrency(value, currency) : "—"} />
           ))}
         </div>
       ) : null}
@@ -141,13 +161,13 @@ export function CompetitorsScreen({
               <span className="rounded-full border border-stone-800 bg-stone-900 px-2.5 py-1 font-mono text-xs text-stone-400">{currency}</span>
             </div>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <Field label="Product"><input className="min-h-10 px-3 py-2" value={draft.product} onChange={(event) => setDraft({ ...draft, product: event.target.value })} required /></Field>
-              <Field label="Brand"><input className="min-h-10 px-3 py-2" value={draft.brand} onChange={(event) => setDraft({ ...draft, brand: event.target.value })} /></Field>
-              <Field label="Price"><input className="min-h-10 px-3 py-2 font-mono tabular-nums" inputMode="decimal" value={priceInput} onChange={(event) => setPriceInput(event.target.value)} /></Field>
-              <Field label="Marketplace"><input className="min-h-10 px-3 py-2" value={draft.marketplace} onChange={(event) => setDraft({ ...draft, marketplace: event.target.value })} /></Field>
-              <Field label="Listing URL"><input className="min-h-10 px-3 py-2" type="url" value={draft.url} onChange={(event) => setDraft({ ...draft, url: event.target.value })} /></Field>
+              <Field label="Product"><input className="min-h-10 px-3 py-2" value={draft.product} onChange={(event) => updateDraft({ ...draft, product: event.target.value })} required /></Field>
+              <Field label="Brand"><input className="min-h-10 px-3 py-2" value={draft.brand} onChange={(event) => updateDraft({ ...draft, brand: event.target.value })} /></Field>
+              <Field label="Price"><input className="min-h-10 px-3 py-2 font-mono tabular-nums" inputMode="decimal" value={priceInput} onChange={(event) => updatePrice(event.target.value)} /></Field>
+              <Field label="Marketplace"><input className="min-h-10 px-3 py-2" value={draft.marketplace} onChange={(event) => updateDraft({ ...draft, marketplace: event.target.value })} /></Field>
+              <Field label="Listing URL"><input className="min-h-10 px-3 py-2" type="url" value={draft.url} onChange={(event) => updateDraft({ ...draft, url: event.target.value })} /></Field>
               <Field label="Evidence source">
-                <select className="min-h-10 px-3 py-2" value={draft.sourceId ?? ""} onChange={(event) => setDraft({ ...draft, sourceId: event.target.value || null })}>
+                <select className="min-h-10 px-3 py-2" value={draft.sourceId ?? ""} onChange={(event) => updateDraft({ ...draft, sourceId: event.target.value || null })}>
                   <option value="">None linked</option>
                   {evidence.map((source) => <option key={source.id} value={source.id}>{source.id} — {source.title}</option>)}
                 </select>
@@ -155,7 +175,7 @@ export function CompetitorsScreen({
             </div>
             <label className="mt-4 grid gap-2 text-sm font-semibold text-stone-200">
               Notes
-              <textarea className="min-h-20 resize-y px-3 py-2.5" value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} />
+              <textarea className="min-h-20 resize-y px-3 py-2.5" value={draft.notes} onChange={(event) => updateDraft({ ...draft, notes: event.target.value })} />
             </label>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <Button disabled={status === "saving"} icon="save" type="submit" variant="primary">{status === "saving" ? "Saving competitor…" : "Save competitor"}</Button>
@@ -180,10 +200,10 @@ export function CompetitorsScreen({
                     <tr className="border-b border-stone-800/80 transition-colors duration-[var(--motion-fast)] last:border-0 hover:bg-stone-900/60" key={competitor.id}>
                       <td className="px-4 py-3.5"><p className="font-semibold text-stone-100">{competitor.product}</p><p className="mt-1 font-mono text-xs text-stone-600">{competitor.id}</p></td>
                       <td className="px-4 py-3.5 text-stone-300">{competitor.brand || "—"}</td>
-                      <td className="px-4 py-3.5 font-mono font-semibold tabular-nums text-stone-100">{competitor.price ? formatCurrency(competitor.price, currency) : "Not priced"}</td>
+                      <td className="px-4 py-3.5 font-mono font-semibold tabular-nums text-stone-100">{competitor.price ? formatFixedCurrency(competitor.price, currency) : "Not priced"}</td>
                       <td className="px-4 py-3.5 text-stone-300">{competitor.marketplace || "—"}</td>
                       <td className="px-4 py-3.5 text-stone-400">{competitor.sourceId ? `${competitor.sourceId}${source ? ` · ${source.title}` : ""}` : "—"}</td>
-                      <td className="px-4 py-3.5"><div className="flex justify-end gap-1"><Button onClick={() => startEdit(competitor)} size="sm" type="button" variant="ghost">Edit</Button><Button disabled={removingId === competitor.id} onClick={() => void removeCompetitor(competitor)} size="sm" type="button" variant="danger">{removingId === competitor.id ? "Removing…" : "Remove"}</Button></div></td>
+                      <td className="px-4 py-3.5"><div className="flex justify-end gap-1"><Button disabled={mutationActive} onClick={() => startEdit(competitor)} size="sm" type="button" variant="ghost">Edit</Button><Button disabled={mutationActive} onClick={() => void removeCompetitor(competitor)} size="sm" type="button" variant="danger">{removingId === competitor.id ? "Removing…" : "Remove"}</Button></div></td>
                     </tr>
                   );
                 })}
@@ -194,7 +214,7 @@ export function CompetitorsScreen({
       ) : !draft ? (
         <div className="mt-6">
           <EmptyState
-            action={<Button icon="plus" onClick={startAdd} size="sm" type="button" variant="secondary">Add first competitor</Button>}
+            action={<Button disabled={mutationActive} icon="plus" onClick={startAdd} size="sm" type="button" variant="secondary">Add first competitor</Button>}
             description="Add comparable products to make your verified price range visible."
             icon="competitors"
             title="No competitors recorded yet"
@@ -208,8 +228,4 @@ export function CompetitorsScreen({
 
 function Field({ children, label }: { children: React.ReactNode; label: string }) {
   return <label className="grid gap-2 text-sm font-semibold text-stone-200">{label}{children}</label>;
-}
-
-function formatCurrency(value: string, currency: string) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value));
 }

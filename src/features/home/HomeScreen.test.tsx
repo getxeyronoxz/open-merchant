@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
@@ -86,5 +86,35 @@ describe("HomeScreen", () => {
 
     finishOpen(mechanicalKeyboardSnapshot);
     expect(await screen.findByText("Mechanical Keyboards India")).toBeInTheDocument();
+  });
+
+  it("keeps the latest project transition when create and open overlap", async () => {
+    const user = userEvent.setup();
+    const client = createFakeDesktopClient();
+    let finishCreate!: (snapshot: typeof mechanicalKeyboardSnapshot) => void;
+    let finishOpen!: (snapshot: typeof mechanicalKeyboardSnapshot) => void;
+    const openedSnapshot = {
+      ...mechanicalKeyboardSnapshot,
+      root: "C:/Research/opened-project",
+      manifest: { ...mechanicalKeyboardSnapshot.manifest, name: "Opened project" },
+    };
+    client.chooseDirectory
+      .mockResolvedValueOnce("C:/Research")
+      .mockResolvedValueOnce("C:/Research/opened-project");
+    client.createProject.mockReturnValue(new Promise((resolve) => { finishCreate = resolve; }));
+    client.openProject.mockReturnValue(new Promise((resolve) => { finishOpen = resolve; }));
+
+    render(<App client={client} />);
+    await user.click(screen.getByRole("button", { name: "Create project" }));
+    await user.type(screen.getByLabelText("Project name"), "Created project");
+    await user.type(screen.getByLabelText("Research objective"), "Test overlapping transitions");
+    await user.click(screen.getByRole("button", { name: "Create workspace" }));
+    await user.click(screen.getByRole("button", { name: "Open project folder" }));
+
+    await act(async () => finishOpen(openedSnapshot));
+    expect(await screen.findByRole("heading", { name: "Opened project" })).toBeInTheDocument();
+    await act(async () => finishCreate(mechanicalKeyboardSnapshot));
+    expect(screen.getByRole("heading", { name: "Opened project" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Mechanical Keyboards India" })).not.toBeInTheDocument();
   });
 });

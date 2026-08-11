@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { EconomicsScreen } from "./EconomicsScreen";
@@ -43,15 +43,32 @@ describe("EconomicsScreen", () => {
     expect(screen.getByRole("button", { name: "Saving assumptions…" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Calculate and save scenarios" })).not.toBeDisabled();
     expect(screen.getByRole("status", { name: "Assumptions status" })).toHaveTextContent("Saving assumptions");
-    finishSave();
-    expect(await screen.findByRole("status", { name: "Assumptions status" })).toHaveTextContent("Assumptions saved");
-
     await user.click(screen.getByRole("button", { name: "Calculate and save scenarios" }));
     expect(screen.getByRole("button", { name: "Calculating…" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Save assumptions" })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "Saving assumptions…" })).toBeDisabled();
     expect(screen.getByRole("status", { name: "Calculation status" })).toHaveTextContent("Calculating scenarios");
-    finishCalculation();
+    expect(calculate).not.toHaveBeenCalled();
+    await act(async () => finishSave());
+    expect(await screen.findByRole("status", { name: "Assumptions status" })).toHaveTextContent("Assumptions saved");
+    await waitFor(() => expect(calculate).toHaveBeenCalledTimes(1));
+    await act(async () => finishCalculation());
     expect(await screen.findByRole("status", { name: "Calculation status" })).toHaveTextContent("Scenarios calculated");
+  });
+
+  it("keeps edits made while assumptions are saving", async () => {
+    const user = userEvent.setup();
+    let finishSave!: () => void;
+    const save = vi.fn().mockReturnValue(new Promise<void>((resolve) => { finishSave = resolve; }));
+    render(<EconomicsScreen assumptions={emptyAssumptions} onSave={save} />);
+
+    await user.click(screen.getByRole("button", { name: "Save assumptions" }));
+    await user.clear(screen.getByLabelText("Acquisition cost"));
+    await user.type(screen.getByLabelText("Acquisition cost"), "2500");
+    await act(async () => finishSave());
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save assumptions" })).not.toBeDisabled());
+    expect(screen.getByLabelText("Acquisition cost")).toHaveValue("2500");
+    expect(screen.getByRole("status", { name: "Assumptions status" })).toBeEmptyDOMElement();
   });
 
   it("preserves assumptions and reports a calculation failure", async () => {
@@ -74,5 +91,10 @@ describe("EconomicsScreen", () => {
     expect(screen.getByText("₹2,560.00")).toBeInTheDocument();
     expect(screen.getByText("₹1,440.00")).toBeInTheDocument();
     expect(screen.getByText("36.00%")).toBeInTheDocument();
+  });
+
+  it("presents large deterministic values without binary-float precision loss", () => {
+    render(<EconomicsScreen assumptions={emptyAssumptions} onSave={vi.fn()} scenarios={[{ ...baseScenario, sellingPrice: "9007199254740993.01", grossProfit: "9007199254740993.01" }]} />);
+    expect(screen.getAllByText("₹9,00,71,99,25,47,40,993.01")).toHaveLength(2);
   });
 });

@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button, EmptyState, InsetPanel, PageHeader, Panel, StatusMessage } from "../../components/ui";
 import type { CostAssumptions, EconomicsScenario } from "../../types";
+import { formatFixedCurrency, isNegativeFixedDecimal } from "../../lib/formatCurrency";
 
 const fields = [
   ["acquisitionCost", "Acquisition cost"],
@@ -41,9 +42,15 @@ export function EconomicsScreen({
   const [calculationStatus, setCalculationStatus] = useState<WorkflowStatus>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [calculationError, setCalculationError] = useState<string | null>(null);
-  useEffect(() => setDraft(assumptions), [assumptions]);
+  const draftRevision = useRef(0);
+  const submittedRevision = useRef(0);
+  const pendingSave = useRef<Promise<void> | null>(null);
+  useEffect(() => {
+    if (draftRevision.current <= submittedRevision.current) setDraft(assumptions);
+  }, [assumptions]);
 
   const updateDraft = (next: CostAssumptions) => {
+    draftRevision.current += 1;
     setSaveStatus("idle");
     setDraft(next);
   };
@@ -76,15 +83,25 @@ export function EconomicsScreen({
       setSaveError("Use non-negative decimal amounts with at most two fractional digits.");
       return;
     }
+    const revision = draftRevision.current;
+    submittedRevision.current = revision;
     setSaveStatus("working");
     setSaveError(null);
+    const saveRequest = Promise.resolve().then(() => onSave(next));
+    pendingSave.current = saveRequest;
     try {
-      await onSave(next);
-      setDraft(next);
-      setSaveStatus("success");
+      await saveRequest;
+      if (draftRevision.current === revision) {
+        setDraft(next);
+        setSaveStatus("success");
+      } else {
+        setSaveStatus("idle");
+      }
     } catch (reason) {
       setSaveStatus("error");
       setSaveError(reason instanceof Error ? reason.message : "The assumptions could not be saved.");
+    } finally {
+      if (pendingSave.current === saveRequest) pendingSave.current = null;
     }
   };
 
@@ -93,6 +110,13 @@ export function EconomicsScreen({
     setCalculationStatus("working");
     setCalculationError(null);
     try {
+      const saveInProgress = pendingSave.current;
+      if (saveInProgress) {
+        await saveInProgress;
+        if (draftRevision.current > submittedRevision.current) {
+          throw new Error("Save your latest assumptions before calculating scenarios.");
+        }
+      }
       await onCalculate();
       setCalculationStatus("success");
     } catch (reason) {
@@ -204,23 +228,19 @@ export function EconomicsScreen({
 }
 
 function ScenarioCard({ currency, scenario }: { currency: string; scenario: EconomicsScenario }) {
-  const profitable = Number(scenario.grossProfit) >= 0;
+  const profitable = !isNegativeFixedDecimal(scenario.grossProfit);
   return (
     <article className={`rounded-[var(--radius-lg)] border p-4 ${scenario.scenario === "base" ? "border-emerald-900/80 bg-emerald-950/15" : "border-stone-800 bg-stone-950/40"}`}>
       <div className="flex items-center justify-between gap-3">
         <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-400">{scenario.scenario} scenario</h4>
         {scenario.scenario === "base" ? <span className="rounded-full border border-emerald-900/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">Base</span> : null}
       </div>
-      <p className="mt-3 font-mono text-2xl font-semibold tabular-nums tracking-tight text-stone-50">{formatCurrency(scenario.sellingPrice, currency)}</p>
+      <p className="mt-3 font-mono text-2xl font-semibold tabular-nums tracking-tight text-stone-50">{formatFixedCurrency(scenario.sellingPrice, currency)}</p>
       <dl className="mt-4 grid gap-2 border-t border-stone-800/80 pt-3 text-sm">
-        <div className="flex items-center justify-between gap-3"><dt className="text-stone-500">Total cost</dt><dd className="font-mono tabular-nums text-stone-300">{formatCurrency(scenario.totalCost, currency)}</dd></div>
-        <div className="flex items-center justify-between gap-3"><dt className="text-stone-500">Gross profit</dt><dd className={`font-mono font-semibold tabular-nums ${profitable ? "text-emerald-300" : "text-rose-300"}`}>{formatCurrency(scenario.grossProfit, currency)}</dd></div>
+        <div className="flex items-center justify-between gap-3"><dt className="text-stone-500">Total cost</dt><dd className="font-mono tabular-nums text-stone-300">{formatFixedCurrency(scenario.totalCost, currency)}</dd></div>
+        <div className="flex items-center justify-between gap-3"><dt className="text-stone-500">Gross profit</dt><dd className={`font-mono font-semibold tabular-nums ${profitable ? "text-emerald-300" : "text-rose-300"}`}>{formatFixedCurrency(scenario.grossProfit, currency)}</dd></div>
         <div className="flex items-center justify-between gap-3"><dt className="text-stone-500">Gross margin</dt><dd className={`font-mono font-semibold tabular-nums ${profitable ? "text-stone-100" : "text-rose-300"}`}>{scenario.grossMarginPercent}%</dd></div>
       </dl>
     </article>
   );
-}
-
-function formatCurrency(value: string, currency: string) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value));
 }
