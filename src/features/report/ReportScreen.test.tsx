@@ -38,5 +38,49 @@ describe("ReportScreen", () => {
       risks: ["Evidence sample is small."],
       opportunities: ["Target enthusiasts."],
     });
+    expect(screen.getByRole("status", { name: "Report notes status" })).toHaveTextContent("Report notes saved");
+  });
+
+  it("keeps save and generation actions independent while they run", async () => {
+    const user = userEvent.setup();
+    let finishSave!: () => void;
+    let finishGenerate!: (markdown: string) => void;
+    const saveSections = vi.fn().mockReturnValue(new Promise<void>((resolve) => { finishSave = resolve; }));
+    const generate = vi.fn().mockReturnValue(new Promise<string>((resolve) => { finishGenerate = resolve; }));
+    render(<ReportScreen onGenerate={generate} onSaveSections={saveSections} sections={emptySections} />);
+
+    await user.type(screen.getByLabelText("Decision summary"), "Keep this report draft.");
+    await user.click(screen.getByRole("button", { name: "Save report notes" }));
+    expect(screen.getByRole("button", { name: "Saving report notes…" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Generate Markdown report" })).not.toBeDisabled();
+    expect(screen.getByRole("status", { name: "Report notes status" })).toHaveTextContent("Saving report notes");
+    finishSave();
+    expect(await screen.findByRole("status", { name: "Report notes status" })).toHaveTextContent("Report notes saved");
+
+    await user.click(screen.getByRole("button", { name: "Generate Markdown report" }));
+    expect(screen.getByRole("button", { name: "Generating report…" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save report notes" })).not.toBeDisabled();
+    expect(screen.getByRole("status", { name: "Report generation status" })).toHaveTextContent("Generating report");
+    finishGenerate("# Opportunity report");
+    expect(await screen.findByRole("heading", { name: "Opportunity report" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Report generation status" })).toHaveTextContent("Report generated");
+  });
+
+  it("preserves the report draft after generation fails", async () => {
+    const user = userEvent.setup();
+    render(
+      <ReportScreen
+        onGenerate={vi.fn().mockRejectedValue(new Error("Report generation was interrupted."))}
+        onSaveSections={vi.fn()}
+        sections={emptySections}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Decision summary"), "Do not lose this draft.");
+    await user.click(screen.getByRole("button", { name: "Generate Markdown report" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Report generation was interrupted.");
+    expect(screen.getByLabelText("Decision summary")).toHaveValue("Do not lose this draft.");
+    expect(screen.getByRole("status", { name: "Report generation status" })).toHaveTextContent("Generation failed");
   });
 });
