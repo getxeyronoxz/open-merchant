@@ -1,6 +1,8 @@
-# Open Merchant V0 Design
+# Open Merchant V0 Design (historical planning record)
 
-**Status:** Revised approved direction, written specification awaiting user review
+> This approved planning record captures the 2026-08-08 design direction. For shipped behavior, repository layout, and verification, use [README.md](../../../README.md), [architecture.md](../../architecture.md), and [manual-smoke-test.md](../../manual-smoke-test.md).
+
+**Status:** Historical planning direction; superseded by the current product documentation
 **Date:** 2026-08-08
 **Milestone:** Credible Windows public prototype in approximately two weeks
 

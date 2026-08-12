@@ -6,12 +6,15 @@ All notable changes to Open Merchant are documented in this file.
 
 ### Changed
 
-- Refreshed the Open Merchant application icon across the Windows desktop bundle.
+- Modernized the focused home screen and six-section desktop workspace while preserving the local-first V0 workflow.
+- Refreshed the canonical Open Merchant application icon and all bundled Windows icon variants with the graphite-and-lime palette.
+- Connected the README, architecture reference, agent guide, contributor guide, manual smoke test, and demo guidance to the shipped V0 behavior.
 
 ### Fixed
 
 - Use crash-safe replacement when saving workspace artifacts and the local recent-project list.
 - Preserve interrupted report generations in local run history, including any artifacts saved before the interruption, and show recovery guidance in the History tab.
+- Added visible keyboard focus treatment and polite save-status announcements for updated form state.
 
 ## [0.1.0] - 2026-08-08
 

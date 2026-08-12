@@ -2,13 +2,24 @@
 
 Open Merchant is an artifact-first, local-first Windows workspace for deciding whether a product opportunity looks commercially attractive—without losing the evidence, assumptions, calculations, and report behind the decision.
 
-Open Merchant V0 is for solo ecommerce sellers, founders, and product researchers who want one inspectable project folder instead of disconnected tabs, spreadsheets, and notes.
+Open Merchant V0 is for solo ecommerce sellers, founders, and product researchers who want one inspectable project folder instead of disconnected tabs, spreadsheets, and notes. It ships as a Windows desktop app with a focused home screen, a stable six-section workspace, clear keyboard focus, and motion that respects the system reduced-motion preference.
 
 ## What Open Merchant is
 
 Create a project, record a research objective and evidence, compare competitors, enter costs and selling-price scenarios, calculate deterministic unit economics, and generate a Markdown opportunity report. The project remains a normal local folder that you own and can inspect outside the app.
 
-The working sample project is [Mechanical Keyboards India](examples/mechanical-keyboards-india).
+The working sample project is [Mechanical Keyboards India](examples/mechanical-keyboards-india). Its listings and sources are deliberately marked as demo data—not live commercial claims.
+
+## Desktop workflow
+
+The app keeps the product context visible while you work:
+
+- **Home:** create a local project or reopen a recent one.
+- **Workspace:** Objective, Evidence, Competitors, Economics, Report, and Artifacts are available from the left rail.
+- **Local status:** the title bar identifies the open project, currency, and local-only workspace state.
+- **Artifacts:** inspect only the known project files and meaningful report-generation history from inside the app.
+
+The Windows app icon is generated from [`src-tauri/app-icon.svg`](src-tauri/app-icon.svg), so the installed application, taskbar, and package all use the same Open Merchant mark.
 
 ## Windows prerequisites
 
@@ -81,6 +92,8 @@ Competitor statistics ignore listings without a price and calculate min, max, av
 
 The React desktop UI calls a narrow Tauri application layer. Portable Rust crates hold the commerce domain and workspace storage rules. Windows/Tauri behavior stays at the desktop boundary, while calculations and file formats remain independent of the platform.
 
+See [Architecture](docs/architecture.md) for the current code and data boundaries. Historical planning records under [`docs/superpowers/`](docs/superpowers/) are not the current product contract.
+
 ## Testing
 
 ```powershell
@@ -116,4 +129,4 @@ Copyright © 2026 Xeyronox.
 
 ## Contributing and support
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for local development and pull-request guidance, [CHANGELOG.md](CHANGELOG.md) for release notes, [SUPPORT.md](SUPPORT.md) for help and issue routing, and [SECURITY.md](SECURITY.md) for private vulnerability reporting. Community participation is governed by the [Code of Conduct](CODE_OF_CONDUCT.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local development and pull-request guidance, [AGENTS.md](AGENTS.md) for repository-specific agent instructions, [Architecture](docs/architecture.md) for current boundaries, [Windows smoke testing](docs/manual-smoke-test.md) for release checks, and the [demo script](docs/demo-script.md) for the checked-in example workflow. [CHANGELOG.md](CHANGELOG.md) records release notes, [SUPPORT.md](SUPPORT.md) routes questions, and [SECURITY.md](SECURITY.md) covers private vulnerability reporting. Community participation is governed by the [Code of Conduct](CODE_OF_CONDUCT.md).

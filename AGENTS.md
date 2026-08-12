@@ -1,35 +1,49 @@
 # Open Merchant agent guide
 
-Open Merchant is a modern, premium-feeling, local-first Windows desktop workspace for commerce research. V0 is artifact-first: users own the normal project files, and the workspace—not a chatbot—is the product.
+## Product and scope
 
-## Boundaries
+- Windows-first, local-first commerce research workspace; the user-owned project folder is the product.
+- React/TypeScript UI → Tauri application layer → Rust workspace/domain crates.
+- `crates/merchant-core`: portable fixed-decimal rules. Never use an LLM or binary floating point for commerce calculations.
+- `crates/merchant-workspace`: validation, known workspace paths, atomic writes, artifacts, and provenance.
+- Do not add accounts, cloud sync, AI, scraping, integrations, payments, teams, mobile, telemetry, or other V1 scope.
 
-- React/TypeScript is the desktop UI; Tauri is the application boundary.
-- `crates/merchant-core` contains portable, deterministic commerce rules. Use fixed decimal values; never use an LLM or binary floating point for business calculations.
-- `crates/merchant-workspace` owns the user-visible files, validation, atomic writes, artifacts, and provenance.
-- Keep Windows-specific behavior at the Tauri/platform edge. V0 ships for Windows only.
-- Do not add accounts, cloud sync, AI, scraping, marketplace integrations, payments, teams, mobile, or other V1 scope.
+## Package manager
 
-## Working safely
+- Use npm and the committed `package-lock.json`: `npm ci`, never a substitute lockfile.
 
-- Read the relevant Superpowers skills before work. Use test-driven development for behavior changes, systematic debugging for failures, and verification before completion.
-- Preserve user work. Inspect `git status`, branch, worktree, and recent commits before edits. Never discard unrelated changes or use destructive Git commands.
-- `main` is founder-controlled. Agents work on `codex/*` branches and submit reviewable pull requests; never merge to `main` without explicit founder approval.
-- User project files are canonical. Reject malformed or unsupported data explicitly; do not silently overwrite or recover it.
-- `target/`, `dist/`, generated Tauri schema files, installers, and temporary projects are build output, not source edits.
+## Source and generated files
+
+- Project files are canonical. Reject malformed or unsupported data; never silently overwrite or recover it.
+- Keep Windows-specific behavior at the Tauri/platform edge.
+- `target/`, `dist/`, Tauri schema output, installers, and temporary projects are build output, not source edits.
+- `src-tauri/app-icon.svg` is the canonical app mark. Regenerate and commit bundle icons with `npm run tauri -- icon src-tauri/app-icon.svg --output src-tauri/icons`.
+
+## Safe workflow
+
+- Inspect status, branch, worktree, and recent commits before edits. Preserve unrelated work; never use destructive Git commands.
+- Work on `codex/*` branches. `main` is founder-controlled; merge only with explicit founder approval.
+- Use focused tests for behavior changes, systematic debugging for failures, and fresh verification before completion.
+- Keep UI premium, calm, keyboard-accessible, and reduced-motion safe.
 
 ## Commands
 
-```powershell
-npm ci
-npm run test:run
-npm run build
-cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace --all-targets --all-features
-npm run tauri build -- --bundles nsis
-```
+| Task | Command |
+| --- | --- |
+| Install | `npm ci` |
+| Frontend test | `npm run test:run -- src/features/home/HomeScreen.test.tsx` |
+| Rust crate test | `cargo test -p merchant-core --test economics` |
+| Full frontend test | `npm run test:run` |
+| Frontend build | `npm run build` |
+| Rust checks | `cargo fmt --all -- --check`; `cargo clippy --workspace --all-targets --all-features -- -D warnings`; `cargo test --workspace --all-targets --all-features` |
+| Windows package | `npm run tauri build -- --bundles nsis` |
 
-## License and privacy
+## Documentation
 
-Open Merchant is `AGPL-3.0-only`. Public copyright attribution is **Xeyronox**; never seek, infer, or expose the author’s private/legal identity.
+- Keep `README.md` factual and user-facing. Keep architecture, manual smoke, and contributor guidance aligned with shipped V0 behavior.
+- Treat `docs/superpowers/` as historical planning material; do not present it as current product behavior.
+
+## Commit attribution
+
+- Use the configured Git identity; do not invent contributor names, private identities, or attribution.
+- Open Merchant is `AGPL-3.0-only`; public copyright attribution is **Xeyronox**.
