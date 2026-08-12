@@ -15,4 +15,12 @@ describe("EconomicsScreen", () => {
     await user.type(screen.getByLabelText("Base selling price"), "7499"); await user.click(screen.getByRole("button", { name: "Save assumptions" }));
     expect(save).toHaveBeenCalledWith(expect.objectContaining({ acquisitionCost: "3200.00", shippingCost: "350.00", scenarioPrices: expect.objectContaining({ base: "7499.00" }) }));
   });
+
+  it("announces when assumptions are saved", async () => {
+    const user = userEvent.setup();
+    render(<EconomicsScreen assumptions={emptyAssumptions} onSave={vi.fn().mockResolvedValue(undefined)} />);
+
+    await user.click(screen.getByRole("button", { name: "Save assumptions" }));
+    expect(await screen.findByText("Saved")).toHaveAttribute("aria-live", "polite");
+  });
 });

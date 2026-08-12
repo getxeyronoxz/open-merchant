@@ -66,7 +66,7 @@ export function ReportScreen({
       <form className="mt-6 grid gap-5" onSubmit={(event) => void save(event)}>
         <label className="grid gap-2 text-sm font-medium">Decision summary<textarea className="min-h-24 rounded-lg border border-stone-700 bg-stone-950 px-3 py-2" value={draft.decisionSummary} onChange={(event) => { setSaved(false); setDraft({ ...draft, decisionSummary: event.target.value }); }} /></label>
         {fields.map(([key, label]) => <div className="grid gap-2 text-sm font-medium" key={key}><label htmlFor={key}>{label}</label><span className="text-xs font-normal text-stone-400">One item per line.</span><textarea className="min-h-24 rounded-lg border border-stone-700 bg-stone-950 px-3 py-2" id={key} value={joined(draft[key])} onChange={(event) => { setSaved(false); setDraft({ ...draft, [key]: asLines(event.target.value) }); }} /></div>)}
-        <div className="flex flex-wrap items-center gap-3"><button className="rounded-lg border border-emerald-400 px-4 py-2 font-semibold text-emerald-300" type="submit">Save report notes</button>{saved ? <span className="text-sm text-emerald-300">Saved</span> : null}</div>
+        <div className="flex flex-wrap items-center gap-3"><button className="rounded-lg border border-emerald-400 px-4 py-2 font-semibold text-emerald-300" type="submit">Save report notes</button>{saved ? <span aria-live="polite" className="text-sm text-emerald-300">Saved</span> : null}</div>
       </form>
       <button className="mt-6 rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-stone-950" onClick={() => void generate()} type="button">Generate Markdown report</button>
       {error ? <p className="mt-4 text-rose-300" role="alert">{error}</p> : null}

@@ -39,4 +39,18 @@ describe("ReportScreen", () => {
       opportunities: ["Target enthusiasts."],
     });
   });
+
+  it("announces when report notes are saved", async () => {
+    const user = userEvent.setup();
+    render(
+      <ReportScreen
+        onGenerate={vi.fn().mockResolvedValue("# Report")}
+        onSaveSections={vi.fn().mockResolvedValue(undefined)}
+        sections={emptySections}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Save report notes" }));
+    expect(await screen.findByText("Saved")).toHaveAttribute("aria-live", "polite");
+  });
 });
