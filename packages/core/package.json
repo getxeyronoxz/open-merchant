@@ -16,7 +16,8 @@
   },
   "dependencies": {
     "@open-merchant/shared": "workspace:*",
-    "decimal.js": "^10.4.3"
+    "decimal.js": "^10.4.3",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

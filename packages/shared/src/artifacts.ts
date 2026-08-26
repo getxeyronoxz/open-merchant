@@ -127,3 +127,7 @@ export type ScenarioName = z.infer<typeof scenarioNameSchema>;
 export type EconomicsScenario = z.infer<typeof economicsScenarioSchema>;
 export type CompetitorStatistics = z.infer<typeof competitorStatisticsSchema>;
 export type ReportSections = z.infer<typeof reportSectionsSchema>;
+
+export function emptyReportSections(): ReportSections {
+  return { decisionSummary: "", marketObservations: [], risks: [], opportunities: [] };
+}

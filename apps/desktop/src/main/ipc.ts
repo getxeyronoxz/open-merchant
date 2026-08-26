@@ -1,18 +1,8 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-
-import { createProjectFolder } from "@open-merchant/core";
-import {
-  AppError,
-  ipc,
-  manifestSchema,
-  type IpcChannel,
-  type IpcRequest,
-  type IpcResponse,
-} from "@open-merchant/shared";
+import { type IpcChannel, type IpcRequest, type IpcResponse, AppError, ipc } from "@open-merchant/shared";
 import { app, ipcMain } from "electron";
 
 import { RecentsStore } from "./recents";
+import type { MerchantService } from "./service";
 
 /**
  * The single IPC entry point. Each channel's request is validated against
@@ -20,82 +10,133 @@ import { RecentsStore } from "./recents";
  * or coded failure — travels back as an envelope the SDK understands.
  */
 
-type Handler<C extends IpcChannel> = (request: IpcRequest<C>) => Promise<IpcResponse<C>>;
+type AnyHandler = (request: unknown) => Promise<unknown>;
 
-const MANIFEST_RELATIVE = join(".openmerchant", "manifest.json");
+/**
+ * Captures the exact contract types for one channel while erasing them for
+ * uniform dispatch; the contract parse immediately before invocation is what
+ * makes this safe.
+ */
+function channel<C extends IpcChannel>(handle: (request: IpcRequest<C>) => Promise<IpcResponse<C>>): AnyHandler {
+  return async (request) => handle(request as IpcRequest<C>);
+}
 
-export function registerIpcHandlers(): void {
+export function registerIpcHandlers(service: MerchantService): void {
   const recents = new RecentsStore(app.getPath("userData"));
 
-  const handlers: { [C in IpcChannel]: Handler<C> } = {
-    "app/info": async () => ({
+  const handlers: Record<IpcChannel, AnyHandler> = {
+    "app/info": channel<"app/info">(async () => ({
       appName: "Open Merchant",
       appVersion: app.getVersion(),
       platform: process.platform,
-    }),
-    "project/create": async (input) => {
-      const created = await createProjectFolder(input);
+    })),
+
+    "project/create": channel<"project/create">(async (input) => {
+      const created = await service.createProject(input);
       await recents.upsert(created.manifest.name, created.root);
       return { snapshot: { root: created.root, manifest: created.manifest } };
-    },
-    "project/open": async ({ root }) => {
-      let raw: string;
-      try {
-        raw = await readFile(join(root, MANIFEST_RELATIVE), "utf8");
-      } catch {
-        throw new AppError({
-          code: "not-a-project",
-          message: "That folder is not an Open Merchant project.",
-          detail: `Missing or unreadable ${MANIFEST_RELATIVE} in ${root}`,
-        });
-      }
-      let manifest;
-      try {
-        manifest = manifestSchema.parse(JSON.parse(raw));
-      } catch (error) {
-        throw new AppError({
-          code: "invalid-project",
-          message: "This project's manifest is malformed and was left unchanged.",
-          detail: error instanceof Error ? error.message : String(error),
-        });
-      }
-      await recents.upsert(manifest.name, root);
-      return { snapshot: { root, manifest } };
-    },
-    "recents/list": async () => ({ projects: await recents.list() }),
+    }),
+    "project/open": channel<"project/open">(async ({ root }) => {
+      const store = await service.openStore(root);
+      await recents.upsert(store.manifest.name, root);
+      return { snapshot: { root, manifest: store.manifest } };
+    }),
+    "project/import-v0": channel<"project/import-v0">(async ({ v0Root, parentDirectory }) => {
+      const result = await service.importV0(v0Root, parentDirectory);
+      await recents.upsert(result.manifest.name, result.root);
+      return {
+        snapshot: { root: result.root, manifest: result.manifest },
+        importedEvidence: result.importedEvidence,
+        importedCompetitors: result.importedCompetitors,
+      };
+    }),
+
+    "recents/list": channel<"recents/list">(async () => ({ projects: await recents.list() })),
+    "recents/remove": channel<"recents/remove">(async ({ path }) => {
+      await recents.remove(path);
+      return {};
+    }),
+
+    "evidence/load": channel<"evidence/load">(async ({ root }) => ({
+      sources: await service.loadEvidence(root),
+    })),
+    "evidence/save": channel<"evidence/save">(async ({ root, sources }) => {
+      await service.saveEvidence(root, sources);
+      return {};
+    }),
+
+    "competitors/load": channel<"competitors/load">(async ({ root }) => ({
+      competitors: await service.loadCompetitors(root),
+    })),
+    "competitors/save": channel<"competitors/save">(async ({ root, competitors }) => {
+      await service.saveCompetitors(root, competitors);
+      return {};
+    }),
+    "competitors/statistics": channel<"competitors/statistics">(async ({ root }) => ({
+      statistics: await service.competitorStatistics(root),
+    })),
+
+    "assumptions/load": channel<"assumptions/load">(async ({ root }) => ({
+      assumptions: await service.loadAssumptions(root),
+    })),
+    "assumptions/save": channel<"assumptions/save">(async ({ root, assumptions }) => {
+      await service.saveAssumptions(root, assumptions);
+      return {};
+    }),
+    "economics/calculate": channel<"economics/calculate">(async ({ root }) => ({
+      scenarios: await service.calculateScenarios(root),
+    })),
+    "scenarios/load": channel<"scenarios/load">(async ({ root }) => ({
+      scenarios: await service.loadScenarios(root),
+    })),
+
+    "report/sections/load": channel<"report/sections/load">(async ({ root }) => ({
+      sections: await service.loadReportSections(root),
+    })),
+    "report/sections/save": channel<"report/sections/save">(async ({ root, sections }) => {
+      await service.saveReportSections(root, sections);
+      return {};
+    }),
+    "report/generate": channel<"report/generate">(async ({ root }) => ({
+      markdown: await service.generateReport(root),
+    })),
+    "report/load-generated": channel<"report/load-generated">(async ({ root }) => ({
+      markdown: await service.loadGeneratedReport(root),
+    })),
+
+    "artifacts/list": channel<"artifacts/list">(async ({ root }) => ({
+      artifacts: await service.listArtifacts(root),
+    })),
+    "artifacts/read": channel<"artifacts/read">(async ({ root, relativePath }) => ({
+      text: await service.readArtifact(root, relativePath),
+    })),
+    "runs/list": channel<"runs/list">(async ({ root }) => ({ runs: await service.listRuns(root) })),
+    "provenance/list": channel<"provenance/list">(async ({ root }) => ({
+      provenance: await service.listProvenance(root),
+    })),
   };
 
-  ipcMain.handle("ipc", async (_event, channel: string, payload: unknown) => {
-    if (!Object.hasOwn(handlers, channel)) {
+  ipcMain.handle("ipc", async (_event, channelName: string, payload: unknown) => {
+    if (!Object.hasOwn(handlers, channelName)) {
       return {
         ok: false as const,
-        error: { code: "not-found", message: `Unknown channel: ${channel}` },
+        error: { code: "not-found", message: `Unknown channel: ${channelName}` },
       };
     }
     try {
-      const key = channel as IpcChannel;
-      const request = ipc[key].request.parse(payload ?? {}) as IpcRequest<IpcChannel>;
-      // Each handler above is declared against its own exact request type;
-      // the contract parse immediately before this call is what guarantees
-      // the payload matches, so the erasure here is sound.
-      const handler = handlers[key] as (request: unknown) => Promise<unknown>;
-      const value = await handler(request);
+      const key = channelName as IpcChannel;
+      const request = ipc[key].request.parse(payload ?? {});
+      const value = await handlers[key](request);
       return { ok: true as const, value };
     } catch (error) {
       if (error instanceof AppError) {
         return { ok: false as const, error: error.toJSON() };
       }
-      const message = error instanceof Error ? error.message : String(error);
-      const code = /already exists/i.test(message)
-        ? ("already-exists" as const)
-        : /required|invalid/i.test(message)
-          ? ("invalid-input" as const)
-          : ("storage-error" as const);
       return {
         ok: false as const,
         error: {
-          code,
-          message,
+          code: "storage-error",
+          message: error instanceof Error ? error.message : String(error),
           detail: error instanceof Error ? error.stack : undefined,
         },
       };

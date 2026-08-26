@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { BrowserWindow, app, shell } from "electron";
 
+import { MerchantService } from "./service";
 import { registerIpcHandlers } from "./ipc";
 
 function createMainWindow() {
@@ -36,7 +37,7 @@ function createMainWindow() {
 }
 
 app.whenReady().then(() => {
-  registerIpcHandlers();
+  registerIpcHandlers(new MerchantService(app.getVersion()));
   createMainWindow();
 
   app.on("activate", () => {
