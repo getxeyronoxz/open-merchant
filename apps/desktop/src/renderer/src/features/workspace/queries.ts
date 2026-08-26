@@ -201,3 +201,27 @@ export function useDraftSections(root: string) {
     mutationFn: () => client.draftSections(root),
   });
 }
+
+export function useDraftPlan(root: string) {
+  return useMutation({
+    mutationFn: () => client.draftPlan(root),
+  });
+}
+
+export function useDraftCompetitors(root: string) {
+  return useMutation({
+    mutationFn: (pastedListings: string) => client.draftCompetitors(root, pastedListings),
+  });
+}
+
+export function useReviewEconomics(root: string) {
+  return useMutation({
+    mutationFn: () => client.reviewEconomics(root),
+  });
+}
+
+export function useAuditReport(root: string) {
+  return useMutation({
+    mutationFn: () => client.auditReport(root),
+  });
+}

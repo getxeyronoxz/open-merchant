@@ -78,6 +78,13 @@ export interface DesktopClient {
   testAi(providerId: IpcRequest<"ai/test">["providerId"]): Promise<IpcResponse<"ai/test">>;
   draftEvidence(root: string, url: string, pageText: string): Promise<IpcResponse<"ai/draft-evidence">>;
   draftSections(root: string): Promise<IpcResponse<"ai/draft-sections">>;
+  draftPlan(root: string): Promise<IpcResponse<"ai/draft-plan">>;
+  draftCompetitors(
+    root: string,
+    pastedListings: string,
+  ): Promise<IpcResponse<"ai/draft-competitors">>;
+  reviewEconomics(root: string): Promise<IpcResponse<"ai/review-economics">>;
+  auditReport(root: string): Promise<IpcResponse<"ai/audit-report">>;
 }
 
 export function createDesktopClient(raw: RawInvoke): DesktopClient {
@@ -119,5 +126,10 @@ export function createDesktopClient(raw: RawInvoke): DesktopClient {
     testAi: (providerId) => invoke(raw, "ai/test", { providerId }),
     draftEvidence: (root, url, pageText) => invoke(raw, "ai/draft-evidence", { root, url, pageText }),
     draftSections: (root) => invoke(raw, "ai/draft-sections", { root }),
+    draftPlan: (root) => invoke(raw, "ai/draft-plan", { root }),
+    draftCompetitors: (root, pastedListings) =>
+      invoke(raw, "ai/draft-competitors", { root, pastedListings }),
+    reviewEconomics: (root) => invoke(raw, "ai/review-economics", { root }),
+    auditReport: (root) => invoke(raw, "ai/audit-report", { root }),
   };
 }

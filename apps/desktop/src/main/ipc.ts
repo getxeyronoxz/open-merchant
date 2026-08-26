@@ -152,6 +152,16 @@ export function registerIpcHandlers(
     "ai/draft-sections": channel<"ai/draft-sections">(async ({ root }) =>
       service.draftSections(root),
     ),
+    "ai/draft-plan": channel<"ai/draft-plan">(async ({ root }) => service.draftPlan(root)),
+    "ai/draft-competitors": channel<"ai/draft-competitors">(async ({ root, pastedListings }) =>
+      service.draftCompetitors(root, pastedListings),
+    ),
+    "ai/review-economics": channel<"ai/review-economics">(async ({ root }) =>
+      service.reviewEconomicsFor(root),
+    ),
+    "ai/audit-report": channel<"ai/audit-report">(async ({ root }) =>
+      service.auditGeneratedReport(root),
+    ),
   };
 
   ipcMain.handle("ipc", async (_event, channelName: string, payload: unknown) => {

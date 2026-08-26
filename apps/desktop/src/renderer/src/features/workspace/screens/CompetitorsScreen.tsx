@@ -1,10 +1,15 @@
 import { useState } from "react";
 
-import type { Competitor } from "@open-merchant/shared";
+import type { Competitor, CompetitorDraft } from "@open-merchant/shared";
 import { EmptyState, ErrorState, Field, LedgerRow } from "@open-merchant/ui";
 
 import { useProject } from "../../../state/project";
-import { useCompetitorStatistics, useCompetitors, useSaveCompetitors } from "../queries";
+import {
+  useCompetitorStatistics,
+  useCompetitors,
+  useDraftCompetitors,
+  useSaveCompetitors,
+} from "../queries";
 
 function nextCompetitorId(existing: Competitor[]): string {
   const highest = existing.reduce((max, competitor) => {
@@ -19,7 +24,10 @@ export function CompetitorsScreen({ root }: { root: string }) {
   const query = useCompetitors(root);
   const statistics = useCompetitorStatistics(root);
   const save = useSaveCompetitors(root);
+  const draftAi = useDraftCompetitors(root);
   const [form, setForm] = useState({ product: "", brand: "", price: "", marketplace: "", url: "" });
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [aiDrafts, setAiDrafts] = useState<CompetitorDraft[] | null>(null);
   const { project } = useProject();
   const projectCurrency = project?.manifest.currency ?? "";
 
@@ -59,6 +67,39 @@ export function CompetitorsScreen({ root }: { root: string }) {
     save.mutate(competitors.filter((competitor) => competitor.id !== id));
   };
 
+  const acceptAiDrafts = () => {
+    if (!aiDrafts) return;
+    let nextIdNumber = competitors.length + 1;
+    const existingIds = new Set(competitors.map((competitor) => competitor.id));
+    const additions: Competitor[] = aiDrafts.map((draft) => {
+      let id = `C-${String(nextIdNumber).padStart(3, "0")}`;
+      while (existingIds.has(id)) {
+        nextIdNumber += 1;
+        id = `C-${String(nextIdNumber).padStart(3, "0")}`;
+      }
+      existingIds.add(id);
+      nextIdNumber += 1;
+      return {
+        id,
+        product: draft.product,
+        brand: draft.brand,
+        price: draft.price,
+        currency: projectCurrency,
+        marketplace: draft.marketplace,
+        url: draft.url,
+        sourceId: null,
+        notes: "",
+        observedAt: new Date().toISOString(),
+      };
+    });
+    save.mutate([...competitors, ...additions], {
+      onSuccess: () => {
+        setAiDrafts(null);
+        setAiPanelOpen(false);
+      },
+    });
+  };
+
   return (
     <section className="screen">
       <header className="screen__head">
@@ -68,6 +109,59 @@ export function CompetitorsScreen({ root }: { root: string }) {
           Comparable listings only — unpriced entries are ignored by the statistics.
         </p>
       </header>
+
+      {aiPanelOpen ? (
+        <form
+          className="om-card screen__form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const data = new FormData(event.currentTarget);
+            draftAi.mutate(String(data.get("pastedListings") ?? ""), {
+              onSuccess: (result) => setAiDrafts(result.competitors),
+            });
+          }}
+        >
+          <p className="om-eyebrow">Competitor analyst</p>
+          <Field
+            hint="The assistant reads only what you paste here."
+            label="Paste listing material"
+          >
+            <textarea
+              className="om-textarea"
+              name="pastedListings"
+              placeholder="Copy one or more listings in here — title, price, marketplace…"
+              required
+            />
+          </Field>
+          <div className="screen__actions">
+            <button className="om-button om-button--secondary" onClick={() => setAiPanelOpen(false)} type="button">
+              Cancel
+            </button>
+            <button className="om-button om-button--primary" disabled={draftAi.isPending} type="submit">
+              {draftAi.isPending ? "Extracting…" : "Extract drafts"}
+            </button>
+          </div>
+          {draftAi.isError ? <ErrorState error={draftAi.error} onRetry={() => draftAi.reset()} /> : null}
+          {aiDrafts ? (
+            <div className="screen__stack">
+              <span className="om-badge om-badge--brass">
+                AI draft — review before adding ({aiDrafts.length})
+              </span>
+              {aiDrafts.map((draft, index) => (
+                <LedgerRow
+                  key={`${draft.product}-${index}`}
+                  label={draft.product}
+                  value={draft.price ?? "unpriced"}
+                  tone="muted"
+                />
+              ))}
+              <button className="om-button om-button--primary" disabled={save.isPending} onClick={acceptAiDrafts} type="button">
+                Add all to market landscape
+              </button>
+            </div>
+          ) : null}
+        </form>
+      ) : null}
 
       <div className="screen__columns">
         <form
@@ -119,6 +213,9 @@ export function CompetitorsScreen({ root }: { root: string }) {
           </Field>
           <button className="om-button om-button--primary" disabled={save.isPending} type="submit">
             Add listing
+          </button>
+          <button className="om-button om-button--secondary" onClick={() => setAiPanelOpen((open) => !open)} type="button">
+            {aiPanelOpen ? "Hide AI drafting" : "Draft listings with AI"}
           </button>
           {save.isError ? <ErrorState error={save.error} /> : null}
         </form>

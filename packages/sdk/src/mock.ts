@@ -336,6 +336,62 @@ export function createMockDesktopClient(
         origin: MOCK_ORIGIN,
       };
     },
+    draftPlan: async (root) => {
+      requireProject(projects, root);
+      await Promise.resolve();
+      return {
+        plan: {
+          steps: [
+            { title: "[mock] Collect five comparable listings", why: "Ground the price range." },
+            { title: "[mock] Confirm landed cost with a supplier", why: "Validate assumptions." },
+          ],
+        },
+        origin: MOCK_ORIGIN,
+      };
+    },
+    draftCompetitors: async (root, pastedListings) => {
+      requireProject(projects, root);
+      await Promise.resolve();
+      void pastedListings;
+      return {
+        competitors: [
+          {
+            product: "[mock] Draft listing",
+            brand: "",
+            price: "0.00",
+            marketplace: "",
+            url: "",
+          },
+        ],
+        origin: MOCK_ORIGIN,
+      };
+    },
+    reviewEconomics: async (root) => {
+      requireProject(projects, root);
+      await Promise.resolve();
+      return {
+        review: {
+          verdict: "caution",
+          summary: "[mock] Review output — replace by configuring a provider.",
+          findings: [{ severity: "info", message: "Mock review found nothing to flag." }],
+        },
+        origin: MOCK_ORIGIN,
+      };
+    },
+    auditReport: async (root) => {
+      requireProject(projects, root);
+      await Promise.resolve();
+      return {
+        audit: {
+          verdict: "gaps-found",
+          summary: "[mock] Audit output — replace by configuring a provider.",
+          findings: [
+            { status: "unverified", claim: "[mock] Example claim", note: "No matching evidence." },
+          ],
+        },
+        origin: MOCK_ORIGIN,
+      };
+    },
   };
   return client;
 }

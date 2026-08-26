@@ -3,9 +3,10 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import type { GenerationOrigin, ReportSections } from "@open-merchant/shared";
-import { ErrorState, Field } from "@open-merchant/ui";
+import { ErrorState, Field, LedgerRow } from "@open-merchant/ui";
 
 import {
+  useAuditReport,
   useDraftSections,
   useGenerateReport,
   useGeneratedReport,
@@ -23,6 +24,7 @@ export function ReportScreen({ root }: { root: string }) {
   const generatedQuery = useGeneratedReport(root);
   const generate = useGenerateReport(root);
   const draftAi = useDraftSections(root);
+  const audit = useAuditReport(root);
   const [aiDrafted, setAiDrafted] = useState(false);
 
   if (sectionsQuery.isPending) {
@@ -104,11 +106,42 @@ export function ReportScreen({ root }: { root: string }) {
           ) : null}
 
           {generatedQuery.data?.markdown ? (
-            <div className="om-paper report-preview" aria-label="Generated opportunity report">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {generatedQuery.data.markdown}
-              </ReactMarkdown>
-            </div>
+            <>
+              <button
+                className="om-button om-button--secondary"
+                disabled={audit.isPending}
+                onClick={() => audit.mutate()}
+                type="button"
+              >
+                {audit.isPending ? "Auditing…" : "Run AI auditor"}
+              </button>
+              {audit.isError ? <ErrorState error={audit.error} onRetry={() => audit.reset()} /> : null}
+              {audit.data ? (
+                <div className="review">
+                  <span
+                    className={`om-badge ${
+                      audit.data.audit.verdict === "sound" ? "om-badge--accent" : "om-badge--brass"
+                    }`}
+                  >
+                    {audit.data.audit.verdict}
+                  </span>
+                  <p className="om-field__hint">{audit.data.audit.summary}</p>
+                  {audit.data.audit.findings.map((finding) => (
+                    <LedgerRow
+                      key={`${finding.status}-${finding.claim}`}
+                      label={finding.status}
+                      value={finding.claim}
+                      tone="muted"
+                    />
+                  ))}
+                </div>
+              ) : null}
+              <div className="om-paper report-preview" aria-label="Generated opportunity report">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {generatedQuery.data.markdown}
+                </ReactMarkdown>
+              </div>
+            </>
           ) : (
             <div className="om-empty">
               <span className="om-empty__title">No generated report yet</span>

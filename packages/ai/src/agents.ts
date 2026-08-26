@@ -1,14 +1,25 @@
 import { z } from "zod";
 
 import type {
+  AuditReport,
   Competitor,
+  CompetitorDraft,
   CompetitorStatistics,
   CostAssumptions,
+  EconomicsReview,
   EconomicsScenario,
   EvidenceSource,
   ReportSections,
+  ResearchPlan,
 } from "@open-merchant/shared";
-import { evidenceSourceSchema, reportSectionsSchema } from "@open-merchant/shared";
+import {
+  auditReportSchema,
+  competitorDraftListSchema,
+  economicsReviewSchema,
+  evidenceSourceSchema,
+  reportSectionsSchema,
+  researchPlanSchema,
+} from "@open-merchant/shared";
 
 import type { CompletionResult, LlmProvider } from "./providers";
 
@@ -185,4 +196,126 @@ export async function draftReportSections(
     value: reportSectionsSchema.parse(parsed),
     completion,
   };
+}
+
+// --- Research planner ---------------------------------------------------------
+
+export async function draftResearchPlan(
+  provider: LlmProvider,
+  objective: string,
+  currency: string,
+): Promise<AgentDraft<ResearchPlan>> {
+  const system = [
+    "You are the research planner inside a commerce research workspace.",
+    "Turn a research objective into a short, ordered checklist of evidence to gather.",
+    NO_INVENTION,
+  ].join("\n");
+  const prompt = [
+    `Objective: ${objective}`,
+    `Currency: ${currency}`,
+    "",
+    'Return JSON matching: {"steps":[{"title":string,"why":string}]}',
+    "3-6 steps; each title is an action the seller can actually perform (e.g. collect five comparable listings).",
+  ].join("\n");
+
+  const completion = await provider.complete({ system, prompt });
+  const value = researchPlanSchema.parse(parseJsonObject(completion.text));
+  return { value, completion };
+}
+
+// --- Competitor analyst -------------------------------------------------------
+
+export interface DraftCompetitorsInput {
+  readonly currency: string;
+  readonly pastedListings: string;
+}
+
+export async function draftCompetitorEntries(
+  provider: LlmProvider,
+  input: DraftCompetitorsInput,
+): Promise<AgentDraft<CompetitorDraft[]>> {
+  const system = [
+    "You are the competitor analyst inside a commerce research workspace.",
+    "From the user's pasted listing material, extract every distinct competitor listing.",
+    NO_INVENTION,
+  ].join("\n");
+  const prompt = [
+    `Project currency: ${input.currency}. Prices must be plain decimal strings in that currency, or null if unpriced.`,
+    "Pasted listings follow, between the markers.",
+    "--- BEGIN LISTINGS ---",
+    input.pastedListings,
+    "--- END LISTINGS ---",
+    "",
+    'Return JSON matching: {"competitors":[{"product":string,"brand":string,"price":string|null,"marketplace":string,"url":string}]}',
+  ].join("\n");
+
+  const completion = await provider.complete({ system, prompt });
+  const parsed = competitorDraftListSchema.parse(parseJsonObject(completion.text));
+  return { value: parsed.competitors, completion };
+}
+
+// --- Economics reviewer ---------------------------------------------------------
+
+export interface ReviewEconomicsInput {
+  readonly assumptions: CostAssumptions;
+  readonly scenarios: EconomicsScenario[];
+  readonly statistics: CompetitorStatistics;
+}
+
+export async function reviewEconomics(
+  provider: LlmProvider,
+  input: ReviewEconomicsInput,
+): Promise<AgentDraft<EconomicsReview>> {
+  const system = [
+    "You are the economics reviewer inside a commerce research workspace.",
+    "Sanity-check cost assumptions and calculated scenarios against recorded market prices.",
+    "All numbers are exact decimals computed by deterministic code — never recompute them; assess plausibility only.",
+    NO_INVENTION,
+  ].join("\n");
+  const prompt = [
+    `Assumptions: ${JSON.stringify(input.assumptions)}`,
+    `Calculated scenarios: ${JSON.stringify(input.scenarios)}`,
+    `Market price statistics: ${JSON.stringify(input.statistics)}`,
+    "",
+    'Return JSON matching: {"verdict":"healthy"|"caution"|"risk","summary":string,"findings":[{"severity":"info"|"warning"|"critical","message":string}]}',
+    "1-4 findings; flag margins far from the observed price range, missing scenario prices, or fee rates that look unusual for marketplace selling.",
+  ].join("\n");
+
+  const completion = await provider.complete({ system, prompt });
+  const value = economicsReviewSchema.parse(parseJsonObject(completion.text));
+  return { value, completion };
+}
+
+// --- Auditor ---------------------------------------------------------------------
+
+export interface AuditReportInput {
+  readonly reportMarkdown: string;
+  readonly evidenceSummaries: readonly { id: string; title: string; notes: string }[];
+}
+
+export async function auditReport(
+  provider: LlmProvider,
+  input: AuditReportInput,
+): Promise<AgentDraft<AuditReport>> {
+  const system = [
+    "You are the integrity auditor inside a commerce research workspace.",
+    "Check whether claims in the drafted decision summary are backed by recorded evidence.",
+    NO_INVENTION,
+  ].join("\n");
+  const prompt = [
+    "Evidence on record:",
+    ...input.evidenceSummaries.map((source) => `- [${source.id}] ${source.title}${source.notes ? `: ${source.notes}` : ""}`),
+    "",
+    "Drafted report follows:",
+    "--- BEGIN REPORT ---",
+    input.reportMarkdown,
+    "--- END REPORT ---",
+    "",
+    'Return JSON matching: {"verdict":"sound"|"gaps-found","summary":string,"findings":[{"status":"supported"|"unverified"|"contradicted","claim":string,"note":string}]}',
+    "Assess up to five substantive claims from the decision summary and observations.",
+  ].join("\n");
+
+  const completion = await provider.complete({ system, prompt });
+  const value = auditReportSchema.parse(parseJsonObject(completion.text));
+  return { value, completion };
 }

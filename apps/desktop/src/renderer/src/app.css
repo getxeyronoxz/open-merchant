@@ -385,6 +385,24 @@ body {
   gap: var(--om-space-4);
 }
 
+.plan__steps {
+  margin: 0;
+  padding-left: var(--om-space-5);
+  display: grid;
+  gap: var(--om-space-2);
+}
+
+.plan__steps li {
+  display: grid;
+}
+
+.review {
+  border-top: 1px solid var(--om-border-subtle);
+  padding-top: var(--om-space-3);
+  display: grid;
+  gap: var(--om-space-2);
+}
+
 .screen__actions {
   display: flex;
   align-items: center;

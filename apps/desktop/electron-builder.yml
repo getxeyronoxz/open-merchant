@@ -1,0 +1,25 @@
+appId: com.xeyronox.openmerchant
+productName: Open Merchant
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**
+  - package.json
+# Workspace packages are bundled into out/ by electron-vite; node_modules
+# needed at runtime are only electron itself.
+npmRebuild: false
+win:
+  target:
+    - nsis
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+mac:
+  target:
+    - dmg
+  category: public.app-category.business
+linux:
+  target:
+    - AppImage
+  category: Office

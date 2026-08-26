@@ -10,9 +10,22 @@ import {
   nextSequentialId,
   renderOpportunityReport,
 } from "@open-merchant/core";
-import { draftEvidenceSource, draftReportSections, AiParseError, AiProviderError } from "@open-merchant/ai";
+import {
+  AiParseError,
+  AiProviderError,
+  auditReport,
+  draftCompetitorEntries,
+  draftEvidenceSource,
+  draftReportSections,
+  draftResearchPlan,
+  reviewEconomics,
+} from "@open-merchant/ai";
 import type {
   AiOrigin,
+  AuditReport,
+  CompetitorDraft,
+  EconomicsReview,
+  ResearchPlan,
   Competitor,
   CompetitorStatistics,
   CostAssumptions,
@@ -377,6 +390,95 @@ export class MerchantService {
         modelId: completion.modelId,
         promptHash: completion.promptHash,
       },
+    };
+  }
+
+  async draftPlan(root: string): Promise<{ plan: ResearchPlan; origin: AiOrigin }> {
+    if (!this.aiConfig) {
+      throw new AppError({ code: "ai-not-configured", message: "AI is unavailable in this build." });
+    }
+    const provider = await this.aiConfig.getActiveProvider();
+    const store = await this.openStore(root);
+    const { value, completion } = await runAgent(() =>
+      draftResearchPlan(provider, store.manifest.objective, store.manifest.currency),
+    );
+    return { plan: value, origin: this.aiOrigin("research-planner", completion) };
+  }
+
+  async draftCompetitors(
+    root: string,
+    pastedListings: string,
+  ): Promise<{ competitors: CompetitorDraft[]; origin: AiOrigin }> {
+    if (!this.aiConfig) {
+      throw new AppError({ code: "ai-not-configured", message: "AI is unavailable in this build." });
+    }
+    const provider = await this.aiConfig.getActiveProvider();
+    const store = await this.openStore(root);
+    const { value, completion } = await runAgent(() =>
+      draftCompetitorEntries(provider, {
+        currency: store.manifest.currency,
+        pastedListings,
+      }),
+    );
+    return { competitors: value, origin: this.aiOrigin("competitor-analyst", completion) };
+  }
+
+  async reviewEconomicsFor(root: string): Promise<{ review: EconomicsReview; origin: AiOrigin }> {
+    if (!this.aiConfig) {
+      throw new AppError({ code: "ai-not-configured", message: "AI is unavailable in this build." });
+    }
+    const provider = await this.aiConfig.getActiveProvider();
+    const store = await this.openStore(root);
+    const [assumptions, scenarios] = await Promise.all([
+      store.loadAssumptions(),
+      store.loadScenarios(),
+    ]);
+    if (scenarios.length === 0) {
+      throw new AppError({
+        code: "invalid-input",
+        message: "Calculate scenarios before asking for a review.",
+      });
+    }
+    const statistics = competitorStatistics(await store.loadCompetitors());
+    const { value, completion } = await runAgent(() =>
+      reviewEconomics(provider, { assumptions, scenarios, statistics }),
+    );
+    return { review: value, origin: this.aiOrigin("economics-reviewer", completion) };
+  }
+
+  async auditGeneratedReport(root: string): Promise<{ audit: AuditReport; origin: AiOrigin }> {
+    if (!this.aiConfig) {
+      throw new AppError({ code: "ai-not-configured", message: "AI is unavailable in this build." });
+    }
+    const provider = await this.aiConfig.getActiveProvider();
+    const store = await this.openStore(root);
+    const markdown = await store.loadOpportunityReport();
+    if (markdown === null) {
+      throw new AppError({
+        code: "invalid-input",
+        message: "Generate the report before running the auditor.",
+      });
+    }
+    const evidence = await store.loadEvidence();
+    const { value, completion } = await runAgent(() =>
+      auditReport(provider, {
+        reportMarkdown: markdown,
+        evidenceSummaries: evidence.map(({ id, title, notes }) => ({ id, title, notes })),
+      }),
+    );
+    return { audit: value, origin: this.aiOrigin("auditor", completion) };
+  }
+
+  private aiOrigin(
+    agentId: string,
+    completion: { providerId: string; modelId: string; promptHash: string },
+  ): AiOrigin {
+    return {
+      kind: "agent",
+      agentId,
+      providerId: completion.providerId,
+      modelId: completion.modelId,
+      promptHash: completion.promptHash,
     };
   }
 

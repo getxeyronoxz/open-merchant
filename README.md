@@ -1,132 +1,120 @@
 # Open Merchant
 
-Open Merchant is an artifact-first, local-first Windows workspace for deciding whether a product opportunity looks commercially attractive—without losing the evidence, assumptions, calculations, and report behind the decision.
+Open Merchant is a local-first, AI-native desktop workbench for deciding whether a product opportunity is commercially worth pursuing — without losing the evidence, assumptions, calculations, and report behind the decision.
 
-Open Merchant V0 is for solo ecommerce sellers, founders, and product researchers who want one inspectable project folder instead of disconnected tabs, spreadsheets, and notes. It ships as a Windows desktop app with a focused home screen, a stable six-section workspace, clear keyboard focus, and motion that respects the system reduced-motion preference.
+It is built for solo ecommerce sellers, founders, and product researchers who want one inspectable project folder per decision instead of scattered tabs, spreadsheets, and notes. AI assistants draft; you approve every step. Your files stay on your machine.
 
-## What Open Merchant is
+## What Open Merchant does
 
-Create a project, record a research objective and evidence, compare competitors, enter costs and selling-price scenarios, calculate deterministic unit economics, and generate a Markdown opportunity report. The project remains a normal local folder that you own and can inspect outside the app.
+Create a project folder, record a research objective and evidence, compare competitor listings, enter cost assumptions and selling-price scenarios, calculate deterministic unit economics, and generate an evidence-linked Markdown opportunity report. AI assistants can draft evidence entries, report sections, research plans, and integrity checks — but every draft is clearly marked and nothing is saved until you accept it.
 
-The working sample project is [Mechanical Keyboards India](examples/mechanical-keyboards-india). Its listings and sources are deliberately marked as demo data—not live commercial claims.
+## Platforms
 
-## Desktop workflow
+Windows, macOS, and Linux. Built on Electron with a TypeScript monorepo.
 
-The app keeps the product context visible while you work:
+## The AI copilot
 
-- **Home:** create a local project or reopen a recent one.
-- **Workspace:** Objective, Evidence, Competitors, Economics, Report, and Artifacts are available from the left rail.
-- **Local status:** the title bar identifies the open project, currency, and local-only workspace state.
-- **Artifacts:** inspect only the known project files and meaningful report-generation history from inside the app.
+Open Merchant ships with six specialist assistants rather than one chatbot:
 
-The Windows app icon is generated from [`src-tauri/app-icon.svg`](src-tauri/app-icon.svg), so the installed application, taskbar, and package all use the same Open Merchant mark.
+| Assistant | What it drafts |
+| --- | --- |
+| Research planner | A checklist of evidence to gather for your objective |
+| Evidence assistant | Structured sources from material you paste in |
+| Competitor analyst | Competitor listing entries from pasted listings |
+| Economics reviewer | Sanity flags on your assumptions versus market prices |
+| Report writer | Decision summary, observations, risks, opportunities |
+| Auditor | Whether your drafted claims are backed by recorded evidence |
 
-## Windows prerequisites
+Ground rules:
 
-- Windows 11 (V0 is Windows-only).
-- Node.js 22 or newer with npm.
-- Rust stable with the MSVC toolchain.
-- Microsoft WebView2 Runtime (included with current Windows 11 installations).
-- Git.
-
-## Development
-
-```powershell
-npm ci
-npm run tauri dev
-```
-
-The desktop app opens a folder chooser when creating a project. Choose a location you control; Open Merchant creates a new project folder there and does not use a cloud account.
-
-## Workflow
-
-1. Create or open a project.
-2. Set the research objective.
-3. Add evidence with URLs, notes, observations, and timestamps.
-4. Add competitor listings and inspect min, max, average, and median prices.
-5. Enter acquisition, shipping, marketplace, payment, and other cost assumptions.
-6. Set low, base, and high selling-price scenarios; calculate margins.
-7. Add the decision summary, observations, risks, and opportunities.
-8. Generate the evidence-linked Markdown report.
-9. Inspect the saved JSON, JSONL, CSV, Markdown, run, and provenance artifacts.
-10. Close the app and reopen the same local project.
+- **Bring your own key.** Add an Anthropic or OpenAI API key in AI settings. Keys are encrypted with OS-backed credential storage and never appear in project folders, artifacts, or logs.
+- **Drafts are not saves.** Assistant output enters the UI marked as an AI draft; it becomes project data only when you edit and save it.
+- **Provenance follows the machine.** Accepted AI content is journaled with the agent id, provider, model, prompt hash, and artifact fingerprint.
+- **No autonomous browsing.** Assistants read only what you paste into them.
+- Commerce math is never done by an AI or by floating point — see below.
 
 ## Workspace format
 
-Each project is an ordinary directory. The user-owned files are the canonical state:
+Each project is an ordinary directory that you own and can inspect outside the app:
 
 ```text
-mechanical-keyboards-india/
-  merchant-project.json
-  sources/sources.jsonl
-  market/competitors.csv
+my-project/
+  .openmerchant/
+    manifest.json          # identity, objective, currency, schema version
+    runs.jsonl             # meaningful operations (create, calculate, generate…)
+    provenance.jsonl       # generated artifacts -> run, sha256, AI origin
+  evidence/sources.jsonl   # user-owned inputs
+  market/competitors.json  # user-owned inputs
   economics/assumptions.json
-  economics/scenarios.csv
+  economics/scenarios.json # generated from assumptions
   reports/report-sections.json
-  reports/opportunity-report.md
-  .merchant/runs.jsonl
-  .merchant/provenance.jsonl
+  reports/opportunity-report.md # generated
 ```
 
-`runs.jsonl` records meaningful generation operations. `provenance.jsonl` links generated output files to their run IDs and SHA-256 fingerprints. The app’s artifact viewer reads only this known project layout; it does not expose arbitrary files from the computer.
-
-Open Merchant uses crash-safe replacement when saving its own workspace artifacts and recent-project list. If report generation is interrupted, its failed run remains visible in History with recovery guidance; any artifacts written before the interruption are retained for inspection instead of being silently removed.
+All writes are atomic replace-on-success: an interrupted save leaves the previous file intact. Malformed files are rejected loudly, never silently repaired. Projects created by Open Merchant V0 (schema version 1) can be migrated via **Import legacy project** on the Home screen.
 
 ## Deterministic calculations
 
-All commerce calculations run in tested application code using fixed decimal values—not an LLM and not JavaScript floating-point arithmetic.
-
-For each selling-price scenario:
+All commerce math runs in tested application code using arbitrary-precision decimals — not an LLM, not binary floating point. Rounding is half-away-from-zero to two decimal places, applied only when a value is emitted:
 
 ```text
 marketplace fee = selling price × marketplace fee rate / 100
 payment fee     = selling price × payment fee rate / 100
-total cost      = acquisition + shipping + marketplace fee + payment fee + other costs
+total cost      = acquisition + shipping + fees + other costs
 gross profit    = selling price − total cost
 gross margin    = gross profit / selling price × 100
 ```
 
-Competitor statistics ignore listings without a price and calculate min, max, average, and median from valid prices only.
+Competitor statistics ignore unpriced listings and report min, max, average, and median of valid prices only. The current engine's outputs are pinned against golden fixtures derived from the original Rust implementation.
 
-## Architecture
+## Development
 
-The React desktop UI calls a narrow Tauri application layer. Portable Rust crates hold the commerce domain and workspace storage rules. Windows/Tauri behavior stays at the desktop boundary, while calculations and file formats remain independent of the platform.
+Prerequisites: Node.js 22+, pnpm 9+, Git.
 
-See [Architecture](docs/architecture.md) for the current code and data boundaries. Historical planning records under [`docs/superpowers/`](docs/superpowers/) are not the current product contract.
-
-## Testing
-
-```powershell
-cargo test --workspace --all-targets
-npm run test:run
+```bash
+pnpm install
+pnpm dev        # run the desktop app
+pnpm test       # all package tests
+pnpm lint       # eslint
+pnpm typecheck  # strict TS across the monorepo
 ```
 
-The Rust suite covers workspace persistence, validation, decimal economics, competitor statistics, report generation, provenance, and a complete create → report → reopen workflow. The frontend suite covers the project workflow and key editing screens.
+### Repository layout
 
-## Windows build
-
-```powershell
-npm run tauri build -- --bundles nsis
+```text
+apps/desktop/      Electron app (main, preload, renderer)
+packages/shared/   Zod schemas: artifacts, IPC contract, errors, agent outputs
+packages/core/     Domain engine: exact-decimal money, economics, statistics,
+                   validation, report rendering, atomic workspace store,
+                   path guards, run/provenance journals, V0 import
+packages/ai/       Provider-agnostic LLM seam (Anthropic/OpenAI adapters,
+                   mock provider) and the specialist agents
+packages/sdk/      Typed DesktopClient over the validated IPC contract +
+                   in-memory mock client
+packages/ui/       Design tokens and primitives ("The Merchant's Ledger")
+examples/          Demo project (marked demo data, not live claims)
+docs/              Architecture notes and release checks
 ```
 
-The unsigned NSIS installer is written under `target\release\bundle\nsis`. Windows may show a SmartScreen warning for an unsigned early build. Review the release source and installer provenance before installing; user project folders remain outside the installation directory.
+The renderer never imports Electron: everything crosses the single zod-validated IPC contract exposed through `packages/sdk`.
+
+### Packaging
+
+```bash
+pnpm --filter @open-merchant/desktop dist
+```
+
+Produces an unsigned NSIS installer (Windows), DMG (macOS), or AppImage (Linux) under `apps/desktop/release`. Your operating system may warn about unsigned builds; review the source and build provenance before installing.
 
 ## Current limitations
 
-- Windows only; Linux and macOS releases are not part of V0.
-- No cloud sync, accounts, teams, or mobile application.
-- No chatbot, LLM provider, automatic research, web scraping, or browser automation.
-- No marketplace, supplier, inventory, CRM, accounting, advertising, payment, or purchasing integrations.
-- V0 expects one writer at a time per project. Do not edit a project in another tool while Open Merchant has unsaved changes.
-- Evidence and pricing in the checked-in sample project are clearly marked demo data, not live commercial claims.
+- No cloud sync, accounts, teams, or mobile clients.
+- Assistants cannot browse: you supply page content by pasting it.
+- One writer per project at a time; do not edit a project elsewhere while Open Merchant has unsaved changes.
+- The checked-in example project contains clearly-marked demo data, not live commercial claims.
 
 ## License
 
-Open Merchant is licensed under the GNU Affero General Public License v3.0
-only (`AGPL-3.0-only`).
+Open Merchant is licensed under the GNU Affero General Public License v3.0 only (`AGPL-3.0-only`).
 
 Copyright © 2026 Xeyronox.
-
-## Contributing and support
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for local development and pull-request guidance, [AGENTS.md](AGENTS.md) for repository-specific agent instructions, [Architecture](docs/architecture.md) for current boundaries, [Windows smoke testing](docs/manual-smoke-test.md) for release checks, and the [demo script](docs/demo-script.md) for the checked-in example workflow. [CHANGELOG.md](CHANGELOG.md) records release notes, [SUPPORT.md](SUPPORT.md) routes questions, and [SECURITY.md](SECURITY.md) covers private vulnerability reporting. Community participation is governed by the [Code of Conduct](CODE_OF_CONDUCT.md).

@@ -3,7 +3,8 @@
   "compilerOptions": {
     "noEmit": false,
     "outDir": "./dist",
-    "types": []
+    "lib": ["ES2023", "DOM"],
+    "types": ["node"]
   },
   "include": ["src"],
   "exclude": ["**/*.test.ts"]

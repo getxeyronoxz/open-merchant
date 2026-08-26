@@ -10,6 +10,12 @@ import {
   manifestSchema,
   reportSectionsSchema,
 } from "./artifacts";
+import {
+  auditReportSchema,
+  competitorDraftSchema,
+  economicsReviewSchema,
+  researchPlanSchema,
+} from "./ai";
 import { aiOriginSchema, generationOriginSchema, provenanceRecordSchema, runRecordSchema } from "./provenance";
 
 /**
@@ -225,6 +231,22 @@ export const ipc = {
       sections: reportSectionsSchema,
       origin: aiOriginSchema,
     }),
+  },
+  "ai/draft-plan": {
+    request: rootOnlyInputSchema,
+    response: z.object({ plan: researchPlanSchema, origin: aiOriginSchema }),
+  },
+  "ai/draft-competitors": {
+    request: z.object({ root: z.string(), pastedListings: z.string().min(1) }),
+    response: z.object({ competitors: z.array(competitorDraftSchema), origin: aiOriginSchema }),
+  },
+  "ai/review-economics": {
+    request: rootOnlyInputSchema,
+    response: z.object({ review: economicsReviewSchema, origin: aiOriginSchema }),
+  },
+  "ai/audit-report": {
+    request: rootOnlyInputSchema,
+    response: z.object({ audit: auditReportSchema, origin: aiOriginSchema }),
   },
 } as const;
 

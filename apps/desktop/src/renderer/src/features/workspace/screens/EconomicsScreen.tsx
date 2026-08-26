@@ -7,6 +7,7 @@ import { useProject } from "../../../state/project";
 import {
   useAssumptions,
   useCalculateScenarios,
+  useReviewEconomics,
   useSaveAssumptions,
   useScenarios,
 } from "../queries";
@@ -45,6 +46,7 @@ export function EconomicsScreen({ root }: { root: string }) {
       <div className="screen__columns">
         <AssumptionsForm root={root} initial={assumptionsQuery.data.assumptions} />
         <ScenarioPanel
+          root={root}
           calculateError={calculate.error}
           calculating={calculate.isPending}
           onCalculate={() => calculate.mutate()}
@@ -140,6 +142,7 @@ function AssumptionsForm({ root, initial }: { root: string; initial: CostAssumpt
 }
 
 function ScenarioPanel({
+  root,
   scenarios,
   onCalculate,
   calculating,
@@ -147,6 +150,7 @@ function ScenarioPanel({
   scenariosPending,
   scenariosQuery,
 }: {
+  root: string;
   scenarios: EconomicsScenario[];
   onCalculate: () => void;
   calculating: boolean;
@@ -154,6 +158,7 @@ function ScenarioPanel({
   scenariosPending: boolean;
   scenariosQuery: { isError: boolean; error: unknown; refetch: () => void };
 }) {
+  const review = useReviewEconomics(root);
   return (
     <aside className="om-card om-card--inset screen__stats">
       <p className="om-eyebrow">Scenarios</p>
@@ -198,6 +203,40 @@ function ScenarioPanel({
               <LedgerRow label="Gross margin" value={`${scenario.grossMarginPercent}%`} tone="brass" />
             </article>
           ))}
+
+          <button
+            className="om-button om-button--secondary"
+            disabled={review.isPending || scenarios.length === 0}
+            onClick={() => review.mutate()}
+            type="button"
+          >
+            {review.isPending ? "Reviewing…" : "Review with AI"}
+          </button>
+          {review.isError ? <ErrorState error={review.error} onRetry={() => review.reset()} /> : null}
+          {review.data ? (
+            <div className="review">
+              <span
+                className={`om-badge ${
+                  review.data.review.verdict === "healthy"
+                    ? "om-badge--accent"
+                    : review.data.review.verdict === "risk"
+                      ? "om-badge--danger"
+                      : "om-badge--brass"
+                }`}
+              >
+                {review.data.review.verdict}
+              </span>
+              <p className="om-field__hint">{review.data.review.summary}</p>
+              {review.data.review.findings.map((finding) => (
+                <LedgerRow
+                  key={finding.message}
+                  label={finding.severity}
+                  value={finding.message}
+                  tone="muted"
+                />
+              ))}
+            </div>
+          ) : null}
         </>
       )}
     </aside>
