@@ -1,48 +1,69 @@
 # Contributing to Open Merchant
 
-Thanks for helping improve Open Merchant. Keep contributions focused on the local-first, artifact-first V0 workflow described in [README.md](README.md) and [docs/architecture.md](docs/architecture.md).
+Thanks for helping improve Open Merchant. Keep contributions focused on the
+local-first, artifact-first workflow described in [README.md](README.md) and
+[docs/architecture.md](docs/architecture.md).
 
 ## Local setup
 
-On Windows 11, install Node.js 22+ with npm and Rust stable with the MSVC toolchain. Then run:
+Install Node.js 22+ and pnpm 9+, then run:
 
-```powershell
-npm ci
-npm run tauri dev
+```bash
+pnpm install
+pnpm dev
 ```
 
-Before opening a pull request, run:
+The desktop app opens in development mode; the renderer also runs standalone
+at the printed local URL with an in-memory mock client.
 
-```powershell
-npm run test:run
-npm run build
-cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace --all-targets --all-features
+## Before opening a pull request
+
+```bash
+pnpm -r test && pnpm lint && pnpm typecheck
 ```
 
-For a Windows package or app-icon change, also run:
+Electron end-to-end tests live separately from the unit suites:
 
-```powershell
-npm run tauri build -- --bundles nsis
+```bash
+pnpm --filter @open-merchant/desktop test:e2e
 ```
 
-## Documentation and application identity
+For packaging changes, build the installers for your platform:
 
-- Update `README.md` when user-visible workflow, requirements, workspace files, or limitations change.
-- Keep [docs/architecture.md](docs/architecture.md), [manual smoke testing](docs/manual-smoke-test.md), and the [demo script](docs/demo-script.md) aligned with the shipped app.
-- `docs/superpowers/` preserves historical plans and specifications. Do not update it to describe current behavior; update the current documents above instead.
-- Edit `src-tauri/app-icon.svg` for application-logo changes, then regenerate the committed bundle icon set with `npm run tauri -- icon src-tauri/app-icon.svg --output src-tauri/icons`.
+```bash
+pnpm --filter @open-merchant/desktop dist
+```
+
+## Documentation
+
+- Update `README.md` when user-visible workflow, requirements, workspace
+  files, or limitations change.
+- Keep [docs/architecture.md](docs/architecture.md) aligned with shipped
+  behavior.
 
 ## Pull requests
 
-- Start from the current `main` branch and use a focused branch name.
+- Start from the current `dev` branch and use a focused branch name
+  (`feature/*`). `main` holds the archived V0 codebase and stays frozen.
 - Keep commits and pull requests small, clear, and independently reviewable.
-- Add or update focused tests for changed behavior. Diagnose failures before changing code.
-- Open an issue first for a substantial change or a change that could affect V0 scope, project-file compatibility, licensing, security, or user data ownership.
-- Do not add cloud services, accounts, AI/chat, scraping, marketplace integrations, payments, mobile, or other V1 scope without founder approval.
-- For UI changes, verify keyboard focus, content order, and reduced-motion behavior in addition to automated tests.
+- Add or update focused tests for changed behavior. Diagnose failures before
+  changing code.
+- Commerce math must stay exact: arbitrary-precision decimals only, computed
+  in `packages/core`. Never introduce binary floating point or LLM calls into
+  calculations.
+- AI assistants may only produce validated drafts that a human accepts;
+  accepted content journals provenance (agent id, provider, model, prompt
+  hash). Never send API keys through IPC responses, logs, project folders, or
+  tests.
+- Do not add cloud sync, accounts, teams, telemetry, payments, autonomous
+  browsing, or marketplace integrations without owner approval.
+- For UI changes, verify keyboard focus, content order, and reduced-motion
+  behavior in addition to automated tests.
 
-Report security vulnerabilities through [SECURITY.md](SECURITY.md), not public issues. By participating, you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+Report security vulnerabilities through [SECURITY.md](SECURITY.md), not
+public issues. By participating, you agree to follow the
+[Code of Conduct](CODE_OF_CONDUCT.md).
 
-Open Merchant is licensed under `AGPL-3.0-only`. No contributor license agreement, DCO, or copyright assignment is required for ordinary contributions.
+Open Merchant is licensed under `AGPL-3.0-only`. No contributor license
+agreement, DCO, or copyright assignment is required for ordinary
+contributions.
