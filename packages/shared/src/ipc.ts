@@ -60,6 +60,10 @@ export const ipc = {
       platform: z.string(),
     }),
   },
+  "dialog/choose-directory": {
+    request: z.object({ title: z.string() }),
+    response: z.object({ path: z.string().nullable() }),
+  },
   "project/create": {
     request: createProjectInputSchema,
     response: z.object({
@@ -68,6 +72,12 @@ export const ipc = {
   },
   "project/open": {
     request: openProjectInputSchema,
+    response: z.object({
+      snapshot: projectSnapshotSchema,
+    }),
+  },
+  "manifest/save": {
+    request: z.object({ root: z.string(), manifest: manifestSchema }),
     response: z.object({
       snapshot: projectSnapshotSchema,
     }),

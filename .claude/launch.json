@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "desktop",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@open-merchant/desktop", "dev"],
+      "port": 5173,
+      "url": "http://localhost:5173"
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { type IpcChannel, type IpcRequest, type IpcResponse, AppError, ipc } from "@open-merchant/shared";
-import { app, ipcMain } from "electron";
+import { app, dialog, ipcMain } from "electron";
 
 import { RecentsStore } from "./recents";
 import type { MerchantService } from "./service";
@@ -30,6 +30,15 @@ export function registerIpcHandlers(service: MerchantService): void {
       appVersion: app.getVersion(),
       platform: process.platform,
     })),
+    "dialog/choose-directory": channel<"dialog/choose-directory">(async ({ title }) => {
+      const result = await dialog.showOpenDialog({
+        title,
+        properties: ["openDirectory", "createDirectory"],
+        message: title,
+      });
+      const chosen = result.filePaths[0];
+      return { path: result.canceled || !chosen ? null : chosen };
+    }),
 
     "project/create": channel<"project/create">(async (input) => {
       const created = await service.createProject(input);
@@ -49,6 +58,11 @@ export function registerIpcHandlers(service: MerchantService): void {
         importedEvidence: result.importedEvidence,
         importedCompetitors: result.importedCompetitors,
       };
+    }),
+    "manifest/save": channel<"manifest/save">(async ({ root, manifest }) => {
+      const saved = await service.saveManifest(root, manifest);
+      await recents.upsert(saved.name, root);
+      return { snapshot: { root, manifest: saved } };
     }),
 
     "recents/list": channel<"recents/list">(async () => ({ projects: await recents.list() })),

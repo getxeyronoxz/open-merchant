@@ -35,8 +35,10 @@ function bind<C extends IpcChannel>(raw: RawInvoke, channel: C): (request: IpcRe
 
 export interface DesktopClient {
   appInfo(): Promise<IpcResponse<"app/info">>;
+  chooseDirectory(title: string): Promise<IpcResponse<"dialog/choose-directory">>;
   createProject(request: IpcRequest<"project/create">): Promise<IpcResponse<"project/create">>;
   openProject(request: IpcRequest<"project/open">): Promise<IpcResponse<"project/open">>;
+  saveManifest(root: string, manifest: IpcRequest<"manifest/save">["manifest"]): Promise<IpcResponse<"manifest/save">>;
   importV0Project(request: IpcRequest<"project/import-v0">): Promise<IpcResponse<"project/import-v0">>;
   listRecents(): Promise<IpcResponse<"recents/list">>;
   removeRecent(request: IpcRequest<"recents/remove">): Promise<IpcResponse<"recents/remove">>;
@@ -67,8 +69,10 @@ export interface DesktopClient {
 export function createDesktopClient(raw: RawInvoke): DesktopClient {
   return {
     appInfo: () => invoke(raw, "app/info", {}),
+    chooseDirectory: (title) => invoke(raw, "dialog/choose-directory", { title }),
     createProject: bind(raw, "project/create"),
     openProject: bind(raw, "project/open"),
+    saveManifest: (root, manifest) => invoke(raw, "manifest/save", { root, manifest }),
     importV0Project: bind(raw, "project/import-v0"),
     listRecents: () => invoke(raw, "recents/list", {}),
     removeRecent: bind(raw, "recents/remove"),

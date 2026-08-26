@@ -15,6 +15,7 @@ import type {
   CostAssumptions,
   EconomicsScenario,
   EvidenceSource,
+  Manifest,
   ProvenanceRecord,
   ReportSections,
   RunRecord,
@@ -122,6 +123,17 @@ export class MerchantService {
 
   loadEvidence(root: string): Promise<EvidenceSource[]> {
     return this.openStore(root).then((store) => store.loadEvidence());
+  }
+
+  async saveManifest(root: string, manifest: Manifest): Promise<Manifest> {
+    const store = await this.openStore(root);
+    if (store.manifest.projectId !== manifest.projectId) {
+      throw new AppError({
+        code: "invalid-input",
+        message: "Manifest identity does not match this project.",
+      });
+    }
+    return store.saveManifest({ name: manifest.name, objective: manifest.objective });
   }
 
   async saveEvidence(root: string, sources: EvidenceSource[]): Promise<void> {

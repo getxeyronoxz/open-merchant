@@ -1,6 +1,11 @@
+/* Open Merchant primitives — consume tokens.css. BEM-ish .om-* classes. */
+
+/* ---------- Buttons ---------- */
+
 .om-button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--om-space-2);
   border-radius: var(--om-radius-md);
   border: 1px solid transparent;
@@ -8,10 +13,13 @@
   font-family: var(--om-font-sans);
   font-size: var(--om-text-sm);
   font-weight: 600;
+  letter-spacing: 0.01em;
   cursor: pointer;
+  white-space: nowrap;
   transition:
     background-color var(--om-motion-fast),
     border-color var(--om-motion-fast),
+    color var(--om-motion-fast),
     transform var(--om-motion-fast);
 }
 
@@ -29,9 +37,11 @@
   background: var(--om-accent);
   color: var(--om-accent-contrast);
 }
-
 .om-button--primary:hover:not(:disabled) {
   background: var(--om-accent-strong);
+}
+.om-button--primary:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .om-button--secondary {
@@ -39,7 +49,6 @@
   color: var(--om-text-primary);
   border-color: var(--om-border-strong);
 }
-
 .om-button--secondary:hover:not(:disabled) {
   border-color: var(--om-accent);
 }
@@ -48,7 +57,6 @@
   background: transparent;
   color: var(--om-text-secondary);
 }
-
 .om-button--ghost:hover:not(:disabled) {
   color: var(--om-text-primary);
   background: var(--om-surface-inset);
@@ -59,7 +67,330 @@
   color: var(--om-danger);
   border-color: var(--om-border-subtle);
 }
-
 .om-button--danger:hover:not(:disabled) {
-  background: rgba(251, 113, 133, 0.12);
+  background: var(--om-danger-soft);
+}
+
+/* ---------- Fields ---------- */
+
+.om-field {
+  display: grid;
+  gap: var(--om-space-1);
+  font-size: var(--om-text-sm);
+  color: var(--om-text-secondary);
+}
+
+.om-field__label {
+  font-weight: 600;
+  color: var(--om-text-primary);
+}
+
+.om-field__hint {
+  font-size: var(--om-text-xs);
+  color: var(--om-text-muted);
+}
+
+.om-input,
+.om-textarea,
+.om-select {
+  width: 100%;
+  background: var(--om-surface-inset);
+  color: var(--om-text-primary);
+  border: 1px solid var(--om-border-strong);
+  border-radius: var(--om-radius-md);
+  padding: var(--om-space-2) var(--om-space-3);
+  font-family: var(--om-font-sans);
+  font-size: var(--om-text-md);
+}
+
+.om-input::placeholder,
+.om-textarea::placeholder {
+  color: var(--om-text-muted);
+}
+
+.om-input:focus-visible,
+.om-textarea:focus-visible,
+.om-select:focus-visible {
+  outline: 2px solid var(--om-accent);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+.om-textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+.om-input--mono,
+.om-textarea--mono {
+  font-family: var(--om-font-mono);
+  font-size: var(--om-text-sm);
+}
+
+.om-money {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ---------- Cards & panels ---------- */
+
+.om-card {
+  background: var(--om-surface-raised);
+  border: 1px solid var(--om-border-subtle);
+  border-radius: var(--om-radius-lg);
+  padding: var(--om-space-5);
+}
+
+.om-card--inset {
+  background: var(--om-surface-inset);
+}
+
+.om-paper {
+  background: var(--om-paper);
+  color: var(--om-paper-ink);
+  border: 1px solid var(--om-paper-edge);
+  border-radius: var(--om-radius-md);
+  box-shadow: var(--om-shadow-raised);
+  padding: var(--om-space-6);
+}
+
+/* ---------- Section headers ---------- */
+
+.om-eyebrow {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--om-space-2);
+  color: var(--om-brass);
+  font-family: var(--om-font-mono);
+  font-size: var(--om-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--om-tracking-caps);
+}
+
+.om-eyebrow::before {
+  content: "";
+  width: 14px;
+  height: 1px;
+  background: var(--om-brass);
+}
+
+.om-section-title {
+  margin: var(--om-space-2) 0 0;
+  font-family: var(--om-font-display);
+  font-size: var(--om-text-xl);
+  font-weight: 400;
+  letter-spacing: 0.005em;
+}
+
+.om-section-sub {
+  margin: var(--om-space-1) 0 0;
+  color: var(--om-text-secondary);
+  font-size: var(--om-text-sm);
+  max-width: 56ch;
+}
+
+/* ---------- Ledger rows (signature element) ---------- */
+
+.om-ledger {
+  display: grid;
+  gap: var(--om-space-2);
+}
+
+.om-ledger__row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--om-space-3);
+  min-width: 0;
+}
+
+.om-ledger__label {
+  color: var(--om-text-secondary);
+  font-size: var(--om-text-md);
+}
+
+.om-ledger__leader {
+  flex: 1;
+  border-bottom: 1px dotted var(--om-border-strong);
+  transform: translateY(-4px);
+  min-width: var(--om-space-5);
+}
+
+.om-ledger__value {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--om-text-md);
+  color: var(--om-text-primary);
+}
+
+.om-ledger__value--brass {
+  color: var(--om-brass);
+}
+
+.om-ledger__value--muted {
+  color: var(--om-text-muted);
+}
+
+/* ---------- Badges & status ---------- */
+
+.om-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--om-space-1);
+  padding: 2px var(--om-space-2);
+  border-radius: 999px;
+  font-size: var(--om-text-xs);
+  font-weight: 600;
+  border: 1px solid var(--om-border-subtle);
+  color: var(--om-text-secondary);
+  background: var(--om-surface-inset);
+}
+
+.om-badge--accent {
+  color: var(--om-accent);
+  border-color: transparent;
+  background: var(--om-accent-soft);
+}
+
+.om-badge--brass {
+  color: var(--om-brass);
+  border-color: transparent;
+  background: var(--om-brass-soft);
+}
+
+.om-badge--danger {
+  color: var(--om-danger);
+  border-color: transparent;
+  background: var(--om-danger-soft);
+}
+
+.om-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.9;
+}
+
+/* ---------- Feedback states ---------- */
+
+.om-error-state {
+  display: grid;
+  gap: var(--om-space-2);
+  background: var(--om-danger-soft);
+  border: 1px solid rgba(240, 120, 140, 0.35);
+  color: var(--om-danger);
+  border-radius: var(--om-radius-md);
+  padding: var(--om-space-3) var(--om-space-4);
+  font-size: var(--om-text-sm);
+}
+
+.om-error-state__code {
+  font-family: var(--om-font-mono);
+  font-size: var(--om-text-xs);
+  color: var(--om-text-muted);
+}
+
+.om-empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--om-space-2);
+  border: 1px dashed var(--om-border-strong);
+  border-radius: var(--om-radius-lg);
+  padding: var(--om-space-6);
+  color: var(--om-text-secondary);
+}
+
+.om-empty__title {
+  color: var(--om-text-primary);
+  font-weight: 600;
+  font-size: var(--om-text-md);
+}
+
+.om-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--om-space-2);
+  color: var(--om-text-muted);
+  font-size: var(--om-text-sm);
+}
+
+.om-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid var(--om-border-strong);
+  border-top-color: var(--om-accent);
+  animation: om-spin 0.8s linear infinite;
+}
+
+@keyframes om-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Provenance / data voice ---------- */
+
+.om-data {
+  font-family: var(--om-font-mono);
+  font-size: var(--om-text-xs);
+  color: var(--om-text-muted);
+  word-break: break-all;
+}
+
+.om-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--om-text-sm);
+}
+
+.om-table th {
+  text-align: left;
+  color: var(--om-text-muted);
+  font-weight: 600;
+  font-size: var(--om-text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--om-tracking-caps);
+  padding: var(--om-space-2) var(--om-space-3);
+  border-bottom: 1px solid var(--om-border-strong);
+}
+
+.om-table td {
+  padding: var(--om-space-2) var(--om-space-3);
+  border-bottom: 1px solid var(--om-border-subtle);
+}
+
+.om-table td--num,
+.om-table .om-num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ---------- Report paper typography ---------- */
+
+.om-paper h1,
+.om-paper h2 {
+  font-family: var(--om-font-display);
+  font-weight: 400;
+}
+
+.om-paper table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.om-paper th,
+.om-paper td {
+  border-bottom: 1px solid var(--om-paper-edge);
+  padding: var(--om-space-1) var(--om-space-2);
+  text-align: left;
+}
+
+.om-paper blockquote {
+  margin: 0;
+  border-left: 3px solid var(--om-paper-edge);
+  padding-left: var(--om-space-3);
+  color: var(--om-paper-muted);
 }

@@ -73,6 +73,12 @@ export function createMockDesktopClient(
       platform: "mock",
     }),
 
+    chooseDirectory: async (title) => {
+      void title;
+      // Browser development convenience: pretend the user picked a folder.
+      return { path: "C:/Users/demo/research" };
+    },
+
     createProject: async ({ parentDirectory, name, objective, currency }) => {
       const trimmed = name.trim();
       if (!trimmed || !parentDirectory.trim()) {
@@ -110,6 +116,18 @@ export function createMockDesktopClient(
     },
 
     openProject: async ({ root }) => ({ snapshot: requireProject(projects, root).snapshot }),
+
+    saveManifest: async (root, manifest) => {
+      const project = requireProject(projects, root);
+      const updated = {
+        ...project.snapshot.manifest,
+        name: manifest.name.trim() || project.snapshot.manifest.name,
+        objective: manifest.objective,
+        updatedAt: new Date().toISOString(),
+      };
+      project.snapshot = { root: project.snapshot.root, manifest: updated };
+      return { snapshot: project.snapshot };
+    },
 
     importV0Project: async () => {
       throw new AppError({ code: "not-found", message: "Import is unavailable in the mock client." });
