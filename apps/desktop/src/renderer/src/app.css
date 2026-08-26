@@ -1,0 +1,107 @@
+/* Walking-skeleton layout (phase 0). Replaced by the real design system in phase 1c. */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--om-surface-canvas);
+  color: var(--om-text-primary);
+  font-family: var(--om-font-sans);
+  line-height: var(--om-leading-body);
+}
+
+.skeleton-shell {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--om-space-7) var(--om-space-5);
+  display: grid;
+  gap: var(--om-space-5);
+}
+
+.skeleton-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.skeleton-header h1 {
+  margin: 0;
+  font-size: var(--om-text-xl);
+}
+
+.skeleton-card {
+  background: var(--om-surface-raised);
+  border: 1px solid var(--om-border-subtle);
+  border-radius: var(--om-radius-lg);
+  padding: var(--om-space-5);
+  display: grid;
+  gap: var(--om-space-3);
+}
+
+.skeleton-eyebrow {
+  margin: 0;
+  color: var(--om-accent);
+  font-size: var(--om-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.skeleton-card h2 {
+  margin: 0;
+}
+
+.skeleton-card label {
+  display: grid;
+  gap: var(--om-space-1);
+  font-size: var(--om-text-sm);
+  color: var(--om-text-secondary);
+}
+
+.skeleton-card input,
+.skeleton-card textarea {
+  background: var(--om-surface-inset);
+  color: var(--om-text-primary);
+  border: 1px solid var(--om-border-strong);
+  border-radius: var(--om-radius-md);
+  padding: var(--om-space-2) var(--om-space-3);
+  font-family: inherit;
+  font-size: var(--om-text-md);
+}
+
+.skeleton-card input:focus-visible,
+.skeleton-card textarea:focus-visible,
+.om-button:focus-visible {
+  outline: 2px solid var(--om-accent);
+  outline-offset: 1px;
+}
+
+.skeleton-meta {
+  color: var(--om-text-muted);
+  font-size: var(--om-text-sm);
+}
+
+.skeleton-recents {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--om-space-2);
+}
+
+.skeleton-recents li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--om-space-3);
+}
+
+.skeleton-error {
+  background: rgba(251, 113, 133, 0.12);
+  border: 1px solid rgba(251, 113, 133, 0.4);
+  color: var(--om-danger);
+  border-radius: var(--om-radius-md);
+  padding: var(--om-space-3) var(--om-space-4);
+}

@@ -1,6 +1,23 @@
-.worktrees/
+# Dependencies
 node_modules/
+
+# Build output
 dist/
+out/
+coverage/
 target/
 src-tauri/target/
-coverage/
+
+# Electron / packaging
+release/
+
+# Environment
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Legacy worktrees (to be removed in Phase 1e)
+.worktrees/

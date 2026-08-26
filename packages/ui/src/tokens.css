@@ -1,0 +1,77 @@
+/*
+ * Open Merchant design tokens.
+ * Semantic custom properties only — components never hard-code raw colors
+ * or sizes. Dark-first: the workspace is used for long focused sessions.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --om-surface-canvas: #0d0f0e;
+  --om-surface-raised: #141715;
+  --om-surface-overlay: #1b1f1c;
+  --om-surface-inset: #101311;
+
+  /* Text */
+  --om-text-primary: #f2f4f1;
+  --om-text-secondary: #a8b0aa;
+  --om-text-muted: #6b756e;
+
+  /* Accent — commerce green, calm not neon */
+  --om-accent: #4ade80;
+  --om-accent-strong: #22c55e;
+  --om-accent-contrast: #06130b;
+  --om-accent-soft: rgba(74, 222, 128, 0.12);
+
+  /* Feedback */
+  --om-danger: #fb7185;
+  --om-warning: #fbbf24;
+  --om-info: #7dd3fc;
+
+  /* Lines */
+  --om-border-subtle: rgba(255, 255, 255, 0.07);
+  --om-border-strong: rgba(255, 255, 255, 0.14);
+
+  /* Typography */
+  --om-font-sans:
+    "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --om-font-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+  --om-text-xs: 0.75rem;
+  --om-text-sm: 0.8125rem;
+  --om-text-md: 0.9375rem;
+  --om-text-lg: 1.125rem;
+  --om-text-xl: 1.5rem;
+  --om-leading-tight: 1.25;
+  --om-leading-body: 1.55;
+
+  /* Spacing (4px base) */
+  --om-space-1: 0.25rem;
+  --om-space-2: 0.5rem;
+  --om-space-3: 0.75rem;
+  --om-space-4: 1rem;
+  --om-space-5: 1.5rem;
+  --om-space-6: 2rem;
+  --om-space-7: 3rem;
+
+  /* Shape + depth */
+  --om-radius-sm: 6px;
+  --om-radius-md: 10px;
+  --om-radius-lg: 16px;
+  --om-shadow-raised: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
+
+  /* Motion — non-essential transitions are disabled globally below */
+  --om-motion-fast: 120ms ease-out;
+  --om-motion-base: 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,37 +1,31 @@
 {
   "name": "open-merchant",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0-alpha.0",
   "license": "AGPL-3.0-only",
+  "description": "Local-first, AI-native commerce research workbench.",
   "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "test": "vitest",
-    "test:run": "vitest run",
-    "tauri": "tauri"
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=22"
   },
-  "dependencies": {
-    "@tauri-apps/api": "^2.11.1",
-    "@tauri-apps/plugin-dialog": "^2.7.2",
-    "@tauri-apps/plugin-opener": "^2.5.4",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "react-markdown": "^10.1.0"
+  "scripts": {
+    "dev": "pnpm --filter @open-merchant/desktop dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "pnpm -r test"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "@tauri-apps/cli": "^2.11.4",
-    "@testing-library/jest-dom": "^7.0.0",
-    "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^14.6.3",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
-    "@vitejs/plugin-react": "^6.0.5",
-    "jsdom": "^30.0.1",
-    "tailwindcss": "^4.3.3",
-    "typescript": "^7.0.2",
-    "vite": "^8.2.1",
-    "vitest": "^4.1.10"
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^24.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.4.0",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.1.0"
   }
 }
