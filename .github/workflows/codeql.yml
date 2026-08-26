@@ -25,10 +25,6 @@ jobs:
             build-mode: none
           - language: javascript-typescript
             build-mode: none
-          - language: rust
-            # CodeQL's Rust extractor currently supports only `none` mode.
-            # A real Cargo build remains part of local release verification.
-            build-mode: none
 
     steps:
       - name: Check out repository

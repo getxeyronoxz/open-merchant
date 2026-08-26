@@ -109,6 +109,14 @@ export const reportSectionsSchema = z.object({
   opportunities: z.array(z.string()),
 });
 
+export const competitorStatisticsSchema = z.object({
+  validPriceCount: z.number().int().nonnegative(),
+  minimum: moneyStringSchema.nullable(),
+  maximum: moneyStringSchema.nullable(),
+  average: moneyStringSchema.nullable(),
+  median: moneyStringSchema.nullable(),
+});
+
 export type Manifest = z.infer<typeof manifestSchema>;
 export type Observation = z.infer<typeof observationSchema>;
 export type EvidenceSource = z.infer<typeof evidenceSourceSchema>;
@@ -117,4 +125,5 @@ export type ScenarioPrices = z.infer<typeof scenarioPricesSchema>;
 export type CostAssumptions = z.infer<typeof costAssumptionsSchema>;
 export type ScenarioName = z.infer<typeof scenarioNameSchema>;
 export type EconomicsScenario = z.infer<typeof economicsScenarioSchema>;
+export type CompetitorStatistics = z.infer<typeof competitorStatisticsSchema>;
 export type ReportSections = z.infer<typeof reportSectionsSchema>;
