@@ -380,6 +380,18 @@ body {
   align-items: start;
 }
 
+.screen__stack {
+  display: grid;
+  gap: var(--om-space-4);
+}
+
+.screen__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--om-space-3);
+  flex-wrap: wrap;
+}
+
 @media (max-width: 1000px) {
   .screen__columns {
     grid-template-columns: 1fr;

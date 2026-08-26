@@ -1,9 +1,9 @@
 import { useState } from "react";
 
-import type { EvidenceSource, Observation } from "@open-merchant/shared";
+import type { AiOrigin, EvidenceSource, Observation } from "@open-merchant/shared";
 import { EmptyState, ErrorState, Field, LedgerRow } from "@open-merchant/ui";
 
-import { useEvidence, useSaveEvidence } from "../queries";
+import { useDraftEvidence, useEvidence, useSaveEvidence } from "../queries";
 
 function nextSourceId(existing: EvidenceSource[]): string {
   const highest = existing.reduce((max, source) => {
@@ -31,8 +31,12 @@ function emptySource(id: string): EvidenceSource {
 export function EvidenceScreen({ root }: { root: string }) {
   const query = useEvidence(root);
   const save = useSaveEvidence(root);
+  const draftAi = useDraftEvidence(root);
   const [draft, setDraft] = useState<EvidenceSource | null>(null);
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [aiOrigin, setAiOrigin] = useState<AiOrigin | null>(null);
 
+  // All hooks above; conditional rendering below.
   if (query.isPending) {
     return (
       <p className="om-loading">
@@ -50,11 +54,20 @@ export function EvidenceScreen({ root }: { root: string }) {
     const updated = sources.some((source) => source.id === next.id)
       ? sources.map((source) => (source.id === next.id ? next : source))
       : [...sources, next];
-    save.mutate(updated, { onSuccess: () => setDraft(null) });
+    save.mutate(
+      { sources: updated, origin: aiOrigin ?? undefined },
+      {
+        onSuccess: () => {
+          setDraft(null);
+          setAiOrigin(null);
+          setAiPanelOpen(false);
+        },
+      },
+    );
   };
 
   const remove = (id: string) => {
-    save.mutate(sources.filter((source) => source.id !== id));
+    save.mutate({ sources: sources.filter((source) => source.id !== id) });
   };
 
   return (
@@ -68,24 +81,84 @@ export function EvidenceScreen({ root }: { root: string }) {
         </p>
       </header>
 
-      {draft === null ? (
-        <button
-          className="om-button om-button--primary"
-          onClick={() => setDraft(emptySource(nextSourceId(sources)))}
-          type="button"
+      {draft === null && !aiPanelOpen ? (
+        <div className="screen__actions">
+          <button
+            className="om-button om-button--primary"
+            onClick={() => setDraft(emptySource(nextSourceId(sources)))}
+            type="button"
+          >
+            Add source
+          </button>
+          <button
+            className="om-button om-button--secondary"
+            onClick={() => setAiPanelOpen(true)}
+            type="button"
+          >
+            Draft with AI
+          </button>
+        </div>
+      ) : null}
+
+      {aiPanelOpen && draft === null ? (
+        <form
+          className="om-card screen__form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const data = new FormData(event.currentTarget);
+            draftAi.mutate(
+              { url: String(data.get("url") ?? ""), pageText: String(data.get("pageText") ?? "") },
+              {
+                onSuccess: (result) => {
+                  setDraft(result.draft);
+                  setAiOrigin(result.origin);
+                  setAiPanelOpen(false);
+                },
+              },
+            );
+          }}
         >
-          Add source
-        </button>
-      ) : (
+          <p className="om-eyebrow">Evidence assistant</p>
+          <Field hint="The assistant reads only what you paste here." label="Source URL">
+            <input className="om-input" name="url" placeholder="https://…" required type="url" />
+          </Field>
+          <Field label="Paste the listing or page content">
+            <textarea
+              className="om-textarea"
+              name="pageText"
+              placeholder="Copy the listing text, forum post, or supplier page in here."
+              required
+            />
+          </Field>
+          <div className="screen__actions">
+            <button
+              className="om-button om-button--secondary"
+              onClick={() => setAiPanelOpen(false)}
+              type="button"
+            >
+              Cancel
+            </button>
+            <button className="om-button om-button--primary" disabled={draftAi.isPending} type="submit">
+              {draftAi.isPending ? "Drafting…" : "Produce draft"}
+            </button>
+          </div>
+          {draftAi.isError ? <ErrorState error={draftAi.error} onRetry={() => draftAi.reset()} /> : null}
+        </form>
+      ) : null}
+
+      {draft !== null ? (
         <SourceForm
           initial={draft}
-          onCancel={() => setDraft(null)}
+          onCancel={() => {
+            setDraft(null);
+            setAiOrigin(null);
+          }}
           onSave={upsert}
           saving={save.isPending}
         />
-      )}
+      ) : null}
 
-      {save.isError ? <ErrorState error={save.error} onRetry={() => save.mutate(sources)} /> : null}
+      {save.isError ? <ErrorState error={save.error} onRetry={() => save.mutate({ sources })} /> : null}
 
       {sources.length === 0 && draft === null ? (
         <EmptyState title="No sources yet">

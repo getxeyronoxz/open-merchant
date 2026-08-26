@@ -2,6 +2,7 @@ import { type IpcChannel, type IpcRequest, type IpcResponse, AppError, ipc } fro
 import { app, dialog, ipcMain } from "electron";
 
 import { RecentsStore } from "./recents";
+import type { AiConfigStore } from "./ai-config";
 import type { MerchantService } from "./service";
 
 /**
@@ -21,7 +22,10 @@ function channel<C extends IpcChannel>(handle: (request: IpcRequest<C>) => Promi
   return async (request) => handle(request as IpcRequest<C>);
 }
 
-export function registerIpcHandlers(service: MerchantService): void {
+export function registerIpcHandlers(
+  service: MerchantService,
+  aiConfig: AiConfigStore,
+): void {
   const recents = new RecentsStore(app.getPath("userData"));
 
   const handlers: Record<IpcChannel, AnyHandler> = {
@@ -74,8 +78,8 @@ export function registerIpcHandlers(service: MerchantService): void {
     "evidence/load": channel<"evidence/load">(async ({ root }) => ({
       sources: await service.loadEvidence(root),
     })),
-    "evidence/save": channel<"evidence/save">(async ({ root, sources }) => {
-      await service.saveEvidence(root, sources);
+    "evidence/save": channel<"evidence/save">(async ({ root, sources, origin }) => {
+      await service.saveEvidence(root, sources, origin);
       return {};
     }),
 
@@ -107,8 +111,8 @@ export function registerIpcHandlers(service: MerchantService): void {
     "report/sections/load": channel<"report/sections/load">(async ({ root }) => ({
       sections: await service.loadReportSections(root),
     })),
-    "report/sections/save": channel<"report/sections/save">(async ({ root, sections }) => {
-      await service.saveReportSections(root, sections);
+    "report/sections/save": channel<"report/sections/save">(async ({ root, sections, origin }) => {
+      await service.saveReportSections(root, sections, origin);
       return {};
     }),
     "report/generate": channel<"report/generate">(async ({ root }) => ({
@@ -128,6 +132,26 @@ export function registerIpcHandlers(service: MerchantService): void {
     "provenance/list": channel<"provenance/list">(async ({ root }) => ({
       provenance: await service.listProvenance(root),
     })),
+
+    "ai/config/load": channel<"ai/config/load">(() => aiConfig.publicConfig()),
+    "ai/config/save": channel<"ai/config/save">(async (input) => {
+      await aiConfig.save(input);
+      return {};
+    }),
+    "ai/test": channel<"ai/test">(async ({ providerId }) => {
+      const provider = await aiConfig.getProvider(providerId);
+      const completion = await provider.complete({
+        system: "Reply with the single word: ready",
+        prompt: "Connection test.",
+      });
+      return { reply: completion.text.trim().slice(0, 80) };
+    }),
+    "ai/draft-evidence": channel<"ai/draft-evidence">(async ({ root, url, pageText }) =>
+      service.draftEvidence(root, url, pageText),
+    ),
+    "ai/draft-sections": channel<"ai/draft-sections">(async ({ root }) =>
+      service.draftSections(root),
+    ),
   };
 
   ipcMain.handle("ipc", async (_event, channelName: string, payload: unknown) => {

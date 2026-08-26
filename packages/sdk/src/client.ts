@@ -44,7 +44,11 @@ export interface DesktopClient {
   removeRecent(request: IpcRequest<"recents/remove">): Promise<IpcResponse<"recents/remove">>;
 
   loadEvidence(root: string): Promise<IpcResponse<"evidence/load">>;
-  saveEvidence(root: string, sources: IpcRequest<"evidence/save">["sources"]): Promise<IpcResponse<"evidence/save">>;
+  saveEvidence(
+    root: string,
+    sources: IpcRequest<"evidence/save">["sources"],
+    origin?: IpcRequest<"evidence/save">["origin"],
+  ): Promise<IpcResponse<"evidence/save">>;
 
   loadCompetitors(root: string): Promise<IpcResponse<"competitors/load">>;
   saveCompetitors(root: string, competitors: IpcRequest<"competitors/save">["competitors"]): Promise<IpcResponse<"competitors/save">>;
@@ -56,7 +60,11 @@ export interface DesktopClient {
   loadScenarios(root: string): Promise<IpcResponse<"scenarios/load">>;
 
   loadReportSections(root: string): Promise<IpcResponse<"report/sections/load">>;
-  saveReportSections(root: string, sections: IpcRequest<"report/sections/save">["sections"]): Promise<IpcResponse<"report/sections/save">>;
+  saveReportSections(
+    root: string,
+    sections: IpcRequest<"report/sections/save">["sections"],
+    origin?: IpcRequest<"report/sections/save">["origin"],
+  ): Promise<IpcResponse<"report/sections/save">>;
   generateReport(root: string): Promise<IpcResponse<"report/generate">>;
   loadGeneratedReport(root: string): Promise<IpcResponse<"report/load-generated">>;
 
@@ -64,6 +72,12 @@ export interface DesktopClient {
   readArtifact(root: string, relativePath: string): Promise<IpcResponse<"artifacts/read">>;
   listRuns(root: string): Promise<IpcResponse<"runs/list">>;
   listProvenance(root: string): Promise<IpcResponse<"provenance/list">>;
+
+  loadAiConfig(): Promise<IpcResponse<"ai/config/load">>;
+  saveAiConfig(request: IpcRequest<"ai/config/save">): Promise<IpcResponse<"ai/config/save">>;
+  testAi(providerId: IpcRequest<"ai/test">["providerId"]): Promise<IpcResponse<"ai/test">>;
+  draftEvidence(root: string, url: string, pageText: string): Promise<IpcResponse<"ai/draft-evidence">>;
+  draftSections(root: string): Promise<IpcResponse<"ai/draft-sections">>;
 }
 
 export function createDesktopClient(raw: RawInvoke): DesktopClient {
@@ -78,7 +92,7 @@ export function createDesktopClient(raw: RawInvoke): DesktopClient {
     removeRecent: bind(raw, "recents/remove"),
 
     loadEvidence: (root) => invoke(raw, "evidence/load", { root }),
-    saveEvidence: (root, sources) => invoke(raw, "evidence/save", { root, sources }),
+    saveEvidence: (root, sources, origin) => invoke(raw, "evidence/save", { root, sources, origin }),
 
     loadCompetitors: (root) => invoke(raw, "competitors/load", { root }),
     saveCompetitors: (root, competitors) => invoke(raw, "competitors/save", { root, competitors }),
@@ -90,7 +104,8 @@ export function createDesktopClient(raw: RawInvoke): DesktopClient {
     loadScenarios: (root) => invoke(raw, "scenarios/load", { root }),
 
     loadReportSections: (root) => invoke(raw, "report/sections/load", { root }),
-    saveReportSections: (root, sections) => invoke(raw, "report/sections/save", { root, sections }),
+    saveReportSections: (root, sections, origin) =>
+      invoke(raw, "report/sections/save", { root, sections, origin }),
     generateReport: (root) => invoke(raw, "report/generate", { root }),
     loadGeneratedReport: (root) => invoke(raw, "report/load-generated", { root }),
 
@@ -98,5 +113,11 @@ export function createDesktopClient(raw: RawInvoke): DesktopClient {
     readArtifact: (root, relativePath) => invoke(raw, "artifacts/read", { root, relativePath }),
     listRuns: (root) => invoke(raw, "runs/list", { root }),
     listProvenance: (root) => invoke(raw, "provenance/list", { root }),
+
+    loadAiConfig: () => invoke(raw, "ai/config/load", {}),
+    saveAiConfig: (request) => invoke(raw, "ai/config/save", request),
+    testAi: (providerId) => invoke(raw, "ai/test", { providerId }),
+    draftEvidence: (root, url, pageText) => invoke(raw, "ai/draft-evidence", { root, url, pageText }),
+    draftSections: (root) => invoke(raw, "ai/draft-sections", { root }),
   };
 }

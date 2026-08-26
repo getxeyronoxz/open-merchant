@@ -12,6 +12,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@open-merchant/ai": "workspace:*",
     "@open-merchant/core": "workspace:*",
     "@open-merchant/sdk": "workspace:*",
     "@open-merchant/shared": "workspace:*",

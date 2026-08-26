@@ -1,6 +1,7 @@
 import { join } from "node:path";
-import { BrowserWindow, app, shell } from "electron";
+import { BrowserWindow, app, safeStorage, shell } from "electron";
 
+import { AiConfigStore } from "./ai-config";
 import { MerchantService } from "./service";
 import { registerIpcHandlers } from "./ipc";
 
@@ -37,7 +38,8 @@ function createMainWindow() {
 }
 
 app.whenReady().then(() => {
-  registerIpcHandlers(new MerchantService(app.getVersion()));
+  const aiConfig = new AiConfigStore(app.getPath("userData"), safeStorage);
+  registerIpcHandlers(new MerchantService(app.getVersion(), aiConfig), aiConfig);
   createMainWindow();
 
   app.on("activate", () => {

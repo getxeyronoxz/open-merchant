@@ -1,4 +1,5 @@
 import type {
+  AiOrigin,
   Competitor,
   CompetitorStatistics,
   CostAssumptions,
@@ -14,7 +15,7 @@ import type { DesktopClient } from "./client";
 /**
  * In-memory DesktopClient for Vitest and renderer development outside
  * Electron. State lives entirely in memory with the same coded-error
- * semantics as the real shell.
+ * semantics as the real shell. AI drafts are deterministic placeholders.
  */
 
 export interface MockProjectState {
@@ -58,13 +59,21 @@ function requireProject(projects: MockProjectState[], root: string): MockProject
   return found;
 }
 
+const MOCK_ORIGIN: AiOrigin = {
+  kind: "agent",
+  agentId: "mock-agent",
+  providerId: "mock",
+  modelId: "mock-deterministic",
+  promptHash: "0".repeat(64),
+};
+
 export function createMockDesktopClient(
   seed: Partial<{ projects: MockProjectState[]; version: string }> = {},
 ): DesktopClient & { projects: MockProjectState[] } {
   const projects = seed.projects ?? [];
   const now = () => new Date().toISOString();
 
-  return {
+  const client: DesktopClient & { projects: MockProjectState[] } = {
     projects,
 
     appInfo: async () => ({
@@ -275,5 +284,67 @@ export function createMockDesktopClient(
     },
     listRuns: () => Promise.resolve({ runs: [] }),
     listProvenance: () => Promise.resolve({ provenance: [] }),
+
+    loadAiConfig: async () => ({
+      activeProvider: null,
+      models: { anthropic: "claude-sonnet-4-5", openai: "gpt-4o" },
+      hasKeys: {},
+      encryptionAvailable: true,
+    }),
+    saveAiConfig: async (_request) => {
+      await Promise.resolve();
+      return {};
+    },
+    testAi: async (providerId) => {
+      await Promise.resolve();
+      return { reply: `ready (${providerId} mock)` };
+    },
+    draftEvidence: async (root, url, pageText) => {
+      const project = requireProject(projects, root);
+      const nextId = nextMockId(
+        project.evidence.map((source) => source.id),
+        "S",
+      );
+      const timestamp = now();
+      return {
+        draft: {
+          id: nextId,
+          url,
+          title: `Draft from ${new URL(url).host}`,
+          notes: pageText.slice(0, 200),
+          observations: [
+            { id: "O-1", label: "Mock observation", value: "0.00", unit: null, note: "" },
+          ],
+          observedAt: timestamp,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        },
+        origin: MOCK_ORIGIN,
+      };
+    },
+    draftSections: async (root) => {
+      requireProject(projects, root);
+      await Promise.resolve();
+      return {
+        sections: {
+          decisionSummary:
+            "[mock draft] Review the recorded evidence and scenarios, then edit this summary.",
+          marketObservations: ["[mock draft] Replace with a grounded observation."],
+          risks: ["[mock draft] Replace with a grounded risk."],
+          opportunities: ["[mock draft] Replace with a grounded opportunity."],
+        },
+        origin: MOCK_ORIGIN,
+      };
+    },
   };
+  return client;
+}
+
+function nextMockId(existing: readonly string[], prefix: string): string {
+  let highest = 0;
+  for (const id of existing) {
+    const match = new RegExp(`^${prefix}-(\\d+)$`, "u").exec(id);
+    if (match) highest = Math.max(highest, Number(match[1]));
+  }
+  return `${prefix}-${String(highest + 1).padStart(3, "0")}`;
 }

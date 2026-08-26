@@ -7,20 +7,48 @@ import {
   competitorStatistics,
   fingerprintContents,
   importV0Project,
+  nextSequentialId,
   renderOpportunityReport,
 } from "@open-merchant/core";
+import { draftEvidenceSource, draftReportSections, AiParseError, AiProviderError } from "@open-merchant/ai";
 import type {
+  AiOrigin,
   Competitor,
   CompetitorStatistics,
   CostAssumptions,
   EconomicsScenario,
   EvidenceSource,
+  GenerationOrigin,
   Manifest,
   ProvenanceRecord,
   ReportSections,
   RunRecord,
 } from "@open-merchant/shared";
 import { AppError } from "@open-merchant/shared";
+
+import type { AiConfigStore } from "./ai-config";
+
+/** Maps agent-layer failures to coded app errors. */
+async function runAgent<T>(work: () => Promise<T>): Promise<T> {
+  try {
+    return await work();
+  } catch (error) {
+    if (error instanceof AiParseError) {
+      throw new AppError({
+        code: "ai-provider-error",
+        message: "The model returned something unusable. Try again or edit by hand.",
+        detail: error.message,
+      });
+    }
+    if (error instanceof AiProviderError) {
+      throw new AppError({
+        code: "ai-provider-error",
+        message: error.message,
+      });
+    }
+    throw error;
+  }
+}
 
 /**
  * Application service used by IPC handlers. A store is opened per call —
@@ -58,9 +86,11 @@ function toAppError(error: unknown): AppError {
 
 export class MerchantService {
   private readonly appVersion: string;
+  private readonly aiConfig: AiConfigStore | null;
 
-  constructor(appVersion: string) {
+  constructor(appVersion: string, aiConfig?: AiConfigStore) {
     this.appVersion = appVersion;
+    this.aiConfig = aiConfig ?? null;
   }
 
   async openStore(root: string): Promise<WorkspaceStore> {
@@ -136,9 +166,16 @@ export class MerchantService {
     return store.saveManifest({ name: manifest.name, objective: manifest.objective });
   }
 
-  async saveEvidence(root: string, sources: EvidenceSource[]): Promise<void> {
+  async saveEvidence(
+    root: string,
+    sources: EvidenceSource[],
+    origin?: GenerationOrigin,
+  ): Promise<void> {
     const store = await this.openStore(root);
     await store.saveEvidence(sources);
+    if (origin?.kind === "agent") {
+      await this.journalAgentAcceptance(store, "agentDraftProduced", [ArtifactPaths.evidence], origin);
+    }
   }
 
   loadCompetitors(root: string): Promise<Competitor[]> {
@@ -202,9 +239,145 @@ export class MerchantService {
     return this.openStore(root).then((store) => store.loadReportSections());
   }
 
-  async saveReportSections(root: string, sections: ReportSections): Promise<void> {
+  async saveReportSections(
+    root: string,
+    sections: ReportSections,
+    origin?: GenerationOrigin,
+  ): Promise<void> {
     const store = await this.openStore(root);
     await store.saveReportSections(sections);
+    if (origin?.kind === "agent") {
+      await this.journalAgentAcceptance(store, "agentDraftProduced", [ArtifactPaths.reportSections], origin);
+    }
+  }
+
+  /**
+   * Records that the human accepted an AI-produced draft: a run entry plus
+   * provenance rows carrying provider, model, and prompt hash — so every
+   * AI-touched artifact stays auditable.
+   */
+  private async journalAgentAcceptance(
+    store: WorkspaceStore,
+    _operation: "agentDraftProduced",
+    artifactPaths: readonly string[],
+    origin: AiOrigin,
+  ): Promise<void> {
+    try {
+      const runId = `RUN-${randomUUID()}`;
+      const now = new Date().toISOString();
+      const outputArtifacts = [];
+      for (const relativePath of artifactPaths) {
+        outputArtifacts.push(fingerprintContents(relativePath, await store.readArtifactText(relativePath)));
+      }
+      await store.journal.appendRun({
+        runId,
+        operation: "agentDraftProduced",
+        startedAt: now,
+        completedAt: now,
+        status: "succeeded",
+        appVersion: this.appVersion,
+        inputArtifacts: [],
+        outputArtifacts,
+        errorSummary: null,
+      });
+      for (const artifact of outputArtifacts) {
+        await store.journal.appendProvenance({
+          runId,
+          artifactPath: artifact.path,
+          sha256: artifact.sha256,
+          generatedAt: now,
+          origin,
+        });
+      }
+    } catch {
+      // Journaling must never block an accepted save.
+    }
+  }
+
+  // --- AI copilot ------------------------------------------------------------
+
+  async draftEvidence(
+    root: string,
+    url: string,
+    pageText: string,
+  ): Promise<{ draft: EvidenceSource; origin: AiOrigin }> {
+    if (!this.aiConfig) {
+      throw new AppError({ code: "ai-not-configured", message: "AI is unavailable in this build." });
+    }
+    const provider = await this.aiConfig.getActiveProvider();
+    const store = await this.openStore(root);
+    const existing = await store.loadEvidence();
+    const nextId = nextSequentialId("S", existing.map((source) => source.id));
+
+    const { value, completion } = await runAgent(() =>
+      draftEvidenceSource(provider, { nextId, url, pageText }),
+    );
+    return {
+      draft: value,
+      origin: {
+        kind: "agent",
+        agentId: "evidence-assistant",
+        providerId: completion.providerId,
+        modelId: completion.modelId,
+        promptHash: completion.promptHash,
+      },
+    };
+  }
+
+  async draftSections(root: string): Promise<{ sections: ReportSections; origin: AiOrigin }> {
+    if (!this.aiConfig) {
+      throw new AppError({ code: "ai-not-configured", message: "AI is unavailable in this build." });
+    }
+    const provider = await this.aiConfig.getActiveProvider();
+    const store = await this.openStore(root);
+
+    const [evidence, competitors, assumptions, scenarios, existingSections] = await Promise.all([
+      store.loadEvidence(),
+      store.loadCompetitors(),
+      store.loadAssumptions(),
+      store.loadScenarios(),
+      store.loadReportSections(),
+    ]);
+    const hasContent =
+      evidence.length > 0 ||
+      competitors.length > 0 ||
+      scenarios.length > 0 ||
+      existingSections.decisionSummary.length > 0;
+    if (!hasContent) {
+      throw new AppError({
+        code: "invalid-input",
+        message: "Add evidence or competitors before asking for drafted sections.",
+      });
+    }
+
+    const { value, completion } = await runAgent(() =>
+      draftReportSections(provider, {
+        objective: store.manifest.objective,
+        currency: store.manifest.currency,
+        evidence: evidence.map(({ id, title, notes }) => ({ id, title, notes })),
+        competitors: competitors.map(({ id, product, price, marketplace }) => ({
+          id,
+          product,
+          price,
+          marketplace,
+        })),
+        statistics: competitorStatistics(competitors),
+        assumptions,
+        scenarios,
+        existingSections:
+          existingSections.decisionSummary.length > 0 ? existingSections : undefined,
+      }),
+    );
+    return {
+      sections: value,
+      origin: {
+        kind: "agent",
+        agentId: "report-writer",
+        providerId: completion.providerId,
+        modelId: completion.modelId,
+        promptHash: completion.promptHash,
+      },
+    };
   }
 
   /**

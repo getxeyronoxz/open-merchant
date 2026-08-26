@@ -4,6 +4,7 @@ import type {
   Competitor,
   CostAssumptions,
   EvidenceSource,
+  GenerationOrigin,
   ReportSections,
 } from "@open-merchant/shared";
 
@@ -108,8 +109,14 @@ export function useSaveEvidence(root: string) {
   const invalidate = useInvalidator();
   const keys = ROOT_KEYS(root);
   return useMutation({
-    mutationFn: (sources: EvidenceSource[]) => client.saveEvidence(root, sources),
-    onSuccess: () => invalidate(keys.evidence),
+    mutationFn: (input: {
+      sources: EvidenceSource[];
+      origin?: GenerationOrigin;
+    }) => client.saveEvidence(root, input.sources, input.origin),
+    onSuccess: (_result, input) => {
+      void input;
+      invalidate(keys.evidence);
+    },
   });
 }
 
@@ -144,7 +151,10 @@ export function useSaveReportSections(root: string) {
   const invalidate = useInvalidator();
   const keys = ROOT_KEYS(root);
   return useMutation({
-    mutationFn: (sections: ReportSections) => client.saveReportSections(root, sections),
+    mutationFn: (input: {
+      sections: ReportSections;
+      origin?: GenerationOrigin;
+    }) => client.saveReportSections(root, input.sections, input.origin),
     onSuccess: () => invalidate(keys.sections),
   });
 }
@@ -155,5 +165,39 @@ export function useGenerateReport(root: string) {
   return useMutation({
     mutationFn: () => client.generateReport(root),
     onSuccess: () => invalidate(keys.report, keys.scenarios),
+  });
+}
+
+// --- AI copilot ---------------------------------------------------------------
+
+export function useAiConfig() {
+  return useQuery({ queryKey: ["ai-config"], queryFn: () => client.loadAiConfig() });
+}
+
+export function useSaveAiConfig() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (request: Parameters<typeof client.saveAiConfig>[0]) =>
+      client.saveAiConfig(request),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["ai-config"] }),
+  });
+}
+
+export function useTestAi() {
+  return useMutation({
+    mutationFn: (providerId: "anthropic" | "openai") => client.testAi(providerId),
+  });
+}
+
+export function useDraftEvidence(root: string) {
+  return useMutation({
+    mutationFn: ({ url, pageText }: { url: string; pageText: string }) =>
+      client.draftEvidence(root, url, pageText),
+  });
+}
+
+export function useDraftSections(root: string) {
+  return useMutation({
+    mutationFn: () => client.draftSections(root),
   });
 }

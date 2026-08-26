@@ -8,10 +8,12 @@ import { CompetitorsScreen } from "./screens/CompetitorsScreen";
 import { EconomicsScreen } from "./screens/EconomicsScreen";
 import { ReportScreen } from "./screens/ReportScreen";
 import { ArtifactsScreen } from "./screens/ArtifactsScreen";
+import { AiSettingsScreen } from "./screens/AiSettingsScreen";
 
 /**
- * The stable six-section workspace. The rail doubles as a ledger of where
- * the research stands; the stage keeps the project context overhead.
+ * The stable six-section workspace plus the AI assistant. The rail doubles
+ * as a ledger of where the research stands; the stage keeps project context
+ * overhead.
  */
 
 const sections = [
@@ -23,7 +25,9 @@ const sections = [
   { name: "Artifacts", label: "Files & history" },
 ] as const;
 
-type SectionName = (typeof sections)[number]["name"];
+const assistantSection = { name: "AI", label: "AI settings" } as const;
+
+type SectionName = (typeof sections)[number]["name"] | typeof assistantSection.name;
 
 export function WorkspaceShell() {
   const { project, closeProject } = useProject();
@@ -113,6 +117,20 @@ function Shell({
             </ul>
           </nav>
 
+          <p className="shell__rail-label">Assistant</p>
+          <ul className="shell__nav">
+            <li>
+              <button
+                aria-current={section === assistantSection.name ? "page" : undefined}
+                className={`shell__nav-item${section === assistantSection.name ? " is-active" : ""}`}
+                onClick={() => setSection(assistantSection.name)}
+                type="button"
+              >
+                <span>AI settings</span>
+              </button>
+            </li>
+          </ul>
+
           <button
             className="om-button om-button--ghost shell__all-projects"
             onClick={closeProject}
@@ -155,5 +173,7 @@ function Stage({ section, root }: { section: SectionName; root: string }) {
       return <ReportScreen root={root} />;
     case "Artifacts":
       return <ArtifactsScreen root={root} />;
+    case "AI":
+      return <AiSettingsScreen />;
   }
 }

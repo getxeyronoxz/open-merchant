@@ -38,6 +38,9 @@ importers:
 
   apps/desktop:
     dependencies:
+      '@open-merchant/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@open-merchant/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -99,6 +102,9 @@ importers:
       '@open-merchant/shared':
         specifier: workspace:*
         version: link:../shared
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
     devDependencies:
       typescript:
         specifier: ^5.8.0

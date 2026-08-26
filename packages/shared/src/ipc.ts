@@ -10,7 +10,7 @@ import {
   manifestSchema,
   reportSectionsSchema,
 } from "./artifacts";
-import { provenanceRecordSchema, runRecordSchema } from "./provenance";
+import { aiOriginSchema, generationOriginSchema, provenanceRecordSchema, runRecordSchema } from "./provenance";
 
 /**
  * The IPC contract between renderer and main process. This map is the single
@@ -107,7 +107,12 @@ export const ipc = {
     response: z.object({ sources: z.array(evidenceSourceSchema) }),
   },
   "evidence/save": {
-    request: z.object({ root: z.string(), sources: z.array(evidenceSourceSchema) }),
+    request: z.object({
+      root: z.string(),
+      sources: z.array(evidenceSourceSchema),
+      // Set when the saved content originated from an accepted AI draft.
+      origin: generationOriginSchema.optional(),
+    }),
     response: z.object({}),
   },
 
@@ -146,7 +151,11 @@ export const ipc = {
     response: z.object({ sections: reportSectionsSchema }),
   },
   "report/sections/save": {
-    request: z.object({ root: z.string(), sections: reportSectionsSchema }),
+    request: z.object({
+      root: z.string(),
+      sections: reportSectionsSchema,
+      origin: generationOriginSchema.optional(),
+    }),
     response: z.object({}),
   },
   "report/generate": {
@@ -175,6 +184,47 @@ export const ipc = {
   "provenance/list": {
     request: rootOnlyInputSchema,
     response: z.object({ provenance: z.array(provenanceRecordSchema) }),
+  },
+
+  // --- AI copilot -----------------------------------------------------------
+
+  "ai/config/load": {
+    request: z.object({}),
+    response: z.object({
+      activeProvider: z.string().nullable(),
+      models: z.record(z.string()),
+      hasKeys: z.record(z.boolean()),
+      encryptionAvailable: z.boolean(),
+    }),
+  },
+  "ai/config/save": {
+    request: z.object({
+      providerId: z.enum(["anthropic", "openai"]),
+      modelId: z.string().min(1),
+      apiKey: z.string().min(1).nullable(),
+    }),
+    response: z.object({}),
+  },
+  "ai/test": {
+    request: z.object({ providerId: z.enum(["anthropic", "openai"]) }),
+    response: z.object({ reply: z.string() }),
+  },
+  "ai/draft-evidence": {
+    request: rootOnlyInputSchema.extend({
+      url: z.string().url(),
+      pageText: z.string().min(1),
+    }),
+    response: z.object({
+      draft: evidenceSourceSchema,
+      origin: aiOriginSchema,
+    }),
+  },
+  "ai/draft-sections": {
+    request: rootOnlyInputSchema,
+    response: z.object({
+      sections: reportSectionsSchema,
+      origin: aiOriginSchema,
+    }),
   },
 } as const;
 
