@@ -256,7 +256,60 @@ export function createMockDesktopClient(
     generateReport: async (root) => {
       const project = requireProject(projects, root);
       await Promise.resolve();
-      const markdown = `# ${project.snapshot.manifest.name}\n\nGenerated: ${now()}\n`;
+      const { manifest } = project.snapshot;
+      const prices = project.competitors
+        .map((competitor) => competitor.price)
+        .filter((price): price is NonNullable<typeof price> => price !== null)
+        .map(Number)
+        .sort((a, b) => a - b);
+      const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
+      const stats =
+        prices.length === 0
+          ? "No valid competitor prices recorded."
+          : [
+              `- Priced competitors: ${prices.length}`,
+              `- Price range: ${manifest.currency} ${prices[0]?.toFixed(2)}–${prices[prices.length - 1]?.toFixed(2)}`,
+              `- Average price: ${manifest.currency} ${(sum(prices) / prices.length).toFixed(2)}`,
+            ].join("\n");
+      const scenarioRows = project.scenarios
+        .map(
+          (scenario) =>
+            `| ${scenario.scenario.charAt(0).toUpperCase()}${scenario.scenario.slice(1)} | ${manifest.currency} ${scenario.sellingPrice} | ${scenario.totalCost} | ${scenario.grossProfit} | ${scenario.grossMarginPercent}% |`,
+        )
+        .join("\n");
+      const evidence = project.evidence
+        .map((source) => `- [${source.id}] [${source.title}](${source.url})`)
+        .join("\n");
+      // Demo-grade report for browser development; the real engine lives in
+      // packages/core and runs inside the Electron shell.
+      const markdown = [
+        `# ${manifest.name}`,
+        "",
+        `Generated: ${now()}`,
+        "",
+        "## Research objective",
+        "",
+        manifest.objective,
+        "",
+        "## Decision summary",
+        "",
+        project.sections.decisionSummary || "No decision summary recorded.",
+        "",
+        "## Competitor price statistics",
+        "",
+        stats,
+        "",
+        "## Pricing and unit economics",
+        "",
+        "| Scenario | Price | Total cost | Gross profit | Margin |",
+        "|---|---:|---:|---:|---:|",
+        scenarioRows || "No scenarios calculated.",
+        "",
+        "## Evidence index",
+        "",
+        evidence || "No evidence recorded.",
+        "",
+      ].join("\n");
       project.generatedReport = markdown;
       return { markdown };
     },

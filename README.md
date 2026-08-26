@@ -1,5 +1,7 @@
 # Open Merchant
 
+![Open Merchant — make the call, with evidence in hand.](docs/media/og-banner.png)
+
 Open Merchant is a local-first, AI-native desktop workbench for deciding whether a product opportunity is commercially worth pursuing — without losing the evidence, assumptions, calculations, and report behind the decision.
 
 It is built for solo ecommerce sellers, founders, and product researchers who want one inspectable project folder per decision instead of scattered tabs, spreadsheets, and notes. AI assistants draft; you approve every step. Your files stay on your machine.
@@ -11,6 +13,15 @@ Create a project folder, record a research objective and evidence, compare compe
 ## Platforms
 
 Windows, macOS, and Linux. Built on Electron with a TypeScript monorepo.
+
+## A look inside
+
+| | |
+|---|---|
+| ![Unit economics with deterministic scenarios](docs/media/app-economics.png) | ![The generated report, on paper](docs/media/app-report.png) |
+| *Unit economics — exact decimals, ledger-style rows* | *The opportunity report, rendered as a paper document* |
+
+More views: [home](docs/media/app-home.png) · [objective](docs/media/app-objective.png) · [evidence](docs/media/app-evidence.png) · [competitors](docs/media/app-competitors.png) · [artifacts & history](docs/media/app-artifacts.png)
 
 ## The AI copilot
 

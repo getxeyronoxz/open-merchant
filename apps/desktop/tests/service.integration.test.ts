@@ -240,7 +240,7 @@ describe("MerchantService AI guards", () => {
   it("imports the real V0 example project end to end", async () => {
     const parent = await tempDir();
     const service = makeService();
-    const exampleRoot = join(import.meta.dirname, "..", "..", "..", "examples", "mechanical-keyboards-india");
+    const exampleRoot = join(import.meta.dirname, "..", "..", "..", "examples", "v0-mechanical-keyboards-india");
 
     const result = await service.importV0(exampleRoot, parent);
     expect(result.importedEvidence).toBe(3);

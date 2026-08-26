@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 1,
   "decisionSummary": "Sample only: the modeled base case warrants validating supplier quotes and a larger evidence sample.",
   "marketObservations": [
     "Demo sample listings span INR 2,499 to INR 6,999.",

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "C-001",
+    "product": "Compact wired mechanical keyboard",
+    "brand": "SampleKey",
+    "price": "2499.00",
+    "currency": "INR",
+    "marketplace": "Sample marketplace",
+    "url": "https://example.com/sample-keyboard-listing",
+    "sourceId": "S-001",
+    "notes": "Demo sample data; not a live market claim.",
+    "observedAt": "2026-08-08T17:49:46.163675500+00:00"
+  },
+  {
+    "id": "C-002",
+    "product": "75% hot-swappable keyboard",
+    "brand": "SampleKey",
+    "price": "3499.00",
+    "currency": "INR",
+    "marketplace": "Sample marketplace",
+    "url": "https://example.com/sample-keyboard-listing",
+    "sourceId": "S-001",
+    "notes": "Demo sample data; not a live market claim.",
+    "observedAt": "2026-08-08T17:49:46.163675500+00:00"
+  },
+  {
+    "id": "C-003",
+    "product": "75% hot-swappable keyboard",
+    "brand": "DemoBoard",
+    "price": "4299.00",
+    "currency": "INR",
+    "marketplace": "Sample marketplace",
+    "url": "https://example.com/sample-keyboard-listing",
+    "sourceId": "S-002",
+    "notes": "Demo sample data; not a live market claim.",
+    "observedAt": "2026-08-08T17:49:46.163675500+00:00"
+  },
+  {
+    "id": "C-004",
+    "product": "Wireless mechanical keyboard",
+    "brand": "DemoBoard",
+    "price": "5499.00",
+    "currency": "INR",
+    "marketplace": "Sample marketplace",
+    "url": "https://example.com/sample-keyboard-listing",
+    "sourceId": "S-002",
+    "notes": "Demo sample data; not a live market claim.",
+    "observedAt": "2026-08-08T17:49:46.163675500+00:00"
+  },
+  {
+    "id": "C-005",
+    "product": "Wireless aluminium keyboard",
+    "brand": "ExampleSwitch",
+    "price": "6999.00",
+    "currency": "INR",
+    "marketplace": "Sample marketplace",
+    "url": "https://example.com/sample-keyboard-listing",
+    "sourceId": "S-003",
+    "notes": "Demo sample data; not a live market claim.",
+    "observedAt": "2026-08-08T17:49:46.163675500+00:00"
+  }
+]

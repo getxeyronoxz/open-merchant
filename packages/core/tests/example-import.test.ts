@@ -11,7 +11,7 @@ import { WorkspaceStore, calculateScenarios, importV0Project } from "../src";
  * imported assumptions.
  */
 
-const EXAMPLE_V0_ROOT = join(import.meta.dirname, "..", "..", "..", "examples", "mechanical-keyboards-india");
+const EXAMPLE_V0_ROOT = join(import.meta.dirname, "..", "..", "..", "examples", "v0-mechanical-keyboards-india");
 
 const tempDirs: string[] = [];
 
