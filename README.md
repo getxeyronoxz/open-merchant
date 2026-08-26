@@ -117,6 +117,11 @@ pnpm --filter @open-merchant/desktop dist
 
 Produces an unsigned NSIS installer (Windows), DMG (macOS), or AppImage (Linux) under `apps/desktop/release`. Your operating system may warn about unsigned builds; review the source and build provenance before installing.
 
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for what has shipped, what is in progress, and
+the direction of the product.
+
 ## Current limitations
 
 - No cloud sync, accounts, teams, or mobile clients.
