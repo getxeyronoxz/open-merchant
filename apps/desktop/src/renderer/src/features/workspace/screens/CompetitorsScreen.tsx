@@ -184,6 +184,7 @@ export function CompetitorsScreen({ root }: { root: string }) {
             <input
               className="om-input"
               onChange={(event) => setForm({ ...form, brand: event.target.value })}
+              placeholder="Nova"
               value={form.brand}
             />
           </Field>

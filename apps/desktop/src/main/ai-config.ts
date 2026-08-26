@@ -30,7 +30,7 @@ const storedSchema = z.object({
 
 type Stored = z.infer<typeof storedSchema>;
 
-interface SafeStorageLike {
+export interface SafeStorageLike {
   isEncryptionAvailable(): boolean;
   encryptString(plainText: string): Buffer;
   decryptString(encrypted: Buffer): string;

@@ -38,6 +38,10 @@ function createMainWindow() {
 }
 
 app.whenReady().then(() => {
+  // Tests point this at a temp directory so they never touch real app data.
+  const customUserData = process.env.OPEN_MERCHANT_USER_DATA;
+  if (customUserData) app.setPath("userData", customUserData);
+
   const aiConfig = new AiConfigStore(app.getPath("userData"), safeStorage);
   registerIpcHandlers(new MerchantService(app.getVersion(), aiConfig), aiConfig);
   createMainWindow();

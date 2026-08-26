@@ -10,7 +10,8 @@
     "build": "electron-vite build",
     "dist": "electron-vite build && electron-builder --publish never",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run",
+    "test:e2e": "electron-vite build && vitest run -c vitest.e2e.config.ts"
   },
   "description": "Local-first, AI-native commerce research workbench.",
   "dependencies": {
@@ -33,6 +34,7 @@
     "electron": "^37.0.0",
     "electron-builder": "^26.15.3",
     "electron-vite": "^3.0.0",
+    "playwright-core": "^1.62.1",
     "typescript": "^5.8.0",
     "vite": "^6.0.0",
     "vitest": "^3.1.0"

@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import {
   ArtifactPaths,
+  DomainError,
+  ValidationError,
   WorkspaceStore,
   calculateScenarios,
   competitorStatistics,
@@ -82,6 +84,9 @@ const REPORT_INPUT_ARTIFACTS = [
 
 function toAppError(error: unknown): AppError {
   if (error instanceof AppError) return error;
+  if (error instanceof ValidationError || error instanceof DomainError) {
+    return new AppError({ code: "invalid-input", message: error.message });
+  }
   const message = error instanceof Error ? error.message : String(error);
   const code = /already exists/iu.test(message)
     ? "already-exists"
@@ -112,6 +117,24 @@ export class MerchantService {
     } catch (error) {
       throw toAppError(error);
     }
+  }
+
+  /** Runs a store operation, mapping domain failures to coded AppErrors. */
+  private async run<T>(work: () => Promise<T>): Promise<T> {
+    try {
+      return await work();
+    } catch (error) {
+      throw toAppError(error);
+    }
+  }
+
+  /** Opens the store and runs an operation with coded-error mapping. */
+  private async withStore<T>(
+    root: string,
+    work: (store: WorkspaceStore) => Promise<T>,
+  ): Promise<T> {
+    const store = await this.openStore(root);
+    return this.run(() => work(store));
   }
 
   async createProject(input: {
@@ -165,7 +188,7 @@ export class MerchantService {
   }
 
   loadEvidence(root: string): Promise<EvidenceSource[]> {
-    return this.openStore(root).then((store) => store.loadEvidence());
+    return this.withStore(root, (store) => store.loadEvidence());
   }
 
   async saveManifest(root: string, manifest: Manifest): Promise<Manifest> {
@@ -185,33 +208,32 @@ export class MerchantService {
     origin?: GenerationOrigin,
   ): Promise<void> {
     const store = await this.openStore(root);
-    await store.saveEvidence(sources);
+    await this.run(() => store.saveEvidence(sources));
     if (origin?.kind === "agent") {
       await this.journalAgentAcceptance(store, "agentDraftProduced", [ArtifactPaths.evidence], origin);
     }
   }
 
   loadCompetitors(root: string): Promise<Competitor[]> {
-    return this.openStore(root).then((store) => store.loadCompetitors());
+    return this.withStore(root, (store) => store.loadCompetitors());
   }
 
   async saveCompetitors(root: string, competitors: Competitor[]): Promise<void> {
     const store = await this.openStore(root);
-    await store.saveCompetitors(competitors);
+    await this.run(() => store.saveCompetitors(competitors));
   }
 
-  async competitorStatistics(root: string): Promise<CompetitorStatistics> {
-    const store = await this.openStore(root);
-    return competitorStatistics(await store.loadCompetitors());
+  competitorStatistics(root: string): Promise<CompetitorStatistics> {
+    return this.withStore(root, async (store) => competitorStatistics(await store.loadCompetitors()));
   }
 
   loadAssumptions(root: string): Promise<CostAssumptions> {
-    return this.openStore(root).then((store) => store.loadAssumptions());
+    return this.withStore(root, (store) => store.loadAssumptions());
   }
 
   async saveAssumptions(root: string, assumptions: CostAssumptions): Promise<void> {
     const store = await this.openStore(root);
-    await store.saveAssumptions(assumptions);
+    await this.run(() => store.saveAssumptions(assumptions));
   }
 
   async calculateScenarios(root: string): Promise<EconomicsScenario[]> {
@@ -245,11 +267,11 @@ export class MerchantService {
   }
 
   loadScenarios(root: string): Promise<EconomicsScenario[]> {
-    return this.openStore(root).then((store) => store.loadScenarios());
+    return this.withStore(root, (store) => store.loadScenarios());
   }
 
   loadReportSections(root: string): Promise<ReportSections> {
-    return this.openStore(root).then((store) => store.loadReportSections());
+    return this.withStore(root, (store) => store.loadReportSections());
   }
 
   async saveReportSections(
@@ -258,7 +280,7 @@ export class MerchantService {
     origin?: GenerationOrigin,
   ): Promise<void> {
     const store = await this.openStore(root);
-    await store.saveReportSections(sections);
+    await this.run(() => store.saveReportSections(sections));
     if (origin?.kind === "agent") {
       await this.journalAgentAcceptance(store, "agentDraftProduced", [ArtifactPaths.reportSections], origin);
     }
@@ -568,22 +590,22 @@ export class MerchantService {
   }
 
   loadGeneratedReport(root: string): Promise<string | null> {
-    return this.openStore(root).then((store) => store.loadOpportunityReport());
+    return this.withStore(root, (store) => store.loadOpportunityReport());
   }
 
   listRuns(root: string): Promise<RunRecord[]> {
-    return this.openStore(root).then((store) => store.journal.listRuns());
+    return this.withStore(root, (store) => store.journal.listRuns());
   }
 
   listProvenance(root: string): Promise<ProvenanceRecord[]> {
-    return this.openStore(root).then((store) => store.journal.listProvenance());
+    return this.withStore(root, (store) => store.journal.listProvenance());
   }
 
   listArtifacts(root: string): ReturnType<WorkspaceStore["listArtifacts"]> {
-    return this.openStore(root).then((store) => store.listArtifacts());
+    return this.withStore(root, (store) => store.listArtifacts());
   }
 
   readArtifact(root: string, relativePath: string): Promise<string> {
-    return this.openStore(root).then((store) => store.readArtifactText(relativePath));
+    return this.withStore(root, (store) => store.readArtifactText(relativePath));
   }
 }
