@@ -11,5 +11,11 @@ export function projectFolderName(name: string): string {
       previousWasSeparator = true;
     }
   }
-  return slug.replace(/^-+|-+$/g, "") || "project";
+  // Bounded trimming without regex backtracking — CodeQL flags global
+  // replaces over uncontrolled input, and the loop is behavior-identical.
+  let start = 0;
+  while (start < slug.length && slug[start] === "-") start += 1;
+  let end = slug.length;
+  while (end > start && slug[end - 1] === "-") end -= 1;
+  return slug.slice(start, end) || "project";
 }

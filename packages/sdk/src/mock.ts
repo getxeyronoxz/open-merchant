@@ -40,6 +40,29 @@ export function emptyMockAssumptions(currency: string): CostAssumptions {
   };
 }
 
+/**
+ * Lowercase-hyphenated folder slug, built with bounded character loops —
+ * no regex over uncontrolled input (mirrors core's projectFolderName).
+ */
+function slugify(value: string): string {
+  let slug = "";
+  let previousWasSeparator = false;
+  for (const character of value.trim().toLowerCase()) {
+    const isSlugCharacter =
+      (character >= "a" && character <= "z") || (character >= "0" && character <= "9");
+    if (isSlugCharacter) {
+      slug += character;
+      previousWasSeparator = false;
+    } else if (!previousWasSeparator && slug.length > 0) {
+      slug += "-";
+      previousWasSeparator = true;
+    }
+  }
+  let start = 0;
+  while (start < slug.length && slug[start] === "-") start += 1;
+  return slug.slice(start) || "project";
+}
+
 const EMPTY_STATS: CompetitorStatistics = {
   validPriceCount: 0,
   minimum: null,
@@ -99,10 +122,14 @@ export function createMockDesktopClient(
       if (projects.some((project) => project.snapshot.manifest.name === trimmed)) {
         throw new AppError({ code: "already-exists", message: `A project named ${trimmed} already exists.` });
       }
+      let parentTrimmed = parentDirectory;
+      while (parentTrimmed.endsWith("/") || parentTrimmed.endsWith("\\")) {
+        parentTrimmed = parentTrimmed.slice(0, -1);
+      }
       const timestamp = now();
       const state: MockProjectState = {
         snapshot: {
-          root: `${parentDirectory.replace(/[\\/]+$/u, "")}/${trimmed.toLowerCase().replace(/[^a-z0-9]+/gu, "-")}`,
+          root: `${parentTrimmed}/${slugify(trimmed)}`,
           manifest: {
             schemaVersion: 2,
             projectId: crypto.randomUUID(),
