@@ -1,7 +1,9 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { useProject } from "../../state/project";
-import { useCompetitors, useEvidence } from "./queries";
+import { useAiConfig, useCompetitors, useEvidence } from "./queries";
+import { resolveResumeSection, useWorkflowProgress, type SectionName } from "./useWorkflowProgress";
+import { WorkflowGuide } from "./WorkflowGuide";
 import { ObjectiveScreen } from "./screens/ObjectiveScreen";
 import { EvidenceScreen } from "./screens/EvidenceScreen";
 import { CompetitorsScreen } from "./screens/CompetitorsScreen";
@@ -27,8 +29,6 @@ const sections = [
 
 const assistantSection = { name: "AI", label: "AI settings" } as const;
 
-type SectionName = (typeof sections)[number]["name"] | typeof assistantSection.name;
-
 export function WorkspaceShell() {
   const { project, closeProject } = useProject();
   const [section, setSection] = useState<SectionName>("Objective");
@@ -38,7 +38,7 @@ export function WorkspaceShell() {
 
   return (
     <Shell root={root} section={section} setSection={setSection} closeProject={closeProject}>
-      <Stage section={section} root={root} />
+      <Stage section={section} root={root} onNavigate={setSection} />
     </Shell>
   );
 }
@@ -59,12 +59,35 @@ function Shell({
   const { project } = useProject();
   const evidence = useEvidence(root);
   const competitors = useCompetitors(root);
+  const workflow = useWorkflowProgress(root);
+  const aiConfig = useAiConfig();
+
+  // First-run guidance: until any provider key exists, say out loud that the
+  // deterministic critical path needs no AI at all.
+  const hasAnyAiKey = Boolean(
+    aiConfig.data && Object.values(aiConfig.data.hasKeys ?? {}).some(Boolean),
+  );
+  const showsAiTip = aiConfig.isSuccess && !hasAnyAiKey;
+
+  // One-time resume jump: reopening a mid-walkthrough project lands on its
+  // first incomplete step instead of the default Objective section.
+  const resumeApplied = useRef(false);
+  useEffect(() => {
+    if (resumeApplied.current) return;
+    const target = resolveResumeSection(workflow.progress, section);
+    if (!target) return;
+    resumeApplied.current = true;
+    setSection(target);
+  }, [section, setSection, workflow.progress]);
+
   if (!project) return null;
 
   const counts: Partial<Record<SectionName, number | undefined>> = {
     Evidence: evidence.data?.sources.length,
     Competitors: competitors.data?.competitors.length,
   };
+
+  const stepMap = new Map(workflow.steps.map((s) => [s.id, s]));
 
   return (
     <main className="shell">
@@ -98,6 +121,7 @@ function Shell({
             <ul className="shell__nav">
               {sections.map((item) => {
                 const count = counts[item.name];
+                const step = stepMap.get(item.name);
                 return (
                   <li key={item.name}>
                     <button
@@ -109,6 +133,10 @@ function Shell({
                       <span>{item.name}</span>
                       {count !== undefined && count > 0 ? (
                         <span className="om-badge">{count}</span>
+                      ) : step?.isComplete ? (
+                        <span className="om-badge om-badge--accent" title="Completed">
+                          ✓
+                        </span>
                       ) : null}
                     </button>
                   </li>
@@ -150,6 +178,19 @@ function Shell({
           <div className="shell__scroll">
             {/* key restarts the entrance animation per section */}
             <div className="shell__content" key={section}>
+              {section !== "AI" ? (
+                <WorkflowGuide
+                  steps={workflow.steps}
+                  currentStep={workflow.currentStep}
+                  completedCount={workflow.completedCount}
+                  totalSteps={workflow.totalSteps}
+                  isReportGenerated={workflow.isReportGenerated}
+                  guideVisible={workflow.guideVisible}
+                  onToggleGuide={workflow.toggleGuide}
+                  onNavigate={setSection}
+                  showsAiTip={showsAiTip}
+                />
+              ) : null}
               {children}
             </div>
           </div>
@@ -159,20 +200,28 @@ function Shell({
   );
 }
 
-function Stage({ section, root }: { section: SectionName; root: string }) {
+function Stage({
+  section,
+  root,
+  onNavigate,
+}: {
+  section: SectionName;
+  root: string;
+  onNavigate: (section: SectionName) => void;
+}) {
   switch (section) {
     case "Objective":
-      return <ObjectiveScreen root={root} />;
+      return <ObjectiveScreen root={root} onNavigate={onNavigate} />;
     case "Evidence":
-      return <EvidenceScreen root={root} />;
+      return <EvidenceScreen root={root} onNavigate={onNavigate} />;
     case "Competitors":
-      return <CompetitorsScreen root={root} />;
+      return <CompetitorsScreen root={root} onNavigate={onNavigate} />;
     case "Economics":
-      return <EconomicsScreen root={root} />;
+      return <EconomicsScreen root={root} onNavigate={onNavigate} />;
     case "Report":
-      return <ReportScreen root={root} />;
+      return <ReportScreen root={root} onNavigate={onNavigate} />;
     case "Artifacts":
-      return <ArtifactsScreen root={root} />;
+      return <ArtifactsScreen root={root} onNavigate={onNavigate} />;
     case "AI":
       return <AiSettingsScreen />;
   }

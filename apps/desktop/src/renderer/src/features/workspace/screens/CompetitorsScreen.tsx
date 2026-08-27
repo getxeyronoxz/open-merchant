@@ -10,6 +10,7 @@ import {
   useDraftCompetitors,
   useSaveCompetitors,
 } from "../queries";
+import type { SectionName } from "../useWorkflowProgress";
 
 function nextCompetitorId(existing: Competitor[]): string {
   const highest = existing.reduce((max, competitor) => {
@@ -20,7 +21,13 @@ function nextCompetitorId(existing: Competitor[]): string {
 }
 
 /** Market landscape: comparable listings and the price statistics they imply. */
-export function CompetitorsScreen({ root }: { root: string }) {
+export function CompetitorsScreen({
+  root,
+  onNavigate,
+}: {
+  root: string;
+  onNavigate?: (section: SectionName) => void;
+}) {
   const query = useCompetitors(root);
   const statistics = useCompetitorStatistics(root);
   const save = useSaveCompetitors(root);
@@ -283,6 +290,24 @@ export function CompetitorsScreen({ root }: { root: string }) {
           </tbody>
         </table>
       )}
+
+      {competitors.length > 0 && onNavigate ? (
+        <div className="om-card screen__nav-foot">
+          <div>
+            <strong>Next step: Model unit economics</strong>
+            <p className="om-field__hint">
+              Enter your cost assumptions and calculate 3-tier price scenarios (Low, Base, High).
+            </p>
+          </div>
+          <button
+            className="om-button om-button--primary"
+            onClick={() => onNavigate("Economics")}
+            type="button"
+          >
+            Continue to Economics →
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }

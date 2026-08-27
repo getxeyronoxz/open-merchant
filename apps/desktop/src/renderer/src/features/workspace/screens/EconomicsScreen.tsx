@@ -11,12 +11,19 @@ import {
   useSaveAssumptions,
   useScenarios,
 } from "../queries";
+import type { SectionName } from "../useWorkflowProgress";
 
 /**
  * Unit economics: cost assumptions and low/base/high price scenarios.
  * All math happens in the deterministic core — the UI only edits inputs.
  */
-export function EconomicsScreen({ root }: { root: string }) {
+export function EconomicsScreen({
+  root,
+  onNavigate,
+}: {
+  root: string;
+  onNavigate?: (section: SectionName) => void;
+}) {
   const assumptionsQuery = useAssumptions(root);
   const scenariosQuery = useScenarios(root);
   const calculate = useCalculateScenarios(root);
@@ -31,6 +38,8 @@ export function EconomicsScreen({ root }: { root: string }) {
   if (assumptionsQuery.isError) {
     return <ErrorState error={assumptionsQuery.error} onRetry={() => assumptionsQuery.refetch()} />;
   }
+
+  const scenarios = scenariosQuery.data?.scenarios ?? [];
 
   return (
     <section className="screen">
@@ -50,11 +59,29 @@ export function EconomicsScreen({ root }: { root: string }) {
           calculateError={calculate.error}
           calculating={calculate.isPending}
           onCalculate={() => calculate.mutate()}
-          scenarios={scenariosQuery.data?.scenarios ?? []}
+          scenarios={scenarios}
           scenariosPending={scenariosQuery.isPending}
           scenariosQuery={scenariosQuery}
         />
       </div>
+
+      {scenarios.length > 0 && onNavigate ? (
+        <div className="om-card screen__nav-foot">
+          <div>
+            <strong>Next step: Write & generate report</strong>
+            <p className="om-field__hint">
+              Draft your narrative sections and generate your evidence-linked opportunity report.
+            </p>
+          </div>
+          <button
+            className="om-button om-button--primary"
+            onClick={() => onNavigate("Report")}
+            type="button"
+          >
+            Continue to Report →
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -50,6 +50,15 @@ describe("Open Merchant E2E", () => {
   it("boots to the Home screen", async () => {
     await expect(await page.locator(".home__thesis").innerText()).toContain("Make the call");
     await page.locator(".home__panel-title").waitFor({ state: "visible" });
+
+    // Fresh install: the one-time first-run walkthrough card offers three moves.
+    await page.locator(".home__welcome").waitFor({ state: "visible" });
+    await expect(await page.locator(".home__welcome-title").innerText()).toContain("three moves");
+    await page.getByRole("button", { name: "Got it" }).click();
+    await page.locator(".home__welcome").waitFor({ state: "hidden" });
+
+    // After dismissal the standing invitation remains for empty installs.
+    await expect(await page.locator(".om-empty__title").innerText()).toContain("No decisions yet");
   });
 
   it("creates a project through the real IPC and lands in the workspace", async () => {
@@ -93,11 +102,19 @@ describe("Open Merchant E2E deep workflow", () => {
     await page.locator(".home__form button[type='submit']").click();
     await page.locator(".shell__nav").first().waitFor({ state: "visible" });
 
+    // Verify Onboarding Walkthrough Guide initializes correctly
+    await page.locator(".om-guide").waitFor({ state: "visible" });
+    await expect(await page.locator(".om-guide__title").innerText()).toContain("Step 2 of 6: Evidence library");
+
+    // No AI key exists on a fresh install, so the guide states AI is optional.
+    await page.locator(".om-guide__tip").waitFor({ state: "visible" });
+    await expect(await page.locator(".om-guide__tip").innerText()).toContain("optional");
+
     const projectRoot = join(projectsParent, "deep-flow");
 
-    // --- evidence: add a source manually ---
-    await page.getByRole("button", { name: "Evidence" }).click();
-    await page.getByRole("button", { name: "Add source" }).click();
+    // --- evidence: resume targeting landed the workspace here directly ---
+    await page.getByRole("button", { name: "Add first source" }).waitFor({ state: "visible" });
+    await page.getByRole("button", { name: "Add first source" }).click();
     await page.getByPlaceholder("https://…").fill("https://example.com/nova65");
     await page.getByPlaceholder("Marketplace category page").fill("Nova65 listing");
     await page.getByRole("button", { name: "Save source" }).click();
@@ -106,8 +123,11 @@ describe("Open Merchant E2E deep workflow", () => {
     const sourcesRaw = await readFile(join(projectRoot, "evidence", "sources.jsonl"), "utf8");
     expect(sourcesRaw).toContain("Nova65 listing");
 
-    // --- competitors: add two priced listings ---
-    await page.getByRole("button", { name: "Competitors" }).click();
+    // Guide advanced to Step 3: Market landscape
+    await expect(await page.locator(".om-guide__title").innerText()).toContain("Step 3 of 6: Market landscape");
+
+    // --- competitors: add two priced listings via continuation button ---
+    await page.getByRole("button", { name: "Continue to Competitors →" }).click();
     for (const [product, price] of [["Board A", "499.00"], ["Board B", "599.50"]] as const) {
       await page.getByPlaceholder("65% hot-swappable keyboard").fill(product);
       await page.getByPlaceholder("Nova").fill("Brand");
@@ -119,8 +139,11 @@ describe("Open Merchant E2E deep workflow", () => {
     await page.getByText("549.25").first().waitFor({ state: "visible" });
     expect(await page.getByText("549.25").count()).toBe(2);
 
-    // --- economics: assumptions + prices, save, calculate ---
-    await page.getByRole("button", { name: "Economics" }).click();
+    // Guide advanced to Step 4: Unit economics
+    await expect(await page.locator(".om-guide__title").innerText()).toContain("Step 4 of 6: Unit economics");
+
+    // --- economics: assumptions + prices, save, calculate via continuation button ---
+    await page.getByRole("button", { name: "Continue to Economics →" }).click();
     const moneyInputs = page.locator("input.om-money");
     await moneyInputs.nth(0).fill("500.00"); // acquisition
     await moneyInputs.nth(1).fill("75.50"); // shipping
@@ -140,13 +163,24 @@ describe("Open Merchant E2E deep workflow", () => {
     expect(base.totalCost).toBe("758.85");
     expect(base.grossProfit).toBe("341.14");
 
-    // --- report: sections then generate ---
-    await page.getByRole("button", { name: "Report", exact: true }).click();
+    // Guide advanced to Step 5: Opportunity report
+    await expect(await page.locator(".om-guide__title").innerText()).toContain("Step 5 of 6: Opportunity report");
+
+    // --- report: sections then generate via continuation button ---
+    await page.getByRole("button", { name: "Continue to Report →" }).click();
     await page.getByRole("button", { name: "Generate report" }).click();
     await page.locator(".report-preview").first().waitFor({ state: "visible", timeout: 30_000 });
     const report = await readFile(join(projectRoot, "reports", "opportunity-report.md"), "utf8");
     expect(report).toContain("# Deep Flow");
     expect(report).toContain("| Base | INR 1099.99 | 758.85 | 341.14 | 31.01% |");
+
+    // Walkthrough milestone reached!
+    await expect(await page.locator(".om-guide__title").innerText()).toContain("Opportunity Report Generated");
+    await expect(await page.locator(".om-guide__head-actions .om-badge").innerText()).toContain("6 of 6 complete");
+
+    // Inspect artifacts via guide milestone button
+    await page.getByRole("button", { name: "Inspect Project Artifacts →" }).click();
+    await page.locator(".artifacts__list").waitFor({ state: "visible" });
 
     // Provenance journal gained records for both generated artifacts.
     const provenance = await readFile(join(projectRoot, ".openmerchant", "provenance.jsonl"), "utf8");
@@ -164,8 +198,8 @@ describe("Open Merchant E2E persistence", () => {
     await page.locator(".shell__nav").first().waitFor({ state: "visible" });
 
     // Add one evidence source so the project has real content.
-    await page.getByRole("button", { name: "Evidence" }).click();
-    await page.getByRole("button", { name: "Add source" }).click();
+    await page.locator(".shell__nav").getByRole("button", { name: "Evidence" }).click();
+    await page.getByRole("button", { name: "Add first source" }).click();
     await page.getByPlaceholder("https://…").fill("https://example.com/keep");
     await page.getByPlaceholder("Marketplace category page").fill("Kept source");
     await page.getByRole("button", { name: "Save source" }).click();
@@ -189,7 +223,7 @@ describe("Open Merchant E2E persistence", () => {
       await page2.locator(".shell__nav").first().waitFor({ state: "visible", timeout: 10_000 });
 
       // Evidence survived the restart.
-      await page2.getByRole("button", { name: "Evidence" }).click();
+      await page2.locator(".shell__nav").getByRole("button", { name: "Evidence" }).click();
       await page2.getByText("Kept source").waitFor({ state: "visible" });
     } finally {
       await second.close();

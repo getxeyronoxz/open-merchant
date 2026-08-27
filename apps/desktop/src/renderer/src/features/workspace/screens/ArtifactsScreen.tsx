@@ -11,12 +11,20 @@ import {
   useProvenance,
   useRuns,
 } from "../queries";
+import type { SectionName } from "../useWorkflowProgress";
 
 /**
  * Files & history: the known artifacts of this project plus the run and
  * provenance journals that explain where generated files came from.
  */
-export function ArtifactsScreen({ root }: { root: string }) {
+export function ArtifactsScreen({
+  root,
+  onNavigate,
+}: {
+  root: string;
+  onNavigate?: (section: SectionName) => void;
+}) {
+  void onNavigate;
   const artifacts = useArtifacts(root);
   const runs = useRuns(root);
   const provenance = useProvenance(root);
@@ -91,7 +99,7 @@ export function ArtifactsScreen({ root }: { root: string }) {
         </p>
       ) : runs.isError ? (
         <ErrorState error={runs.error} onRetry={() => runs.refetch()} />
-      ) : (runs.data.runs.length === 0) ? (
+      ) : runs.data.runs.length === 0 ? (
         <EmptyState title="No operations recorded yet">
           <span>Creating the project and generating reports will appear here.</span>
         </EmptyState>
@@ -144,6 +152,13 @@ export function ArtifactsScreen({ root }: { root: string }) {
           </ul>
         </>
       ) : null}
+
+      <div className="om-card om-card--inset" style={{ marginTop: "var(--om-space-4)" }}>
+        <p className="om-eyebrow">Local-First Verification</p>
+        <p className="om-section-sub" style={{ marginTop: "var(--om-space-2)" }}>
+          Every decision file in this workspace is stored in human-readable formats (.json, .jsonl, .md) on your local drive with cryptographic sha-256 provenance.
+        </p>
+      </div>
     </section>
   );
 }

@@ -173,8 +173,20 @@ body {
   min-width: 0;
 }
 
-.home__empty-hint {
+/* ---------- Home first-run walkthrough ---------- */
+.home__welcome {
+  display: grid;
+  gap: var(--om-space-2);
+}
+
+.home__welcome-title {
+  font-size: var(--om-text-sm);
+}
+
+.home__welcome-note {
+  margin: 0;
   color: var(--om-text-muted);
+  font-size: var(--om-text-xs);
 }
 
 .home__form {
@@ -525,3 +537,186 @@ body {
   border-bottom: 1px solid var(--om-paper-edge);
   padding-bottom: var(--om-space-1);
 }
+
+/* ---------- Walkthrough guide ---------- */
+
+.om-guide {
+  margin-bottom: var(--om-space-5);
+  background: var(--om-surface-raised);
+  border: 1px solid var(--om-border-strong);
+  display: grid;
+  gap: var(--om-space-4);
+  animation: om-enter var(--om-motion-base) both;
+}
+
+.om-guide__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--om-space-3);
+  flex-wrap: wrap;
+}
+
+.om-guide__title-group {
+  display: grid;
+  gap: var(--om-space-1);
+}
+
+.om-guide__title {
+  margin: 0;
+  font-family: var(--om-font-display);
+  font-size: var(--om-text-lg);
+  font-weight: 400;
+}
+
+.om-guide__head-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--om-space-2);
+}
+
+.om-guide__stepper {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: var(--om-space-2);
+}
+
+.om-guide__step-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--om-space-1);
+  padding: var(--om-space-2) var(--om-space-3);
+  background: var(--om-surface-inset);
+  border: 1px solid var(--om-border-subtle);
+  border-radius: var(--om-radius-md);
+  color: var(--om-text-secondary);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--om-font-sans);
+  font-size: var(--om-text-xs);
+  transition:
+    border-color var(--om-motion-fast),
+    background-color var(--om-motion-fast),
+    color var(--om-motion-fast);
+}
+
+.om-guide__step-btn:hover {
+  border-color: var(--om-accent);
+  color: var(--om-text-primary);
+}
+
+.om-guide__step-btn:focus-visible {
+  outline: 2px solid var(--om-accent);
+  outline-offset: -1px;
+}
+
+.om-guide__step-btn.is-current {
+  border-color: var(--om-brass);
+  background: var(--om-brass-soft);
+  color: var(--om-text-primary);
+  font-weight: 600;
+}
+
+.om-guide__step-btn.is-complete {
+  border-color: rgba(67, 193, 122, 0.35);
+  color: var(--om-text-primary);
+}
+
+.om-guide__step-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--om-surface-overlay);
+  font-family: var(--om-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.om-guide__step-btn.is-complete .om-guide__step-badge {
+  background: var(--om-accent-soft);
+  color: var(--om-accent);
+}
+
+.om-guide__step-btn.is-current .om-guide__step-badge {
+  background: var(--om-brass);
+  color: var(--om-accent-contrast);
+}
+
+.om-guide__step-label {
+  font-size: var(--om-text-sm);
+  line-height: var(--om-leading-tight);
+}
+
+.om-guide__step-sub {
+  color: var(--om-text-muted);
+  font-size: 11px;
+}
+
+.om-guide__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--om-space-4);
+  padding-top: var(--om-space-3);
+  border-top: 1px solid var(--om-border-subtle);
+  flex-wrap: wrap;
+}
+
+.om-guide__desc {
+  margin: 0;
+  color: var(--om-text-secondary);
+  font-size: var(--om-text-sm);
+  max-width: 60ch;
+}
+
+.om-guide__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--om-space-2);
+}
+
+.om-guide-bar {
+  margin-bottom: var(--om-space-4);
+  display: flex;
+  align-items: center;
+}
+
+.om-guide-bar__btn {
+  font-size: var(--om-text-xs);
+  gap: var(--om-space-2);
+}
+
+.om-guide-bar__tip {
+  margin-left: auto;
+  color: var(--om-text-muted);
+  font-size: var(--om-text-xs);
+}
+
+.om-guide__foot-copy {
+  display: grid;
+  gap: var(--om-space-1);
+  min-width: 0;
+}
+
+.om-guide__tip {
+  margin: 0;
+  color: var(--om-text-muted);
+  font-size: var(--om-text-xs);
+}
+
+.screen__nav-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--om-space-4);
+  padding: var(--om-space-4) var(--om-space-5);
+  background: var(--om-surface-inset);
+  border: 1px solid var(--om-border-subtle);
+  border-radius: var(--om-radius-lg);
+  margin-top: var(--om-space-4);
+  flex-wrap: wrap;
+}
+

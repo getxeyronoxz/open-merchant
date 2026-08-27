@@ -4,6 +4,7 @@ import type { AiOrigin, EvidenceSource, Observation } from "@open-merchant/share
 import { EmptyState, ErrorState, Field, LedgerRow } from "@open-merchant/ui";
 
 import { useDraftEvidence, useEvidence, useSaveEvidence } from "../queries";
+import type { SectionName } from "../useWorkflowProgress";
 
 function nextSourceId(existing: EvidenceSource[]): string {
   const highest = existing.reduce((max, source) => {
@@ -28,7 +29,13 @@ function emptySource(id: string): EvidenceSource {
 }
 
 /** Evidence library: every claim in the report should trace to a source here. */
-export function EvidenceScreen({ root }: { root: string }) {
+export function EvidenceScreen({
+  root,
+  onNavigate,
+}: {
+  root: string;
+  onNavigate?: (section: SectionName) => void;
+}) {
   const query = useEvidence(root);
   const save = useSaveEvidence(root);
   const draftAi = useDraftEvidence(root);
@@ -163,6 +170,15 @@ export function EvidenceScreen({ root }: { root: string }) {
       {sources.length === 0 && draft === null ? (
         <EmptyState title="No sources yet">
           <span>Add the listing, search result, or report behind your research.</span>
+          <div className="screen__actions" style={{ marginTop: "var(--om-space-2)" }}>
+            <button
+              className="om-button om-button--primary"
+              onClick={() => setDraft(emptySource(nextSourceId(sources)))}
+              type="button"
+            >
+              Add first source
+            </button>
+          </div>
         </EmptyState>
       ) : (
         <div className="om-ledger">
@@ -210,6 +226,24 @@ export function EvidenceScreen({ root }: { root: string }) {
           ))}
         </div>
       )}
+
+      {sources.length > 0 && onNavigate ? (
+        <div className="om-card screen__nav-foot">
+          <div>
+            <strong>Next step: Compare competitors</strong>
+            <p className="om-field__hint">
+              Record comparable listings to map price distribution and market norms.
+            </p>
+          </div>
+          <button
+            className="om-button om-button--primary"
+            onClick={() => onNavigate("Competitors")}
+            type="button"
+          >
+            Continue to Competitors →
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }

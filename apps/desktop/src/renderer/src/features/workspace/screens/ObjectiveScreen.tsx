@@ -6,9 +6,16 @@ import { ErrorState, Field } from "@open-merchant/ui";
 import { client } from "../../../client";
 import { useDraftPlan } from "../queries";
 import { useProject } from "../../../state/project";
+import type { SectionName } from "../useWorkflowProgress";
 
 /** Research objective: the project's identity. Currency is fixed at creation. */
-export function ObjectiveScreen({ root }: { root: string }) {
+export function ObjectiveScreen({
+  root,
+  onNavigate,
+}: {
+  root: string;
+  onNavigate?: (section: SectionName) => void;
+}) {
   const { project, updateManifest } = useProject();
   const [name, setName] = useState(project?.manifest.name ?? "");
   const [objective, setObjective] = useState(project?.manifest.objective ?? "");
@@ -108,6 +115,24 @@ export function ObjectiveScreen({ root }: { root: string }) {
               </li>
             ))}
           </ol>
+        </div>
+      ) : null}
+
+      {onNavigate ? (
+        <div className="om-card screen__nav-foot">
+          <div>
+            <strong>Next step: Collect evidence</strong>
+            <p className="om-field__hint">
+              Gather listings, forum threads, or supplier quotes in the Evidence library.
+            </p>
+          </div>
+          <button
+            className="om-button om-button--primary"
+            onClick={() => onNavigate("Evidence")}
+            type="button"
+          >
+            Continue to Evidence →
+          </button>
         </div>
       ) : null}
     </section>

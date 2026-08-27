@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { ErrorState, LedgerRow } from "@open-merchant/ui";
+import { EmptyState, ErrorState, LedgerRow } from "@open-merchant/ui";
 
 import { client } from "../../client";
 import { useProject } from "../../state/project";
@@ -48,6 +48,43 @@ export function HomeScreen() {
     onSuccess: (result) => openProject(result.snapshot),
   });
 
+  const fillExampleTemplate = () => {
+    setName("Mechanical keyboards India");
+    setObjective("Should we enter the Indian enthusiast keyboard market this quarter?");
+    setCurrency("INR");
+  };
+
+  // One-time first-run walkthrough card; remembered locally like the guide bar.
+  const [welcomeDismissed, setWelcomeDismissed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("om:home:welcomed") === "true";
+    } catch {
+      // Storage unavailable — never nag.
+      return true;
+    }
+  });
+
+  const dismissWelcome = () => {
+    setWelcomeDismissed(true);
+    try {
+      localStorage.setItem("om:home:welcomed", "true");
+    } catch {
+      // Ignore storage failures; dismissal still holds for this session.
+    }
+  };
+
+  const startDemoFlow = () => {
+    fillExampleTemplate();
+    dismissWelcome();
+    chooseDirectory.mutate();
+  };
+
+  const showWelcome =
+    !welcomeDismissed &&
+    recentsQuery.isSuccess &&
+    recentsQuery.data !== undefined &&
+    recentsQuery.data.projects.length === 0;
+
   return (
     <main className="home">
       <header className="home__top">
@@ -89,8 +126,42 @@ export function HomeScreen() {
                 <span className="om-spinner" /> Loading recent projects…
               </p>
             ) : null}
-            {recentsQuery.data && recentsQuery.data.projects.length === 0 ? (
-              <p className="home__empty-hint">No projects yet. Create your first decision workspace.</p>
+            {showWelcome ? (
+              <section aria-label="First-run walkthrough" className="home__welcome om-card om-card--inset">
+                <p className="om-eyebrow">New here?</p>
+                <strong className="home__welcome-title">Your first report takes three moves</strong>
+                <div className="om-ledger">
+                  <LedgerRow label="1 · Create" value="A project folder you own" tone="muted" />
+                  <LedgerRow label="2 · Feed" value="Evidence, competitors & cost assumptions" tone="muted" />
+                  <LedgerRow label="3 · Decide" value="Calculate scenarios & generate the report" tone="brass" />
+                </div>
+                <p className="home__welcome-note">
+                  Everything stays on this device and the math is exact. The AI assistants are
+                  optional — every step works without a key.
+                </p>
+                <div className="screen__actions">
+                  <button
+                    className="om-button om-button--primary"
+                    onClick={startDemoFlow}
+                    type="button"
+                  >
+                    Try the demo research goal
+                  </button>
+                  <button
+                    className="om-button om-button--ghost"
+                    onClick={dismissWelcome}
+                    type="button"
+                  >
+                    Got it
+                  </button>
+                </div>
+              </section>
+            ) : null}
+            {!showWelcome && recentsQuery.data && recentsQuery.data.projects.length === 0 ? (
+              <EmptyState title="No decisions yet">
+                <span>One folder per commercial question — evidence, competitors, costs, report.</span>
+                <span>Pick where it lives below, name the decision, and you're in.</span>
+              </EmptyState>
             ) : null}
             <ul className="home__recents">
               {(recentsQuery.data?.projects ?? []).map((recent) => (
@@ -125,7 +196,17 @@ export function HomeScreen() {
               createProject.mutate();
             }}
           >
-            <h2 className="home__panel-title">New project</h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h2 className="home__panel-title">New project</h2>
+              <button
+                className="om-button om-button--ghost"
+                onClick={fillExampleTemplate}
+                style={{ fontSize: "var(--om-text-xs)" }}
+                type="button"
+              >
+                Use sample template
+              </button>
+            </div>
             <p className="om-data">{parentDirectory}</p>
             <label className="om-field">
               <span className="om-field__label">Project name</span>

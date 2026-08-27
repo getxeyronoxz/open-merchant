@@ -13,13 +13,20 @@ import {
   useReportSections,
   useSaveReportSections,
 } from "../queries";
+import type { SectionName } from "../useWorkflowProgress";
 
 /**
  * The opportunity report: user-owned narrative sections plus the
  * deterministic markdown generated from every saved artifact. Generated
  * reports read on paper — documents are paper.
  */
-export function ReportScreen({ root }: { root: string }) {
+export function ReportScreen({
+  root,
+  onNavigate,
+}: {
+  root: string;
+  onNavigate?: (section: SectionName) => void;
+}) {
   const sectionsQuery = useReportSections(root);
   const generatedQuery = useGeneratedReport(root);
   const generate = useGenerateReport(root);
@@ -150,6 +157,29 @@ export function ReportScreen({ root }: { root: string }) {
           )}
         </aside>
       </div>
+
+      {generatedQuery.data?.markdown && onNavigate ? (
+        <div className="om-card screen__nav-foot">
+          <div>
+            <div style={{ marginBottom: "var(--om-space-1)" }}>
+              <span className="om-badge om-badge--accent">
+                <span className="om-dot" /> Milestone Reached
+              </span>
+            </div>
+            <strong>First Opportunity Report Generated!</strong>
+            <p className="om-field__hint">
+              Inspect your saved files, journals, and cryptographic provenance in Artifacts.
+            </p>
+          </div>
+          <button
+            className="om-button om-button--primary"
+            onClick={() => onNavigate("Artifacts")}
+            type="button"
+          >
+            Inspect Artifacts & History →
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }
