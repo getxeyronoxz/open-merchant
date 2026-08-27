@@ -31,7 +31,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.0",
-    "electron": "^37.0.0",
+    "electron": "^39.8.10",
     "electron-builder": "^26.15.3",
     "electron-vite": "^3.0.0",
     "playwright-core": "^1.62.1",
