@@ -1,0 +1,44 @@
+[
+  {
+    "scenario": "low",
+    "sellingPrice": "3499.00",
+    "acquisitionCost": "1800.00",
+    "shippingCost": "180.00",
+    "marketplaceFeeRate": "12.00",
+    "marketplaceFee": "419.88",
+    "paymentFeeRate": "2.00",
+    "paymentFee": "69.98",
+    "otherCosts": "120.00",
+    "totalCost": "2589.86",
+    "grossProfit": "909.14",
+    "grossMarginPercent": "25.98"
+  },
+  {
+    "scenario": "base",
+    "sellingPrice": "4499.00",
+    "acquisitionCost": "1800.00",
+    "shippingCost": "180.00",
+    "marketplaceFeeRate": "12.00",
+    "marketplaceFee": "539.88",
+    "paymentFeeRate": "2.00",
+    "paymentFee": "89.98",
+    "otherCosts": "120.00",
+    "totalCost": "2729.86",
+    "grossProfit": "1769.14",
+    "grossMarginPercent": "39.32"
+  },
+  {
+    "scenario": "high",
+    "sellingPrice": "5499.00",
+    "acquisitionCost": "1800.00",
+    "shippingCost": "180.00",
+    "marketplaceFeeRate": "12.00",
+    "marketplaceFee": "659.88",
+    "paymentFeeRate": "2.00",
+    "paymentFee": "109.98",
+    "otherCosts": "120.00",
+    "totalCost": "2869.86",
+    "grossProfit": "2629.14",
+    "grossMarginPercent": "47.81"
+  }
+]
