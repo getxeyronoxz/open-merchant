@@ -101,6 +101,15 @@
   padding: var(--om-space-2) var(--om-space-3);
   font-family: var(--om-font-sans);
   font-size: var(--om-text-md);
+  transition:
+    border-color var(--om-motion-fast),
+    box-shadow var(--om-motion-fast);
+}
+
+.om-input:hover:not(:focus-visible),
+.om-textarea:hover:not(:focus-visible),
+.om-select:hover:not(:focus-visible) {
+  border-color: rgba(238, 242, 238, 0.28);
 }
 
 .om-input::placeholder,
@@ -111,9 +120,9 @@
 .om-input:focus-visible,
 .om-textarea:focus-visible,
 .om-select:focus-visible {
-  outline: 2px solid var(--om-accent);
-  outline-offset: -1px;
-  border-color: transparent;
+  outline: none;
+  border-color: var(--om-accent);
+  box-shadow: 0 0 0 3px var(--om-accent-soft);
 }
 
 .om-textarea {
@@ -139,6 +148,10 @@
   border: 1px solid var(--om-border-subtle);
   border-radius: var(--om-radius-lg);
   padding: var(--om-space-5);
+  box-shadow:
+    inset 0 1px 0 rgba(238, 242, 238, 0.04),
+    0 1px 2px rgb(0 0 0 / 0.3),
+    0 8px 24px rgb(0 0 0 / 0.22);
 }
 
 .om-card--inset {
@@ -208,19 +221,22 @@
 .om-ledger__label {
   color: var(--om-text-secondary);
   font-size: var(--om-text-md);
+  white-space: nowrap;
 }
 
 .om-ledger__leader {
   flex: 1;
   border-bottom: 1px dotted var(--om-border-strong);
   transform: translateY(-4px);
-  min-width: var(--om-space-5);
+  min-width: var(--om-space-3);
 }
 
 .om-ledger__value {
   font-variant-numeric: tabular-nums;
   font-size: var(--om-text-md);
   color: var(--om-text-primary);
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 .om-ledger__value--brass {
@@ -302,9 +318,21 @@
 }
 
 .om-empty__title {
+  display: flex;
+  align-items: center;
+  gap: var(--om-space-2);
   color: var(--om-text-primary);
   font-weight: 600;
   font-size: var(--om-text-md);
+}
+
+.om-empty__title::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--om-accent);
+  opacity: 0.85;
 }
 
 .om-loading {
@@ -359,6 +387,14 @@
 .om-table td {
   padding: var(--om-space-2) var(--om-space-3);
   border-bottom: 1px solid var(--om-border-subtle);
+}
+
+.om-table tbody tr {
+  transition: background-color var(--om-motion-fast);
+}
+
+.om-table tbody tr:hover {
+  background: var(--om-surface-hover);
 }
 
 .om-table td--num,
