@@ -72,6 +72,16 @@ function initAutoUpdate() {
 
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
+
+  // Testing override: point the updater at any HTTP folder (e.g. a local
+  // `release/` directory served with any static server) by launching the
+  // installed app with OPEN_MERCHANT_TEST_UPDATE_URL set. Nothing about the
+  // normal GitHub flow changes when the variable is absent.
+  const testFeedUrl = process.env.OPEN_MERCHANT_TEST_UPDATE_URL;
+  if (testFeedUrl) {
+    autoUpdater.setFeedURL({ provider: "generic", url: testFeedUrl });
+  }
+
   autoUpdater.on("update-downloaded", async () => {
     const { response } = await dialog.showMessageBox({
       type: "info",
