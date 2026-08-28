@@ -56,4 +56,8 @@ export const auditReportSchema = z.object({
   ),
 });
 
+/** Providers behind the BYO-key / local-endpoint registry. */
+export const providerIdSchema = z.enum(["anthropic", "openai", "gemini", "local-openai"]);
+export type ProviderId = z.infer<typeof providerIdSchema>;
+
 export type AuditReport = z.infer<typeof auditReportSchema>;

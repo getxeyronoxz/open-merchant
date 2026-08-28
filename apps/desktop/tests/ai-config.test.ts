@@ -83,4 +83,38 @@ describe("AiConfigStore", () => {
     await expect(store.getProvider("openai")).rejects.toBeInstanceOf(AppError);
     await expect(store.getActiveProvider()).rejects.toMatchObject({ code: "ai-not-configured" });
   });
+
+  it("configures a local endpoint without any API key", async () => {
+    const { store } = await makeStore();
+
+    await store.save({ providerId: "local-openai", modelId: "llama3.1", apiKey: null });
+
+    const config = await store.publicConfig();
+    expect(config.hasKeys["local-openai"]).toBe(false);
+    expect(config.baseUrls["local-openai"]).toBe("http://localhost:11434/v1");
+
+    const provider = await store.getProvider("local-openai");
+    expect(provider.id).toBe("local-openai");
+    expect(provider.modelId).toBe("llama3.1");
+
+    // A custom endpoint replaces the default; trailing slashes are kept on disk.
+    await store.save({
+      providerId: "local-openai",
+      modelId: "qwen2.5",
+      apiKey: null,
+      baseUrl: "http://localhost:1234/v1/",
+    });
+    expect((await store.publicConfig()).baseUrls["local-openai"]).toBe("http://localhost:1234/v1/");
+    expect((await store.getProvider("local-openai")).modelId).toBe("qwen2.5");
+  });
+
+  it("activates gemini behind the same encrypted-key flow", async () => {
+    const { store } = await makeStore();
+    await store.save({ providerId: "gemini", modelId: "gemini-test", apiKey: "g-key" });
+
+    const provider = await store.getProvider("gemini");
+    expect(provider.id).toBe("gemini");
+    expect(provider.modelId).toBe("gemini-test");
+    expect((await store.publicConfig()).activeProvider).toBe("gemini");
+  });
 });

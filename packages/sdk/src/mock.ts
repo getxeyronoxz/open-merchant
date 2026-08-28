@@ -369,6 +369,7 @@ export function createMockDesktopClient(
       activeProvider: null,
       models: { anthropic: "claude-sonnet-4-5", openai: "gpt-4o" },
       hasKeys: {},
+      baseUrls: {},
       encryptionAvailable: true,
     }),
     saveAiConfig: async (_request) => {

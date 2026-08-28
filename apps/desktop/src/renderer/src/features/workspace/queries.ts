@@ -5,6 +5,7 @@ import type {
   CostAssumptions,
   EvidenceSource,
   GenerationOrigin,
+  ProviderId,
   ReportSections,
 } from "@open-merchant/shared";
 
@@ -185,7 +186,7 @@ export function useSaveAiConfig() {
 
 export function useTestAi() {
   return useMutation({
-    mutationFn: (providerId: "anthropic" | "openai") => client.testAi(providerId),
+    mutationFn: (providerId: ProviderId) => client.testAi(providerId),
   });
 }
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import type { ProviderId } from "@open-merchant/shared";
 import { ErrorState, Field } from "@open-merchant/ui";
 
 import {
@@ -9,25 +10,39 @@ import {
 } from "../queries";
 
 /**
- * AI settings: bring your own key. Keys are sealed with OS-backed
- * encryption before storage and are never displayed or exported again —
- * the UI only learns whether a key exists.
+ * AI settings: bring your own key — or none at all. Cloud keys are sealed
+ * with OS-backed encryption before storage and are never displayed or
+ * exported again; the UI only learns whether a key exists. Local
+ * OpenAI-compatible endpoints (Ollama, LM Studio) run on this machine and
+ * need no key, only a base URL.
  */
+
+const PROVIDERS: { id: ProviderId; label: string }[] = [
+  { id: "anthropic", label: "Anthropic" },
+  { id: "openai", label: "OpenAI" },
+  { id: "gemini", label: "Google Gemini" },
+  { id: "local-openai", label: "Local · Ollama / LM Studio" },
+];
+
 export function AiSettingsScreen() {
   const configQuery = useAiConfig();
   const save = useSaveAiConfig();
   const test = useTestAi();
 
-  const [providerId, setProviderId] = useState<"anthropic" | "openai">("anthropic");
+  const [providerId, setProviderId] = useState<ProviderId>("anthropic");
   const [modelId, setModelId] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
 
   useEffect(() => {
     if (configQuery.data) {
-      setProviderId(
-        configQuery.data.activeProvider === "openai" ? "openai" : "anthropic",
-      );
-      setModelId(configQuery.data.models[configQuery.data.activeProvider ?? "anthropic"] ?? "");
+      const config = configQuery.data;
+      const active = PROVIDERS.some((provider) => provider.id === config.activeProvider)
+        ? (config.activeProvider as ProviderId)
+        : "anthropic";
+      setProviderId(active);
+      setModelId(config.models[active] ?? "");
+      setBaseUrl(config.baseUrls[active] ?? "");
     }
   }, [configQuery.data]);
 
@@ -44,6 +59,7 @@ export function AiSettingsScreen() {
 
   const config = configQuery.data;
   const hasKey = Boolean(config.hasKeys[providerId]);
+  const isLocal = providerId === "local-openai";
 
   return (
     <section className="screen">
@@ -71,23 +87,31 @@ export function AiSettingsScreen() {
             providerId,
             modelId,
             apiKey: apiKey.trim().length > 0 ? apiKey.trim() : null,
+            baseUrl: isLocal ? (baseUrl.trim().length > 0 ? baseUrl.trim() : null) : null,
           });
         }}
       >
         <div className="ai-providers" role="radiogroup" aria-label="AI provider">
-          {(["anthropic", "openai"] as const).map((id) => (
+          {PROVIDERS.map((provider) => (
             <button
-              aria-pressed={providerId === id}
-              className={`om-card ai-provider${providerId === id ? " is-active" : ""}`}
-              key={id}
+              aria-pressed={providerId === provider.id}
+              className={`om-card ai-provider${providerId === provider.id ? " is-active" : ""}`}
+              key={provider.id}
               onClick={() => {
-                setProviderId(id);
-                setModelId(config.models[id] ?? "");
+                setProviderId(provider.id);
+                setModelId(config.models[provider.id] ?? "");
+                setBaseUrl(config.baseUrls[provider.id] ?? "");
               }}
               type="button"
             >
-              <strong>{id === "anthropic" ? "Anthropic" : "OpenAI"}</strong>
-              <span className="om-data">{config.hasKeys[id] ? "key saved" : "no key yet"}</span>
+              <strong>{provider.label}</strong>
+              <span className="om-data">
+                {config.hasKeys[provider.id]
+                  ? "key saved"
+                  : provider.id === "local-openai"
+                    ? "no key needed"
+                    : "no key yet"}
+              </span>
             </button>
           ))}
         </div>
@@ -101,8 +125,28 @@ export function AiSettingsScreen() {
             value={modelId}
           />
         </Field>
+        {isLocal ? (
+          <Field
+            hint="OpenAI-compatible endpoint — Ollama: http://localhost:11434/v1 · LM Studio: http://localhost:1234/v1"
+            label="Endpoint base URL"
+          >
+            <input
+              className="om-input om-input--mono"
+              inputMode="url"
+              onChange={(event) => setBaseUrl(event.target.value)}
+              placeholder={config.baseUrls[providerId] || "http://localhost:11434/v1"}
+              value={baseUrl}
+            />
+          </Field>
+        ) : null}
         <Field
-          hint={hasKey ? "A key is already stored. Leave empty to keep it." : undefined}
+          hint={
+            hasKey
+              ? "A key is already stored. Leave empty to keep it."
+              : isLocal
+                ? "Optional — most local servers need no key."
+                : undefined
+          }
           label="API key"
         >
           <input
@@ -117,7 +161,7 @@ export function AiSettingsScreen() {
         <div className="screen__form-foot">
           <button
             className="om-button om-button--secondary"
-            disabled={!hasKey || test.isPending}
+            disabled={isLocal ? test.isPending : !hasKey || test.isPending}
             onClick={() => test.mutate(providerId)}
             type="button"
           >

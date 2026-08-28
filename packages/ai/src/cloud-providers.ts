@@ -110,3 +110,84 @@ export function createOpenAiProvider(options: OpenAiOptions): LlmProvider {
     },
   };
 }
+
+export interface GeminiOptions {
+  readonly apiKey: string;
+  readonly modelId: string;
+}
+
+export function createGeminiProvider(options: GeminiOptions): LlmProvider {
+  const id = "gemini";
+  return {
+    id,
+    modelId: options.modelId,
+    async complete(request: CompletionRequest): Promise<CompletionResult> {
+      const payload = (await postJson(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(options.modelId)}:generateContent`,
+        { "x-goog-api-key": options.apiKey },
+        {
+          systemInstruction: { parts: [{ text: request.system }] },
+          contents: [{ role: "user", parts: [{ text: request.prompt }] }],
+          generationConfig: { responseMimeType: "application/json" },
+        },
+      )) as {
+        candidates?: { content?: { parts?: { text?: string }[] } }[];
+      };
+
+      const text = (payload.candidates?.[0]?.content?.parts ?? [])
+        .map((part) => (typeof part.text === "string" ? part.text : ""))
+        .join("");
+      if (!text) throw new AiProviderError("Gemini returned an empty completion");
+
+      return {
+        text,
+        providerId: id,
+        modelId: options.modelId,
+        promptHash: hashPrompt(request),
+      };
+    },
+  };
+}
+
+export interface LocalOpenAiOptions {
+  /** OpenAI-compatible base URL, e.g. http://localhost:11434/v1 (Ollama). */
+  readonly baseUrl: string;
+  readonly modelId: string;
+  /** Local servers usually need none; sent only when present. */
+  readonly apiKey?: string;
+}
+
+export function createLocalOpenAiProvider(options: LocalOpenAiOptions): LlmProvider {
+  const id = "local-openai";
+  const normalized = options.baseUrl.trim().replace(/\/+$/u, "");
+  if (!/^https?:\/\//u.test(normalized)) {
+    throw new AiProviderError(
+      `Local endpoint URL must start with http:// or https:// — got "${options.baseUrl}"`,
+    );
+  }
+  const headers: Record<string, string> = {};
+  if (options.apiKey) headers.authorization = `Bearer ${options.apiKey}`;
+  return {
+    id,
+    modelId: options.modelId,
+    async complete(request: CompletionRequest): Promise<CompletionResult> {
+      const payload = (await postJson(`${normalized}/chat/completions`, headers, {
+        model: options.modelId,
+        messages: [
+          { role: "system", content: request.system },
+          { role: "user", content: request.prompt },
+        ],
+      })) as { choices?: { message?: { content?: string } }[] };
+
+      const text = payload.choices?.[0]?.message?.content ?? "";
+      if (!text) throw new AiProviderError("The local endpoint returned an empty completion");
+
+      return {
+        text,
+        providerId: id,
+        modelId: options.modelId,
+        promptHash: hashPrompt(request),
+      };
+    },
+  };
+}

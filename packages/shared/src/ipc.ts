@@ -14,6 +14,7 @@ import {
   auditReportSchema,
   competitorDraftSchema,
   economicsReviewSchema,
+  providerIdSchema,
   researchPlanSchema,
 } from "./ai";
 import { aiOriginSchema, generationOriginSchema, provenanceRecordSchema, runRecordSchema } from "./provenance";
@@ -200,19 +201,22 @@ export const ipc = {
       activeProvider: z.string().nullable(),
       models: z.record(z.string()),
       hasKeys: z.record(z.boolean()),
+      baseUrls: z.record(z.string()),
       encryptionAvailable: z.boolean(),
     }),
   },
   "ai/config/save": {
     request: z.object({
-      providerId: z.enum(["anthropic", "openai"]),
+      providerId: providerIdSchema,
       modelId: z.string().min(1),
       apiKey: z.string().min(1).nullable(),
+      /** Local endpoints (Ollama, LM Studio) need an OpenAI-compatible base URL. */
+      baseUrl: z.string().url().nullable().optional(),
     }),
     response: z.object({}),
   },
   "ai/test": {
-    request: z.object({ providerId: z.enum(["anthropic", "openai"]) }),
+    request: z.object({ providerId: providerIdSchema }),
     response: z.object({ reply: z.string() }),
   },
   "ai/draft-evidence": {
