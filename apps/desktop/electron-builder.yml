@@ -9,17 +9,25 @@ files:
 # Workspace packages are bundled into out/ by electron-vite; node_modules
 # needed at runtime are only electron itself.
 npmRebuild: false
+# Update feed: electron-updater reads this channel (latest.yml on Releases).
+publish:
+  provider: github
+  owner: getxeyronoxz
+  repo: open-merchant
 win:
   target:
     - nsis
+  icon: build/icon.png
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
 mac:
   target:
     - dmg
+  icon: build/icon.png
   category: public.app-category.business
 linux:
   target:
     - AppImage
+  icon: build/icon.png
   category: Office

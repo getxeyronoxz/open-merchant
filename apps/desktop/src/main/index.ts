@@ -1,5 +1,6 @@
 import { join } from "node:path";
-import { BrowserWindow, app, safeStorage, shell } from "electron";
+import { BrowserWindow, app, dialog, safeStorage, shell } from "electron";
+import { autoUpdater } from "electron-updater";
 
 import { AiConfigStore } from "./ai-config";
 import { MerchantService } from "./service";
@@ -14,6 +15,11 @@ function createMainWindow() {
     show: false,
     title: "Open Merchant",
     backgroundColor: "#0d0f0e",
+    // Packaged builds get the icon embedded in the executable; development
+    // points at the source asset so the taskbar shows the mark too.
+    ...(app.isPackaged
+      ? {}
+      : { icon: join(app.getAppPath(), "build", "icon.png") }),
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: true,
@@ -44,6 +50,7 @@ app.whenReady().then(() => {
 
   const aiConfig = new AiConfigStore(app.getPath("userData"), safeStorage);
   registerIpcHandlers(new MerchantService(app.getVersion(), aiConfig), aiConfig);
+  initAutoUpdate();
   createMainWindow();
 
   app.on("activate", () => {
@@ -54,3 +61,30 @@ app.whenReady().then(() => {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
+
+/**
+ * Passive update check against our own GitHub Releases feed. Nothing is
+ * sent anywhere; offline or failed checks are silent and safe. Skipped in
+ * development and in tests so it only ever runs inside a packaged build.
+ */
+function initAutoUpdate() {
+  if (!app.isPackaged || process.env.OPEN_MERCHANT_USER_DATA) return;
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.on("update-downloaded", async () => {
+    const { response } = await dialog.showMessageBox({
+      type: "info",
+      title: "Update ready",
+      message: "A new version of Open Merchant has been downloaded.",
+      detail: "Restart now to apply it, or keep working — it installs on quit.",
+      buttons: ["Restart now", "Later"],
+      defaultId: 0,
+    });
+    if (response === 0) autoUpdater.quitAndInstall();
+  });
+
+  autoUpdater.checkForUpdates().catch(() => {
+    // Offline, rate-limited, or no release yet: stay quiet.
+  });
+}

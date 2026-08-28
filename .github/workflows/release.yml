@@ -1,0 +1,46 @@
+# Builds installers on GitHub runners (never on a dev machine) and publishes
+# them — plus the latest.yml update feed — to GitHub Releases. Tag a commit
+# (v1.0.0-alpha.1, …) to cut a release. Code-signing secrets are optional
+# slots: empty today, and the same workflow produces signed builds later.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build renderer + main + preload
+        run: pnpm --filter @open-merchant/desktop build
+
+      - name: Package and publish to GitHub Releases
+        run: pnpm --filter @open-merchant/desktop exec electron-builder --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional signing slots — empty today; drop certificates into repo
+          # secrets later and builds become signed automatically.
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}

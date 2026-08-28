@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a2420"/>
+      <stop offset="1" stop-color="#0c0f0d"/>
+    </linearGradient>
+    <linearGradient id="brass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e8cd6b"/>
+      <stop offset="1" stop-color="#c9a227"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="224" fill="url(#tile)"/>
+  <rect x="28" y="28" width="968" height="968" rx="200" fill="none" stroke="rgba(238,242,238,0.09)" stroke-width="4"/>
+  <!-- ledger rule lines under the monogram -->
+  <g stroke="rgba(67,193,122,0.55)" stroke-width="18" stroke-linecap="round">
+    <line x1="240" y1="806" x2="784" y2="806"/>
+  </g>
+  <g stroke="rgba(238,242,238,0.18)" stroke-width="10" stroke-linecap="round" stroke-dasharray="4 26">
+    <line x1="300" y1="742" x2="724" y2="724"/>
+    <line x1="330" y1="884" x2="694" y2="884"/>
+  </g>
+  <!-- Merchant monogram -->
+  <text x="512" y="560" font-family="Georgia, 'Times New Roman', serif" font-size="520"
+        font-style="italic" text-anchor="middle" fill="url(#brass)">M</text>
+  <!-- the accent coin -->
+  <circle cx="512" cy="176" r="26" fill="#43c17a"/>
+</svg>
