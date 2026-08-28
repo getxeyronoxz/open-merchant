@@ -2,6 +2,25 @@
 
 All notable changes to Open Merchant are documented in this file.
 
+## [1.0.0-alpha.1] - 2026-08-28
+
+### Added
+
+- Onboarding: one-time first-run welcome card on an empty Home (create → feed → decide), a standing invitation after dismissal, an "AI assistants are optional" tip inside the walkthrough guide, and reopen targeting that lands mid-walkthrough projects on their first incomplete step. Renderer-only; unit and e2e covered.
+- More providers: Google Gemini and local OpenAI-compatible endpoints (Ollama, LM Studio) behind the BYO-key registry. Local endpoints need only a base URL — no key, no cloud. A shared HTTP provider contract suite runs identically across all four providers.
+- Auto-update: `electron-updater` performs a passive check against the project's own GitHub Releases feed; delta downloads with restart-or-quit install. A `v*` tag pushes build and publish NSIS/DMG/AppImage to Releases from GitHub runners. Local device testing supported via `OPEN_MERCHANT_TEST_UPDATE_URL` and a self-signed developer certificate (`dev-signing.ps1`, alias-only identity).
+- App icon: the Merchant's Ledger mark (brass serif M, ledger leaders, accent coin) across window, taskbar, and installers.
+
+### Changed
+
+- UI quality pass: layered card depth, glowing input focus, table row hover, accent-dot empty states, dual-glow canvas, gradient brass hero, hover motion on recents, and a styled four-card AI provider picker.
+- Electron upgraded 37.10.3 → 39.8.10, clearing 63 Dependabot advisories in the shipped runtime.
+- CI verifies every push to `dev` on Windows/macOS/Linux and fixes the pnpm version conflict that had silently broken the verify job.
+
+### Security
+
+- All open Dependabot alerts (64, including context-isolation bypasses and sandbox escapes) and all code-scanning warnings resolved; secret scanning clean.
+
 ## [1.0.0-alpha.0] - 2026-08-26
 
 ### Changed
@@ -19,15 +38,9 @@ All notable changes to Open Merchant are documented in this file.
 
 ## [Unreleased]
 
-### Changed
+### Removed
 
-- Modernized the focused home screen and six-section desktop workspace while preserving the local-first V0 workflow.
-- Refreshed the canonical Open Merchant application icon and all bundled Windows icon variants with the graphite-and-lime palette.
-- Connected the README, architecture reference, agent guide, contributor guide, manual smoke test, and demo guidance to the shipped V0 behavior.
-
-### Fixed
-
-- Use crash-safe replacement when saving workspace artifacts and the local recent-project list.
+- Stale V0-era notes that no longer described the shipped application.
 - Preserve interrupted report generations in local run history, including any artifacts saved before the interruption, and show recovery guidance in the History tab.
 - Added visible keyboard focus treatment and polite save-status announcements for updated form state.
 

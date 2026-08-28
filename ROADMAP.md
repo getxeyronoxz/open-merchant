@@ -9,14 +9,18 @@ Open Merchant is built in the open. This file states what has shipped, what is b
 * Rebuilt UI ("The Merchant's Ledger" design system): TanStack Query data layer, coded error states with retry, ledger-style statistic rows, generated reports rendered as paper documents.
 * Verification: 77 unit/integration tests, service-level integration suite, Electron end-to-end smoke; CI on Windows/macOS/Linux.
 * Cross-platform installers (NSIS / DMG / AppImage) via electron-builder.
+* Onboarding: one-time Home welcome card, persistent six-step walkthrough guide with an "AI assistants are optional" tip, chained next-step actions on every screen, and reopen targeting onto the next incomplete step — covered by unit tests and Electron e2e.
+* More providers: Google Gemini and local OpenAI-compatible endpoints (Ollama, LM Studio) behind the BYO-key registry — local endpoints are keyless (base URL only, stays on the user's machine), and all four providers pass the same HTTP contract test suite.
+* Auto-update pipeline: `electron-updater` passively checks the project's own GitHub Releases (delta downloads, restart-or-quit install); a `v*` tag publishes NSIS/DMG/AppImage from GitHub runners. A self-signed developer certificate (`dev-signing.ps1`, alias-only identity) signs local builds — a trusted CA certificate can replace it later with zero code changes.
+* Application icon (the Merchant's Ledger mark) and a screenshot-verified UI quality pass: layered depth, glowing focus, hover states, motion.
+* Security baseline: Electron 39.8.10, zero open Dependabot / code-scanning / secret-scanning alerts, and a three-OS verify matrix on every push to `dev`.
 
 ## 🔄 In progress — near term
 
-* Signed installers + auto-update — code-signing certificates for Windows (and notarization for macOS), then delta auto-updates. Done when: a fresh install on each platform shows no "unsigned/unknown publisher" warning, and an update installs without a manual re-download.
-* Onboarding — first-run walkthrough of the six-section workflow. Done when: a first-time user reaches their first generated report without external help or documentation.
-* More providers — Google Gemini and OpenAI-compatible local endpoints (Ollama, LM Studio) behind the existing BYO-key provider registry. Done when: at least one local-endpoint provider passes the same provider test suite as Anthropic/OpenAI today.
+* Signed installers — replace the self-signed developer certificate with a CA-issued one (or the same pfx distributed via repo secrets) so fresh installs on unknown machines show a verified publisher. Done when: a fresh install on each platform shows no "unsigned/unknown publisher" warning. The update flow itself is built and locally verified; its first tagged GitHub Releases run completes the end-to-end proof.
 * Richer artifact viewer — side-by-side diffs of regenerated reports and scenario runs, filtered provenance search. Done when: a user can answer "what changed since last time" without opening the raw JSONL files.
 * Visibility — README demo asset (short GIF of the real evidence → report loop), and a first build-in-public thread once the demo exists. Done when: the README shows the product working, not just describing it.
+* Onboarding validation — one qualitative check with a genuinely new user reaching their first generated report unaided (no instrumentation, per ground rules).
 
 ## 🧭 Phase 2 — the commerce-ops cockpit
 Entry criteria: V1.0.0 is out of alpha and stable, and at least a handful of real (non-demo-project) users have generated reports with it. Phase 2 does not start on a timeline — it starts when that's true.

@@ -21,3 +21,7 @@ Thumbs.db
 
 # Legacy worktrees (to be removed in Phase 1e)
 .worktrees/
+
+# Developer signing material (never commit)
+*.pfx
+*.pass
