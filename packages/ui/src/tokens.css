@@ -36,7 +36,14 @@
   --om-danger: #f0788c;
   --om-danger-soft: rgba(240, 120, 140, 0.12);
   --om-warning: #e0b34a;
+  --om-warning-soft: rgba(224, 179, 74, 0.13);
   --om-info: #79c0e8;
+  --om-info-soft: rgba(121, 192, 232, 0.12);
+
+  /* Interaction */
+  --om-surface-hover: rgba(238, 242, 238, 0.04);
+  --om-selection: rgba(67, 193, 122, 0.28);
+  --om-focus-ring: 0 0 0 2px rgba(67, 193, 122, 0.4);
 
   /* Lines */
   --om-border-subtle: rgba(238, 242, 238, 0.07);
