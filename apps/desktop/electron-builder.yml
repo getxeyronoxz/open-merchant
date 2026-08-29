@@ -1,5 +1,7 @@
 appId: com.xeyronox.openmerchant
 productName: Open Merchant
+# AppImage rejects the scoped package name; keep the executable path-safe.
+executableName: open-merchant
 directories:
   output: release
   buildResources: build

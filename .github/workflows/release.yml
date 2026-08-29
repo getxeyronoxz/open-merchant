@@ -34,11 +34,21 @@ jobs:
         run: pnpm --filter @open-merchant/desktop build
 
       - name: Package and publish to GitHub Releases
-        run: pnpm --filter @open-merchant/desktop exec electron-builder --publish always
+        # Empty secrets arrive as empty strings, which electron-builder
+        # misreads as certificate file paths — strip them before building.
+        # With no certificate, macOS signing is skipped via the discovery
+        # flag; Windows and Linux packages need no signing to work.
+        shell: bash
+        run: |
+          if [ -z "${CSC_LINK:-}" ]; then
+            unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
+          pnpm --filter @open-merchant/desktop exec electron-builder --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Optional signing slots — empty today; drop certificates into repo
-          # secrets later and builds become signed automatically.
+          # Optional signing slots — add these repo secrets later and signed
+          # builds happen automatically.
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}

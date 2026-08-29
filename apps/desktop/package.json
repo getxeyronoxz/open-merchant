@@ -14,6 +14,9 @@
     "test:e2e": "electron-vite build && vitest run -c vitest.e2e.config.ts"
   },
   "description": "Local-first, AI-native commerce research workbench.",
+  "author": {
+    "name": "Xeyronox"
+  },
   "dependencies": {
     "@open-merchant/ai": "workspace:*",
     "@open-merchant/core": "workspace:*",

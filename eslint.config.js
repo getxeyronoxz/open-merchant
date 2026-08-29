@@ -8,6 +8,7 @@ export default tseslint.config(
       "**/out/**",
       "**/node_modules/**",
       "**/*.config.js",
+      "**/*.cjs",
       "docs/media/**",
     ],
   },
