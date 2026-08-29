@@ -25,3 +25,5 @@ Thumbs.db
 # Developer signing material (never commit)
 *.pfx
 *.pass
+# Code-graph analysis output (local tooling only)
+graphify-out/
