@@ -38,11 +38,15 @@ Open Merchant ships with six specialist assistants rather than one chatbot:
 
 Ground rules:
 
-- **Bring your own key.** Add an Anthropic or OpenAI API key in AI settings. Keys are encrypted with OS-backed credential storage and never appear in project folders, artifacts, or logs.
+- **Bring your own key — or no key at all.** Four providers are built in: Anthropic, OpenAI, Google Gemini, and **local endpoints** (Ollama, LM Studio, or any OpenAI-compatible server). Local models run entirely on your machine and need only a base URL — no key, no cloud. Cloud keys are encrypted with OS-backed credential storage and never appear in project folders, artifacts, or logs.
 - **Drafts are not saves.** Assistant output enters the UI marked as an AI draft; it becomes project data only when you edit and save it.
 - **Provenance follows the machine.** Accepted AI content is journaled with the agent id, provider, model, prompt hash, and artifact fingerprint.
 - **No autonomous browsing.** Assistants read only what you paste into them.
 - Commerce math is never done by an AI or by floating point — see below.
+
+## Install & auto-updates
+
+Download the current installer for your platform from [GitHub Releases](https://github.com/getxeyronoxz/open-merchant/releases). The app keeps itself current: on startup it passively checks this project's own Releases feed, downloads updates in the background (delta downloads where supported), and offers to restart — or simply applies the update on quit. Checks are read-only against GitHub; nothing about your projects or usage leaves your machine.
 
 ## Workspace format
 
@@ -98,8 +102,8 @@ packages/shared/   Zod schemas: artifacts, IPC contract, errors, agent outputs
 packages/core/     Domain engine: exact-decimal money, economics, statistics,
                    validation, report rendering, atomic workspace store,
                    path guards, run/provenance journals, V0 import
-packages/ai/       Provider-agnostic LLM seam (Anthropic/OpenAI adapters,
-                   mock provider) and the specialist agents
+packages/ai/       Provider-agnostic LLM seam (Anthropic, OpenAI, Gemini, and
+                   local-endpoint adapters, mock provider) and the specialists
 packages/sdk/      Typed DesktopClient over the validated IPC contract +
                    in-memory mock client
 packages/ui/       Design tokens and primitives ("The Merchant's Ledger")
@@ -109,13 +113,17 @@ docs/              Architecture notes and release checks
 
 The renderer never imports Electron: everything crosses the single zod-validated IPC contract exposed through `packages/sdk`.
 
-### Packaging
+### Packaging & releases
 
 ```bash
 pnpm --filter @open-merchant/desktop dist
 ```
 
-Produces an unsigned NSIS installer (Windows), DMG (macOS), or AppImage (Linux) under `apps/desktop/release`. Your operating system may warn about unsigned builds; review the source and build provenance before installing.
+Produces an NSIS installer (Windows), DMG (macOS), or AppImage (Linux) under `apps/desktop/release`.
+
+- **Releases are built by GitHub Actions**: pushing a `v*` tag runs the release workflow, which builds all three platforms on GitHub runners and publishes them — together with the auto-update feed (`latest.yml`) — to GitHub Releases.
+- **Developer signing** without a CA or legal identity: run `powershell -File dev-signing.ps1` once (inside `apps/desktop`) to create a self-signed code-signing certificate under the alias `Open Merchant Developer`; subsequent local builds are signed automatically, and the same certificate can be added as the `CSC_LINK`/`CSC_KEY_PASSWORD` repo secrets for signed CI builds.
+- For testing updates locally, `update-feed-server.cjs` serves a release folder as an update feed and `OPEN_MERCHANT_TEST_UPDATE_URL` points the installed app at it.
 
 ## Roadmap
 
