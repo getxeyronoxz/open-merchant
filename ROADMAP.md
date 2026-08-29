@@ -17,7 +17,7 @@ Open Merchant is built in the open. This file states what has shipped, what is b
 
 ## 🔄 In progress — near term
 
-* Signed installers — replace the self-signed developer certificate with a CA-issued one (or the same pfx distributed via repo secrets) so fresh installs on unknown machines show a verified publisher. Done when: a fresh install on each platform shows no "unsigned/unknown publisher" warning. First tagged release run: Windows published the installer + update feed; macOS/Linux packaging fixes are in, their assets land on the next tag.
+* Signed installers — replace the self-signed developer certificate with a CA-issued one (or the same pfx distributed via repo secrets) so fresh installs on unknown machines show a verified publisher. Done when: a fresh install on each platform shows no "unsigned/unknown publisher" warning. The first tagged build is live: `v1.0.0-alpha.1` publishes Windows, macOS, and Linux installers plus the full update feed (latest.yml / latest-mac.yml / latest-linux.yml) from GitHub Releases, with locally-verified delta updates.
 * Richer artifact viewer — side-by-side diffs of regenerated reports and scenario runs, filtered provenance search. Done when: a user can answer "what changed since last time" without opening the raw JSONL files.
 * Visibility — README demo asset (short GIF of the real evidence → report loop), and a first build-in-public thread once the demo exists. Done when: the README shows the product working, not just describing it.
 * Onboarding validation — one qualitative check with a genuinely new user reaching their first generated report unaided (no instrumentation, per ground rules).
