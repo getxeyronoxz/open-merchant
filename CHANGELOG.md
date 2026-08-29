@@ -38,11 +38,7 @@ All notable changes to Open Merchant are documented in this file.
 
 ## [Unreleased]
 
-### Removed
-
-- Stale V0-era notes that no longer described the shipped application.
-- Preserve interrupted report generations in local run history, including any artifacts saved before the interruption, and show recovery guidance in the History tab.
-- Added visible keyboard focus treatment and polite save-status announcements for updated form state.
+Nothing yet — entries move here from in-flight work when the next version is cut.
 
 ## [0.1.0] - 2026-08-08
 

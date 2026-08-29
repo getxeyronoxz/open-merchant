@@ -16,6 +16,10 @@ Instructions for Claude Code working in this repository.
   `Co-Authored-By: Claude <noreply@anthropic.com>` trailers on Claude-assisted commits.
 - Work on feature branches off `dev` (e.g. `feature/*`). `dev` is the active line;
   `main` holds the archived V0 (Tauri/Rust) codebase and stays frozen.
+- Releases are cut by pushing a `v*` tag (e.g. `v1.0.0-alpha.1`): the Release
+  workflow builds NSIS/DMG/AppImage on GitHub runners and publishes them with
+  the auto-update feed to GitHub Releases. Bump `apps/desktop/package.json`
+  (and the root version) to match before tagging.
 - Never rewrite published history without explicit approval from the owner.
 
 ## Source and generated files
@@ -46,10 +50,28 @@ Instructions for Claude Code working in this repository.
 | Core domain tests | `pnpm --filter @open-merchant/core test` |
 | AI agent tests | `pnpm --filter @open-merchant/ai test` |
 | Desktop integration tests | `pnpm --filter @open-merchant/desktop test` |
+| Electron E2E | `pnpm --filter @open-merchant/desktop test:e2e` |
 | Lint | `pnpm lint` |
 | Typecheck | `pnpm typecheck` |
 | Renderer build | `pnpm build` |
 | Installer | `pnpm --filter @open-merchant/desktop dist` |
+| Developer signing (self-signed, alias-only) | `powershell -File apps/desktop/dev-signing.ps1` |
+| Local update-feed test server | `node apps/desktop/update-feed-server.cjs apps/desktop/release` |
+
+## Releases and updates
+
+- Tagging `v*` triggers `.github/workflows/release.yml`: builds on GitHub
+  runners and publishes installers + `latest.yml` to GitHub Releases. The
+  packaging step strips empty signing secrets (they arrive as empty strings
+  and break electron-builder) and skips macOS signing when none is set.
+- The installed app auto-updates from that feed via `electron-updater`
+  (delta downloads, restart-or-quit install).
+- For device testing without GitHub: `node apps/desktop/update-feed-server.cjs
+  apps/desktop/release` serves the feed locally, and launching the installed
+  app with `OPEN_MERCHANT_TEST_UPDATE_URL=http://localhost:8123/` points the
+  updater at it. The feed must contain dash-named artifacts exactly as
+  `latest.yml` references them (electron-builder renames on publish; copy
+  them manually for a local feed).
 
 ## Documentation
 

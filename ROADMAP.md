@@ -7,7 +7,7 @@ Open Merchant is built in the open. This file states what has shipped, what is b
 * Workspace format v2: `.openmerchant/` manifest, JSON/JSONL artifacts, atomic replace-on-success writes, known-layout path guard, run and provenance journals. One-time V0 → V2 importer.
 * Six AI assistants (planner, evidence, competitor analyst, economics reviewer, report writer, auditor) producing zod-validated drafts with human acceptance; bring-your-own Anthropic/OpenAI key sealed with OS-backed storage; provenance records agent, provider, model, prompt hash.
 * Rebuilt UI ("The Merchant's Ledger" design system): TanStack Query data layer, coded error states with retry, ledger-style statistic rows, generated reports rendered as paper documents.
-* Verification: 77 unit/integration tests, service-level integration suite, Electron end-to-end smoke; CI on Windows/macOS/Linux.
+* Verification: 112 unit/integration tests, service-level integration suite, Electron end-to-end smoke driving the real IPC stack; CI matrix on Windows/macOS/Linux for every push to `dev`.
 * Cross-platform installers (NSIS / DMG / AppImage) via electron-builder.
 * Onboarding: one-time Home welcome card, persistent six-step walkthrough guide with an "AI assistants are optional" tip, chained next-step actions on every screen, and reopen targeting onto the next incomplete step — covered by unit tests and Electron e2e.
 * More providers: Google Gemini and local OpenAI-compatible endpoints (Ollama, LM Studio) behind the BYO-key registry — local endpoints are keyless (base URL only, stays on the user's machine), and all four providers pass the same HTTP contract test suite.
@@ -17,7 +17,7 @@ Open Merchant is built in the open. This file states what has shipped, what is b
 
 ## 🔄 In progress — near term
 
-* Signed installers — replace the self-signed developer certificate with a CA-issued one (or the same pfx distributed via repo secrets) so fresh installs on unknown machines show a verified publisher. Done when: a fresh install on each platform shows no "unsigned/unknown publisher" warning. The update flow itself is built and locally verified; its first tagged GitHub Releases run completes the end-to-end proof.
+* Signed installers — replace the self-signed developer certificate with a CA-issued one (or the same pfx distributed via repo secrets) so fresh installs on unknown machines show a verified publisher. Done when: a fresh install on each platform shows no "unsigned/unknown publisher" warning. First tagged release run: Windows published the installer + update feed; macOS/Linux packaging fixes are in, their assets land on the next tag.
 * Richer artifact viewer — side-by-side diffs of regenerated reports and scenario runs, filtered provenance search. Done when: a user can answer "what changed since last time" without opening the raw JSONL files.
 * Visibility — README demo asset (short GIF of the real evidence → report loop), and a first build-in-public thread once the demo exists. Done when: the README shows the product working, not just describing it.
 * Onboarding validation — one qualitative check with a genuinely new user reaching their first generated report unaided (no instrumentation, per ground rules).
