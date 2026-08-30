@@ -2,6 +2,13 @@
 
 All notable changes to Open Merchant are documented in this file.
 
+## [1.0.0-alpha.2] - 2026-08-30
+
+### Added
+
+- Richer artifact viewer: the Artifacts tab now answers "what changed since last time" without opening raw files — a side-by-side diff of the latest generated report against the previous generation (LCS line alignment, removed/added highlighting, equal-height paired columns), plus filtered provenance search over the run journal by agent, provider, model, and text.
+- Run history surface: the deterministic core records a per-workspace generation history; the typed SDK, in-memory mock, and main-process service expose it over the validated IPC contract. Covered by new core unit tests, a service-level integration test, mock-client tests, a diff unit suite, and the Electron e2e.
+
 ## [1.0.0-alpha.1] - 2026-08-28
 
 ### Added

@@ -41,6 +41,7 @@ Ground rules:
 - **Bring your own key — or no key at all.** Four providers are built in: Anthropic, OpenAI, Google Gemini, and **local endpoints** (Ollama, LM Studio, or any OpenAI-compatible server). Local models run entirely on your machine and need only a base URL — no key, no cloud. Cloud keys are encrypted with OS-backed credential storage and never appear in project folders, artifacts, or logs.
 - **Drafts are not saves.** Assistant output enters the UI marked as an AI draft; it becomes project data only when you edit and save it.
 - **Provenance follows the machine.** Accepted AI content is journaled with the agent id, provider, model, prompt hash, and artifact fingerprint.
+- **What changed since last time?** The Artifacts tab diffs your latest generated report against the previous generation side by side, and the provenance journal is searchable by agent, provider, and model — no raw JSONL reading required.
 - **No autonomous browsing.** Assistants read only what you paste into them.
 - Commerce math is never done by an AI or by floating point — see below.
 
