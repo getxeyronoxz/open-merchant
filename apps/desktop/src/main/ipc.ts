@@ -34,6 +34,13 @@ export function registerIpcHandlers(
       appVersion: app.getVersion(),
       platform: process.platform,
     })),
+    "update/install": channel<"update/install">(async () => {
+      // Packaged builds only: in dev there is no updater feed to install from.
+      if (!app.isPackaged) return { quitting: false };
+      const { autoUpdater } = await import("electron-updater");
+      autoUpdater.quitAndInstall();
+      return { quitting: true };
+    }),
     "dialog/choose-directory": channel<"dialog/choose-directory">(async ({ title }) => {
       const result = await dialog.showOpenDialog({
         title,

@@ -35,6 +35,7 @@ function bind<C extends IpcChannel>(raw: RawInvoke, channel: C): (request: IpcRe
 
 export interface DesktopClient {
   appInfo(): Promise<IpcResponse<"app/info">>;
+  installUpdate(): Promise<IpcResponse<"update/install">>;
   chooseDirectory(title: string): Promise<IpcResponse<"dialog/choose-directory">>;
   createProject(request: IpcRequest<"project/create">): Promise<IpcResponse<"project/create">>;
   openProject(request: IpcRequest<"project/open">): Promise<IpcResponse<"project/open">>;
@@ -95,6 +96,7 @@ export interface DesktopClient {
 export function createDesktopClient(raw: RawInvoke): DesktopClient {
   return {
     appInfo: () => invoke(raw, "app/info", {}),
+    installUpdate: () => invoke(raw, "update/install", {}),
     chooseDirectory: (title) => invoke(raw, "dialog/choose-directory", { title }),
     createProject: bind(raw, "project/create"),
     openProject: bind(raw, "project/open"),

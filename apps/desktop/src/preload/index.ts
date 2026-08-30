@@ -17,4 +17,15 @@ contextBridge.exposeInMainWorld("openMerchant", {
     }
     return ipcRenderer.invoke("ipc", channel, payload);
   },
+  /**
+   * One-way subscription to main-process push events. Only the single
+   * "update:status" channel is allowed through; returns an unsubscribe.
+   */
+  onUpdateStatus: (callback: (payload: unknown) => void): (() => void) => {
+    const listener = (_event: unknown, payload: unknown): void => callback(payload);
+    ipcRenderer.on("update:status", listener);
+    return () => {
+      ipcRenderer.removeListener("update:status", listener);
+    };
+  },
 });

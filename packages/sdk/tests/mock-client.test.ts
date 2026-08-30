@@ -77,4 +77,9 @@ describe("createMockDesktopClient", () => {
     const report = await mock.readHistory(root, "report", "RUN-mock-0001");
     expect(report.text).toContain("# Keyboards");
   });
+
+  it("exposes the update surface as a no-op in the mock", async () => {
+    const mock = createMockDesktopClient();
+    await expect(mock.installUpdate()).resolves.toEqual({ quitting: false });
+  });
 });

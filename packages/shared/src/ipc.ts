@@ -54,6 +54,18 @@ export const openProjectInputSchema = z.object({ root: z.string() });
 export const rootOnlyInputSchema = z.object({ root: z.string() });
 
 /**
+ * Pushed from main to the renderer on the one-way "update:status" channel
+ * (see the preload bridge). The renderer shows a non-blocking banner when a
+ * downloaded update is ready; it never needs to poll.
+ */
+export const updateStatusSchema = z.object({
+  state: z.enum(["checking", "available", "not-available", "downloaded", "error"]),
+  version: z.string().optional(),
+});
+
+export type UpdateStatus = z.infer<typeof updateStatusSchema>;
+
+/**
  * Walking-skeleton contract (phase 0): application identity plus the two
  * project primitives needed by a stub Home screen. Later phases extend this
  * map — evidence, competitors, economics, report, artifacts, AI.
@@ -66,6 +78,10 @@ export const ipc = {
       appVersion: z.string(),
       platform: z.string(),
     }),
+  },
+  "update/install": {
+    request: z.object({}),
+    response: z.object({ quitting: z.boolean() }),
   },
   "dialog/choose-directory": {
     request: z.object({ title: z.string() }),

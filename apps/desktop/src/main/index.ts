@@ -1,6 +1,8 @@
 import { join } from "node:path";
-import { BrowserWindow, app, dialog, safeStorage, shell } from "electron";
+import { BrowserWindow, Menu, app, dialog, safeStorage, shell } from "electron";
 import { autoUpdater } from "electron-updater";
+
+import { updateStatusSchema } from "@open-merchant/shared";
 
 import { AiConfigStore } from "./ai-config";
 import { MerchantService } from "./service";
@@ -43,6 +45,89 @@ function createMainWindow() {
   }
 }
 
+/**
+ * A deliberately slim application menu — the stock Electron menu reads as a
+ * template, not a product. Edit keeps the standard roles so clipboard
+ * shortcuts keep working in inputs; Help exposes the updater manually.
+ */
+function buildApplicationMenu() {
+  const menu = Menu.buildFromTemplate([
+    {
+      label: "File",
+      submenu: [
+        {
+          label: "Check for Updates…",
+          accelerator: "CmdOrCtrl+U",
+          click: () => {
+            if (!app.isPackaged) {
+              void dialog.showMessageBox({
+                type: "info",
+                title: "Updates",
+                message: "Automatic updates are available in installed builds.",
+                detail: `You are running the development build (${app.getVersion()}).`,
+              });
+              return;
+            }
+            autoUpdater.checkForUpdates().catch(() => {
+              // Offline or no feed: the updater stays silent.
+            });
+          },
+        },
+        { type: "separator" },
+        { role: "quit", label: "Quit Open Merchant" },
+      ],
+    },
+    {
+      label: "Edit",
+      submenu: [
+        { role: "undo" },
+        { role: "redo" },
+        { type: "separator" },
+        { role: "cut" },
+        { role: "copy" },
+        { role: "paste" },
+        { role: "selectAll" },
+      ],
+    },
+    {
+      label: "View",
+      submenu: [
+        { role: "resetZoom" },
+        { role: "zoomIn" },
+        { role: "zoomOut" },
+        { type: "separator" },
+        { role: "toggleDevTools" },
+      ],
+    },
+    {
+      label: "Help",
+      submenu: [
+        {
+          label: "Open Merchant on GitHub",
+          click: () => {
+            void shell.openExternal("https://github.com/getxeyronoxz/open-merchant");
+          },
+        },
+        { type: "separator" },
+        {
+          label: `About Open Merchant (${app.getVersion()})`,
+          click: () => {
+            void dialog.showMessageBox({
+              type: "info",
+              title: "About Open Merchant",
+              message: `Open Merchant ${app.getVersion()}`,
+              detail:
+                "A local-first, AI-native workbench for deciding whether a product " +
+                "opportunity is worth pursuing. Your project folders stay on your machine.",
+            });
+          },
+        },
+      ],
+    },
+  ]);
+  Menu.setApplicationMenu(menu);
+}
+
 app.whenReady().then(() => {
   // Tests point this at a temp directory so they never touch real app data.
   const customUserData = process.env.OPEN_MERCHANT_USER_DATA;
@@ -50,6 +135,7 @@ app.whenReady().then(() => {
 
   const aiConfig = new AiConfigStore(app.getPath("userData"), safeStorage);
   registerIpcHandlers(new MerchantService(app.getVersion(), aiConfig), aiConfig);
+  buildApplicationMenu();
   initAutoUpdate();
   createMainWindow();
 
@@ -63,9 +149,23 @@ app.on("window-all-closed", () => {
 });
 
 /**
+ * Push a validated update-status event to every open window on the one-way
+ * "update:status" channel. The payload is parsed with the shared schema on
+ * this side too, so the renderer receives only contract-shaped data.
+ */
+function sendUpdateStatus(state: "available" | "not-available" | "downloaded", version?: string) {
+  const payload = updateStatusSchema.parse(version ? { state, version } : { state });
+  for (const window of BrowserWindow.getAllWindows()) {
+    window.webContents.send("update:status", payload);
+  }
+}
+
+/**
  * Passive update check against our own GitHub Releases feed. Nothing is
  * sent anywhere; offline or failed checks are silent and safe. Skipped in
  * development and in tests so it only ever runs inside a packaged build.
+ * When a new version is ready, the renderer shows a non-blocking banner
+ * (Restart now / keep working); either way the update installs on quit.
  */
 function initAutoUpdate() {
   if (!app.isPackaged || process.env.OPEN_MERCHANT_USER_DATA) return;
@@ -82,16 +182,11 @@ function initAutoUpdate() {
     autoUpdater.setFeedURL({ provider: "generic", url: testFeedUrl });
   }
 
-  autoUpdater.on("update-downloaded", async () => {
-    const { response } = await dialog.showMessageBox({
-      type: "info",
-      title: "Update ready",
-      message: "A new version of Open Merchant has been downloaded.",
-      detail: "Restart now to apply it, or keep working — it installs on quit.",
-      buttons: ["Restart now", "Later"],
-      defaultId: 0,
-    });
-    if (response === 0) autoUpdater.quitAndInstall();
+  autoUpdater.on("update-available", (info) => {
+    sendUpdateStatus("available", info.version);
+  });
+  autoUpdater.on("update-downloaded", (info) => {
+    sendUpdateStatus("downloaded", info.version);
   });
 
   autoUpdater.checkForUpdates().catch(() => {

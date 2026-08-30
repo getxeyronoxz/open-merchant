@@ -117,6 +117,11 @@ export function createMockDesktopClient(
       platform: "mock",
     }),
 
+    installUpdate: async () => {
+      // The mock has no updater; nothing to install.
+      return { quitting: false };
+    },
+
     chooseDirectory: async (title) => {
       void title;
       // Browser development convenience: pretend the user picked a folder.

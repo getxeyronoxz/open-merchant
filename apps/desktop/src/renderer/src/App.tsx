@@ -4,6 +4,7 @@ import { queryClient } from "./lib/query";
 import { HomeScreen } from "./features/home/HomeScreen";
 import { WorkspaceShell } from "./features/workspace/WorkspaceShell";
 import { ProjectProvider, useProject } from "./state/project";
+import { UpdateBanner } from "./features/updates/UpdateBanner";
 
 function Router() {
   const { project } = useProject();
@@ -15,6 +16,7 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <ProjectProvider>
         <Router />
+        <UpdateBanner />
       </ProjectProvider>
     </QueryClientProvider>
   );
