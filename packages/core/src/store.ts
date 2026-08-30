@@ -20,6 +20,7 @@ import {
 
 import { writeFileAtomically } from "./atomic";
 import { fingerprintContents } from "./fingerprint";
+import { HISTORY_DIR, HistoryStore } from "./history";
 import {
   ArtifactPaths,
   WORKSPACE_DIR,
@@ -80,6 +81,7 @@ export class WorkspaceStore {
     readonly root: string,
     private manifestValue: Manifest,
     readonly journal: RunJournal,
+    readonly history: HistoryStore,
   ) {}
 
   static async create(input: CreateProjectInput): Promise<WorkspaceStore> {
@@ -119,6 +121,7 @@ export class WorkspaceStore {
         root,
         manifest,
         new RunJournal(join(root, ArtifactPaths.runs), join(root, ArtifactPaths.provenance)),
+        new HistoryStore(join(root, HISTORY_DIR)),
       );
       await store.writeManifestFile(manifest);
       await writeFileAtomically(join(root, ArtifactPaths.evidence), "");
@@ -159,6 +162,7 @@ export class WorkspaceStore {
       root,
       manifest,
       new RunJournal(join(root, ArtifactPaths.runs), join(root, ArtifactPaths.provenance)),
+      new HistoryStore(join(root, HISTORY_DIR)),
     );
   }
 

@@ -192,6 +192,14 @@ export const ipc = {
     request: rootOnlyInputSchema,
     response: z.object({ provenance: z.array(provenanceRecordSchema) }),
   },
+  "history/read": {
+    request: z.object({
+      root: z.string(),
+      kind: z.enum(["scenarios", "report"]),
+      runId: z.string().min(1),
+    }),
+    response: z.object({ text: z.string().nullable() }),
+  },
 
   // --- AI copilot -----------------------------------------------------------
 

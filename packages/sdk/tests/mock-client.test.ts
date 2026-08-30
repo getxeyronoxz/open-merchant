@@ -46,4 +46,35 @@ describe("createMockDesktopClient", () => {
     const info = await mock.appInfo();
     expect(info).toEqual({ appName: "Open Merchant", appVersion: "9.9.9-test", platform: "mock" });
   });
+
+  it("keeps generation snapshots readable through history/read", async () => {
+    const mock = createMockDesktopClient();
+    const created = await mock.createProject({
+      parentDirectory: "C:/research",
+      name: "Keyboards",
+      objective: "Decide market entry",
+      currency: "INR",
+    });
+    const root = created.snapshot.root;
+
+    await mock.saveAssumptions(root, {
+      currency: "INR",
+      acquisitionCost: "500.00",
+      shippingCost: "75.50",
+      marketplaceFeeRate: "12.50",
+      paymentFeeRate: "2.35",
+      otherCosts: "20.00",
+      scenarioPrices: { low: "899.99", base: "1099.99", high: "1499.99" },
+    });
+
+    expect(await mock.readHistory(root, "scenarios", "RUN-mock-0001")).toEqual({ text: null });
+
+    await mock.calculateScenarios(root);
+    const scenarios = await mock.readHistory(root, "scenarios", "RUN-mock-0000");
+    expect(scenarios.text).toContain('"scenario": "base"');
+
+    await mock.generateReport(root);
+    const report = await mock.readHistory(root, "report", "RUN-mock-0001");
+    expect(report.text).toContain("# Keyboards");
+  });
 });

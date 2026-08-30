@@ -132,6 +132,9 @@ export function registerIpcHandlers(
     "provenance/list": channel<"provenance/list">(async ({ root }) => ({
       provenance: await service.listProvenance(root),
     })),
+    "history/read": channel<"history/read">(async ({ root, kind, runId }) => ({
+      text: await service.readHistory(root, kind, runId),
+    })),
 
     "ai/config/load": channel<"ai/config/load">(() => aiConfig.publicConfig()),
     "ai/config/save": channel<"ai/config/save">(async (input) => {

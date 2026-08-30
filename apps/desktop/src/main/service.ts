@@ -42,6 +42,7 @@ import type {
 import { AppError } from "@open-merchant/shared";
 
 import type { AiConfigStore } from "./ai-config";
+import type { HistoryKind } from "@open-merchant/core";
 
 /** Maps agent-layer failures to coded app errors. */
 async function runAgent<T>(work: () => Promise<T>): Promise<T> {
@@ -238,6 +239,7 @@ export class MerchantService {
 
   async calculateScenarios(root: string): Promise<EconomicsScenario[]> {
     const store = await this.openStore(root);
+    const runId = `RUN-${randomUUID()}`;
     let scenarios: EconomicsScenario[];
     try {
       scenarios = calculateScenarios(await store.loadAssumptions());
@@ -249,10 +251,25 @@ export class MerchantService {
     }
     const scenariosFingerprint = await store.saveScenarios(scenarios);
 
+    // Immutable snapshot for "what changed since last time"; history must
+    // never fail the calculation itself.
+    await store.history
+      .snapshot("scenarios", runId, `${JSON.stringify(scenarios, null, 2)}\n`)
+      .catch(() => undefined);
+
     const completedAt = new Date().toISOString();
     await store.journal
+      .appendProvenance({
+        runId,
+        artifactPath: ArtifactPaths.scenarios,
+        sha256: scenariosFingerprint.sha256,
+        generatedAt: completedAt,
+        origin: { kind: "user" },
+      })
+      .catch(() => undefined); // journaling must never fail the calculation
+    await store.journal
       .appendRun({
-        runId: `RUN-${randomUUID()}`,
+        runId,
         operation: "economicsGenerated",
         startedAt: completedAt,
         completedAt,
@@ -549,6 +566,13 @@ export class MerchantService {
       });
       outputArtifacts.push(await store.writeOpportunityReport(markdown));
 
+      // Immutable snapshots backing the artifact viewer's diff; history must
+      // never fail the report itself.
+      await store.history
+        .snapshot("scenarios", runId, `${JSON.stringify(scenarios, null, 2)}\n`)
+        .catch(() => undefined);
+      await store.history.snapshot("report", runId, markdown).catch(() => undefined);
+
       for (const artifact of outputArtifacts) {
         await store.journal.appendProvenance({
           runId,
@@ -599,6 +623,10 @@ export class MerchantService {
 
   listProvenance(root: string): Promise<ProvenanceRecord[]> {
     return this.withStore(root, (store) => store.journal.listProvenance());
+  }
+
+  readHistory(root: string, kind: HistoryKind, runId: string): Promise<string | null> {
+    return this.withStore(root, (store) => store.history.readSnapshot(kind, runId));
   }
 
   listArtifacts(root: string): ReturnType<WorkspaceStore["listArtifacts"]> {

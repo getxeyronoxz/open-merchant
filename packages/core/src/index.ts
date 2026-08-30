@@ -3,6 +3,7 @@ export * from "./ids";
 export * from "./atomic";
 export * from "./fingerprint";
 export * from "./provenance";
+export * from "./history";
 export * from "./economics";
 export * from "./statistics";
 export * from "./validation";

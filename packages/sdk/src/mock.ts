@@ -95,6 +95,18 @@ export function createMockDesktopClient(
 ): DesktopClient & { projects: MockProjectState[] } {
   const projects = seed.projects ?? [];
   const now = () => new Date().toISOString();
+  const historyByProject = new Map<string, Record<"scenarios" | "report", Map<string, string>>>();
+  let snapshotCounter = 0;
+
+  const saveSnapshot = (root: string, kind: "scenarios" | "report", contents: string): void => {
+    const runId = `RUN-mock-${String(snapshotCounter++).padStart(4, "0")}`;
+    let byKind = historyByProject.get(root);
+    if (!byKind) {
+      byKind = { scenarios: new Map(), report: new Map() };
+      historyByProject.set(root, byKind);
+    }
+    byKind[kind].set(runId, contents);
+  };
 
   const client: DesktopClient & { projects: MockProjectState[] } = {
     projects,
@@ -270,6 +282,7 @@ export function createMockDesktopClient(
         });
       }
       project.scenarios = scenarios;
+      saveSnapshot(root, "scenarios", `${JSON.stringify(scenarios, null, 2)}\n`);
       return { scenarios };
     },
     loadScenarios: (root) => Promise.resolve({ scenarios: requireProject(projects, root).scenarios }),
@@ -338,10 +351,16 @@ export function createMockDesktopClient(
         "",
       ].join("\n");
       project.generatedReport = markdown;
+      saveSnapshot(root, "report", markdown);
       return { markdown };
     },
     loadGeneratedReport: (root) =>
       Promise.resolve({ markdown: requireProject(projects, root).generatedReport }),
+
+    readHistory: async (root, kind, runId) => {
+      requireProject(projects, root);
+      return { text: historyByProject.get(root)?.[kind]?.get(runId) ?? null };
+    },
 
     listArtifacts: async (root) => {
       const project = requireProject(projects, root);

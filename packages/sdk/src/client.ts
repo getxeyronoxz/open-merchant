@@ -72,6 +72,11 @@ export interface DesktopClient {
   readArtifact(root: string, relativePath: string): Promise<IpcResponse<"artifacts/read">>;
   listRuns(root: string): Promise<IpcResponse<"runs/list">>;
   listProvenance(root: string): Promise<IpcResponse<"provenance/list">>;
+  readHistory(
+    root: string,
+    kind: IpcRequest<"history/read">["kind"],
+    runId: string,
+  ): Promise<IpcResponse<"history/read">>;
 
   loadAiConfig(): Promise<IpcResponse<"ai/config/load">>;
   saveAiConfig(request: IpcRequest<"ai/config/save">): Promise<IpcResponse<"ai/config/save">>;
@@ -120,6 +125,7 @@ export function createDesktopClient(raw: RawInvoke): DesktopClient {
     readArtifact: (root, relativePath) => invoke(raw, "artifacts/read", { root, relativePath }),
     listRuns: (root) => invoke(raw, "runs/list", { root }),
     listProvenance: (root) => invoke(raw, "provenance/list", { root }),
+    readHistory: (root, kind, runId) => invoke(raw, "history/read", { root, kind, runId }),
 
     loadAiConfig: () => invoke(raw, "ai/config/load", {}),
     saveAiConfig: (request) => invoke(raw, "ai/config/save", request),

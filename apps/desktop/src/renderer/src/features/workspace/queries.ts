@@ -80,6 +80,18 @@ export function useProvenance(root: string) {
   });
 }
 
+export function useReadHistory(
+  root: string,
+  kind: "scenarios" | "report",
+  runId: string | null,
+) {
+  return useQuery({
+    queryKey: ["history", root, kind, runId],
+    queryFn: () => client.readHistory(root, kind, runId as string),
+    enabled: runId !== null,
+  });
+}
+
 export function useArtifacts(root: string) {
   return useQuery({
     queryKey: ["artifacts", root],
