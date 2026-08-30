@@ -55,7 +55,7 @@ Agents draft; humans accept. Assistant output is validated JSON tied to shared s
 
 ## Updates and releases
 
-Packaged builds check the project's own GitHub Releases feed (`latest.yml`, published by a `v*` tag build on GitHub runners) via `electron-updater` and download delta updates on a restart-or-quit flow. There is no telemetry and no third-party service: the update check is a passive read of the owner's release feed, so the local-first boundary holds.
+Packaged builds check the project's own GitHub Releases feed (`latest.yml`, published by a `v*` tag build on GitHub runners) via `electron-updater` and download delta updates in the background. When an update is ready, the renderer shows a non-blocking banner — restart now, or keep working and it installs on quit. The notice travels over the same validated IPC contract as everything else (`update:status` push events plus an `update/install` channel), never a native dialog. There is no telemetry and no third-party service: the update check is a passive read of the owner's release feed, so the local-first boundary holds.
 
 ## Verification map
 

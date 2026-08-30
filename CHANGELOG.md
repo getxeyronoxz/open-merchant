@@ -45,7 +45,10 @@ All notable changes to Open Merchant are documented in this file.
 
 ## [Unreleased]
 
-Nothing yet — entries move here from in-flight work when the next version is cut.
+### Added
+
+- Custom slim application menu (File/Edit/View/Help) replacing the stock Electron template — Check for Updates… (Ctrl+U), clipboard roles preserved, zoom controls, GitHub link, and an About dialog with the running version.
+- Non-blocking in-app update banner: when a new version is downloaded, the renderer offers Restart now / Not now over the validated `update:status` push channel and an `update/install` IPC surface — replacing the native message box. Dismissing keeps working; the update still installs on quit.
 
 ## [0.1.0] - 2026-08-08
 
