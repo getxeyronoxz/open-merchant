@@ -9,6 +9,7 @@ export default tseslint.config(
       "**/node_modules/**",
       "**/*.config.js",
       "**/*.cjs",
+      "apps/desktop/gif.mjs",
       "docs/media/**",
     ],
   },

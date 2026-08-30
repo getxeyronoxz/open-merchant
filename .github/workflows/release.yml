@@ -54,3 +54,22 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Verify Windows signature (only when a certificate is configured)
+        if: matrix.os == 'windows-latest' && env.CSC_LINK != ''
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem "apps/desktop/release/*.exe" | Select-Object -First 1
+          $sig = Get-AuthenticodeSignature $exe.FullName
+          "signature: $($sig.Status) / $($sig.SignerCertificate.Subject)"
+          if ($sig.Status -ne "Valid") { throw "installer is not validly signed" }
+
+      - name: Verify macOS signature (only when a certificate is configured)
+        if: matrix.os == 'macos-latest' && env.CSC_LINK != ''
+        shell: bash
+        run: |
+          APP=$(find apps/desktop/release -maxdepth 2 -name "*.app" | head -1)
+          codesign --verify --strict "$APP"
+          echo "signed app verified: $APP"
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}

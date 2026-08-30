@@ -27,3 +27,6 @@ Thumbs.db
 *.pass
 # Code-graph analysis output (local tooling only)
 graphify-out/
+
+# demo recorder frames
+.om-frames/

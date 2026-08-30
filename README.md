@@ -16,6 +16,8 @@ Windows, macOS, and Linux. Built on Electron with a TypeScript monorepo.
 
 ## A look inside
 
+![The full loop — create a project, add evidence and competitors, calculate exact unit economics, and generate the opportunity report — in about twenty seconds.](docs/media/demo-loop.gif)
+
 | | |
 |---|---|
 | ![Unit economics with deterministic scenarios](docs/media/app-economics.png) | ![The generated report, on paper](docs/media/app-report.png) |
