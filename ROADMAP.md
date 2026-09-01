@@ -14,25 +14,38 @@ Open Merchant is built in the open. This file states what has shipped, what is b
 * More providers: Google Gemini and local OpenAI-compatible endpoints (Ollama, LM Studio) behind the BYO-key registry — local endpoints are keyless (base URL only, stays on the user's machine), and all four providers pass the same HTTP contract test suite.
 * Auto-update pipeline: `electron-updater` passively checks the project's own GitHub Releases (delta downloads, restart-or-quit install); a `v*` tag publishes NSIS/DMG/AppImage from GitHub runners. A self-signed developer certificate (`dev-signing.ps1`, alias-only identity) signs local builds — a trusted CA certificate can replace it later with zero code changes.
 * Application icon (the Merchant's Ledger mark) and a screenshot-verified UI quality pass: layered depth, glowing focus, hover states, motion.
+* README demo loop: the real evidence → economics → report flow recorded as a scripted, deterministic GIF (`docs/media/demo-loop.gif`, no AI keys, no network) — the README shows the product working, not just describing it.
 * Security baseline: Electron 39.8.10, zero open Dependabot / code-scanning / secret-scanning alerts, and a three-OS verify matrix on every push to `dev`.
 
 ## 🔄 In progress — near term
 
 * Signed installers — replace the self-signed developer certificate with a CA-issued one so fresh installs on unknown machines show a verified publisher. Done when: a fresh install on each platform shows no "unsigned/unknown publisher" warning. The first tagged build is live: `v1.0.0-alpha.1` publishes Windows, macOS, and Linux installers plus the full update feed (latest.yml / latest-mac.yml / latest-linux.yml) from GitHub Releases, with locally-verified delta updates. Note: distributing the self-signed pfx via repo secrets signs builds but cannot remove the warning on machines that don't trust it — only the CA certificate can. Windows "unknown publisher" disappears with OV signing; SmartScreen may still ask for confirmation until download reputation builds.
-* Visibility — README demo asset (short GIF of the real evidence → report loop), and a first build-in-public thread once the demo exists. Done when: the README shows the product working, not just describing it.
+* Build-in-public thread — the demo GIF exists and the thread is drafted (`docs/marketing/build-in-public-thread.md`); what remains is posting it. Done when: the first build-in-public thread is live.
 * Onboarding validation — one qualitative check with a genuinely new user reaching their first generated report unaided (no instrumentation, per ground rules).
+* `1.0.0-alpha.3` — in local development only (local commits, no GitHub tag yet): everything above "Shipped" still describes `1.0.0-alpha.2` as the latest published release until the `v1.0.0-alpha.3` tag is pushed and the release workflow publishes it.
 
 ## 🧭 Phase 2 — the commerce-ops cockpit
 Entry criteria: V1.0.0 is out of alpha and stable, and at least a handful of real (non-demo-project) users have generated reports with it. Phase 2 does not start on a timeline — it starts when that's true.
-Launch decision: Product Hunt launch is planned for Phase 2, not before — once onboarding, the demo asset, and V1.0.0 stability are all in place.
-The research-to-decision core becomes a living cockpit for sellers who have already decided:
+Planning status: Phase 2 planning has already begun locally (this section is that plan); implementation starts only after `1.0.0-alpha.3` ships and the entry criteria above are met.
+Launch decision: the Product Hunt launch happens when Phase 2 begins, not before — a complete, opinionated product before a bigger audience, no launch from alpha. The pitch for that day is written here so the roadmap and the storefront say the same thing: **real desktop software for people who miss real software — your files, exact math, and AI that drafts and waits.** AI in Open Merchant is a drafting pen, never an operator: assistants extend what one person can produce, but nothing browses, decides, or acts on its own.
 
-* Market snapshots — save timestamped competitor captures; price-history per listing and per market.
+The research-to-decision core becomes a standing tool the seller keeps open after the decision — a cockpit, not a one-shot wizard:
+
+* Market snapshots — save timestamped competitor captures; price history per listing and per market.
 * Margin monitoring — watch assumptions against recorded market prices; flag when a scenario's margin drifts past your threshold.
 * Decision journal — compare today's report against the one you generated a month ago; what changed, what evidence is stale.
 * Portfolio view — track multiple projects (products) in one place.
 
-## 🌌 Exploratory (not committed)
+And a pillar for the people who chose desktop software on purpose — the file-first, unglamorous work that subscription SaaS forgot:
+
+* Portable project folders — archive, back up, and restore a workspace as a single file that opens on any of the three platforms.
+* Spreadsheet bridges — CSV import for competitor listings and evidence, CSV export for anything the app holds: the data is the user's, in formats other tools can read.
+* Print-perfect output — the generated report prints and exports to PDF exactly as it appears on screen, because "send me the document" is still how business is done.
+
+Phase 2 changes what the tool does; the ground rules never move: local-first, no accounts, no telemetry, no autonomous agents, and math that never touches floating point or an LLM.
+
+## 🌌 Exploratory — experiments, not product promises
+These are ideas tested in local prototypes and throwaway branches only. Nothing in this section is a feature, a commitment, or an announcement: none of it appears in the shipped software, release notes, or marketing at that time. An idea ships only if it graduates — rewritten as a real entry with entry criteria inside a committed phase first.
 
 * MCP-style connectors for read-only market data the user opts into — must preserve the "no autonomous browsing" ground rule: the user triggers each fetch explicitly, nothing crawls or polls on its own.
 * Plugin surface for custom report sections and importers.
