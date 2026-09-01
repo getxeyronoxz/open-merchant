@@ -1,7 +1,7 @@
 {
   "name": "open-merchant",
   "private": true,
-  "version": "1.0.0-alpha.2",
+  "version": "1.0.0-alpha.3",
   "license": "AGPL-3.0-only",
   "description": "Local-first, AI-native commerce research workbench.",
   "type": "module",

@@ -2,6 +2,20 @@
 
 All notable changes to Open Merchant are documented in this file.
 
+## [1.0.0-alpha.3] - 2026-09-03
+
+### Added
+
+- Custom application menu: a purpose-built menu replaces the default Electron menu, matched to the app's structure and actions.
+- In-app update banner: update notices now appear inside the app as a dismissible banner instead of a native dialog, carried over the validated IPC contract (new shared schemas, typed SDK methods, and in-memory mock coverage).
+- Scripted demo recorder: `record.cjs` drives a real build through the evidence → competitors → economics → report loop with Playwright and `gif.mjs` assembles the frames with gifenc (pure JS, no ffmpeg) — no AI keys, no network — producing the `docs/media/demo-loop.gif` now embedded in the README.
+- Build-in-public thread draft (`docs/marketing/build-in-public-thread.md`) and an onboarding validation kit (`docs/onboarding-validation-kit.md`) for the first unaided-user check.
+- Release workflow signature checks: the release CI verifies artifact signatures before publishing.
+
+### Changed
+
+- The renderer client only probes `window.openMerchant` when a `window` exists, so the module imports safely outside a browser context; behavior inside Electron and the dev-server mock is unchanged.
+
 ## [1.0.0-alpha.2] - 2026-08-30
 
 ### Added

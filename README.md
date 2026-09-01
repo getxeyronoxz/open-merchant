@@ -51,6 +51,16 @@ Ground rules:
 
 Download the current installer for your platform from [GitHub Releases](https://github.com/getxeyronoxz/open-merchant/releases). The app keeps itself current: on startup it passively checks this project's own Releases feed, downloads updates in the background (delta downloads where supported), and offers to restart — or simply applies the update on quit. Checks are read-only against GitHub; nothing about your projects or usage leaves your machine.
 
+### Running the installers before CA signing
+
+**Security note for our users:** because we are an independent developer team, our software is not yet registered in Microsoft's or Apple's developer registries — and those registries are expensive. Your operating system may therefore flag the installer as "unrecognized" on first launch. Don't worry: the app is clean and does exactly what this README describes. The warnings come from the missing certificate, not from the software. What to expect on each platform:
+
+- **Windows** — SmartScreen may show *"Windows protected your PC"*. Choose **More info → Run anyway**; the prompt softens as download reputation builds. The installer may also note an "unknown publisher" — installation proceeds normally either way.
+- **macOS** — Gatekeeper blocks the first launch of apps from unidentified developers. If macOS refuses to open the app, open **System Settings → Privacy & Security**, find the message about Open Merchant, and click **Open Anyway** (right-click → **Open** on the app works too). On Apple Silicon, `xattr -cr "/Applications/Open Merchant.app"` in Terminal clears it in one step if needed.
+- **Linux** — no extra steps: make the AppImage executable (`chmod +x`) and run it.
+
+A CA-issued certificate is on the [roadmap](ROADMAP.md) and will remove these warnings automatically — no action or change needed on your side when it lands.
+
 ## Workspace format
 
 Each project is an ordinary directory that you own and can inspect outside the app:
