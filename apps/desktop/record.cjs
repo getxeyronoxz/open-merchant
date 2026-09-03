@@ -110,10 +110,10 @@ async function shot(page, name, settleMs = 900) {
     await page.getByRole("button", { name: "Generate report" }).click();
     await page.locator(".report-preview").first().waitFor({ state: "visible", timeout: 30_000 });
     await shot(page, "report-top", 1200);
-    await page.mouse.wheel(0, 480);
-    await shot(page, "report-mid", 700);
-    await page.mouse.wheel(0, 480);
-    await shot(page, "report-low", 700);
+    for (let i = 1; i <= 6; i += 1) {
+      await page.mouse.wheel(0, 170);
+      await shot(page, `report-scroll-${i}`, 150);
+    }
 
     // --- Milestone + artifacts/history with the diff viewer ---
     await page.getByRole("button", { name: "Inspect Project Artifacts →" }).click();

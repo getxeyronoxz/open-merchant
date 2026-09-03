@@ -19,27 +19,42 @@ const outPath =
 
 /** Per-frame hold time in ms; names may carry a suffix from the recorder. */
 const delayFor = (name) => {
+  if (name.includes("scroll")) return 220;
   if (name.includes("report-")) return 1400;
   if (name.includes("results") || name.includes("stats")) return 1500;
   if (name.includes("home-") || name.includes("objective")) return 1200;
   return 1000;
 };
 
-/** Nearest-neighbor downscale so the GIF stays small; frames are 1280x800. */
-const TARGET_W = 800;
+/** Box-filter (averaging) downscale — smooth text and edges, no aliasing. Frames are 1280x800. */
+const TARGET_W = 960;
 function downscale(rgba, width, height) {
   const targetH = Math.round((height * TARGET_W) / width);
   const out = Buffer.alloc(TARGET_W * targetH * 4);
   for (let y = 0; y < targetH; y += 1) {
-    const sy = Math.min(height - 1, Math.floor((y * height) / targetH));
+    const y0 = Math.floor((y * height) / targetH);
+    const y1 = Math.max(y0 + 1, Math.floor(((y + 1) * height) / targetH));
     for (let x = 0; x < TARGET_W; x += 1) {
-      const sx = Math.min(width - 1, Math.floor((x * width) / TARGET_W));
-      const src = (sy * width + sx) * 4;
+      const x0 = Math.floor((x * width) / TARGET_W);
+      const x1 = Math.max(x0 + 1, Math.floor(((x + 1) * width) / TARGET_W));
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let count = 0;
+      for (let sy = y0; sy < y1; sy += 1) {
+        for (let sx = x0; sx < x1; sx += 1) {
+          const src = (sy * width + sx) * 4;
+          r += rgba[src];
+          g += rgba[src + 1];
+          b += rgba[src + 2];
+          count += 1;
+        }
+      }
       const dst = (y * TARGET_W + x) * 4;
-      out[dst] = rgba[src];
-      out[dst + 1] = rgba[src + 1];
-      out[dst + 2] = rgba[src + 2];
-      out[dst + 3] = rgba[src + 3];
+      out[dst] = Math.round(r / count);
+      out[dst + 1] = Math.round(g / count);
+      out[dst + 2] = Math.round(b / count);
+      out[dst + 3] = 255;
     }
   }
   return { data: out, width: TARGET_W, height: targetH };
@@ -57,8 +72,8 @@ for (const file of files) {
   const image = PNG.sync.read(png);
   const scaled = downscale(image.data, image.width, image.height);
   const rgba = scaled.data;
-  const palette = quantize(rgba, 256, { format: "rgb444" });
-  const index = applyPalette(rgba, palette, "rgb444");
+  const palette = quantize(rgba, 256, { format: "rgb565" });
+  const index = applyPalette(rgba, palette, "rgb565");
   gif.writeFrame(index, scaled.width, scaled.height, { palette, delay: delayFor(file) });
   console.log(`encoded ${file} (${scaled.width}x${scaled.height})`);
 }
