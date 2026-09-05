@@ -4,6 +4,7 @@ import {
   competitorIdSchema,
   currencyCodeSchema,
   evidenceSourceIdSchema,
+  marketSnapshotIdSchema,
   moneyStringSchema,
 } from "./money";
 
@@ -117,6 +118,51 @@ export const competitorStatisticsSchema = z.object({
   median: moneyStringSchema.nullable(),
 });
 
+/**
+ * Market snapshots (phase 2): an immutable, timestamped capture of the whole
+ * competitor listing set. Snapshots are never edited — new ones accumulate,
+ * and price history is derived from the sequence.
+ */
+export const marketSnapshotSchema = z.object({
+  id: marketSnapshotIdSchema,
+  capturedAt: isoDateTimeSchema,
+  note: z.string(),
+  listingCount: z.number().int().nonnegative(),
+  statistics: competitorStatisticsSchema,
+  listings: z.array(competitorSchema),
+});
+
+export const snapshotPriceChangeSchema = z.object({
+  key: z.string(),
+  product: z.string(),
+  brand: z.string(),
+  marketplace: z.string(),
+  fromPrice: moneyStringSchema.nullable(),
+  toPrice: moneyStringSchema.nullable(),
+});
+
+export const snapshotDiffSchema = z.object({
+  fromId: marketSnapshotIdSchema,
+  toId: marketSnapshotIdSchema,
+  added: z.array(competitorSchema),
+  removed: z.array(competitorSchema),
+  priceChanges: z.array(snapshotPriceChangeSchema),
+});
+
+export const listingPricePointSchema = z.object({
+  snapshotId: marketSnapshotIdSchema,
+  capturedAt: isoDateTimeSchema,
+  price: moneyStringSchema.nullable(),
+});
+
+export const listingPriceHistorySchema = z.object({
+  key: z.string(),
+  product: z.string(),
+  brand: z.string(),
+  marketplace: z.string(),
+  points: z.array(listingPricePointSchema),
+});
+
 export type Manifest = z.infer<typeof manifestSchema>;
 export type Observation = z.infer<typeof observationSchema>;
 export type EvidenceSource = z.infer<typeof evidenceSourceSchema>;
@@ -126,6 +172,11 @@ export type CostAssumptions = z.infer<typeof costAssumptionsSchema>;
 export type ScenarioName = z.infer<typeof scenarioNameSchema>;
 export type EconomicsScenario = z.infer<typeof economicsScenarioSchema>;
 export type CompetitorStatistics = z.infer<typeof competitorStatisticsSchema>;
+export type MarketSnapshot = z.infer<typeof marketSnapshotSchema>;
+export type SnapshotPriceChange = z.infer<typeof snapshotPriceChangeSchema>;
+export type SnapshotDiff = z.infer<typeof snapshotDiffSchema>;
+export type ListingPricePoint = z.infer<typeof listingPricePointSchema>;
+export type ListingPriceHistory = z.infer<typeof listingPriceHistorySchema>;
 export type ReportSections = z.infer<typeof reportSectionsSchema>;
 
 export function emptyReportSections(): ReportSections {

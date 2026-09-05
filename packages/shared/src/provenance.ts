@@ -46,6 +46,7 @@ export const runOperationSchema = z.enum([
   "reportGenerated",
   "agentDraftProduced",
   "artifactSaved",
+  "snapshotCaptured",
 ]);
 
 export const runStatusSchema = z.enum(["succeeded", "failed"]);

@@ -24,6 +24,9 @@ export const evidenceSourceIdSchema = z
 export const competitorIdSchema = z
   .string()
   .regex(/^C-\d{3,}$/, "Competitor IDs look like C-001");
+export const marketSnapshotIdSchema = z
+  .string()
+  .regex(/^SNAP-\d{8}T\d{6}Z-[0-9a-f]{4}$/, "Market snapshot IDs look like SNAP-20260905T081234Z-4f2a");
 
 export type MoneyString = z.infer<typeof moneyStringSchema>;
 export type CurrencyCode = z.infer<typeof currencyCodeSchema>;

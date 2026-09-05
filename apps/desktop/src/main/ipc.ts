@@ -143,6 +143,19 @@ export function registerIpcHandlers(
       text: await service.readHistory(root, kind, runId),
     })),
 
+    "snapshots/capture": channel<"snapshots/capture">(async ({ root, note }) => ({
+      snapshot: await service.captureMarketSnapshot(root, note),
+    })),
+    "snapshots/list": channel<"snapshots/list">(async ({ root }) => ({
+      snapshots: await service.listMarketSnapshots(root),
+    })),
+    "snapshots/diff": channel<"snapshots/diff">(async ({ root, fromId, toId }) => ({
+      diff: await service.snapshotDiff(root, fromId, toId),
+    })),
+    "snapshots/history": channel<"snapshots/history">(async ({ root }) => ({
+      history: await service.listingPriceHistory(root),
+    })),
+
     "ai/config/load": channel<"ai/config/load">(() => aiConfig.publicConfig()),
     "ai/config/save": channel<"ai/config/save">(async (input) => {
       await aiConfig.save(input);

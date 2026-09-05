@@ -79,6 +79,11 @@ export interface DesktopClient {
     runId: string,
   ): Promise<IpcResponse<"history/read">>;
 
+  captureMarketSnapshot(root: string, note: string): Promise<IpcResponse<"snapshots/capture">>;
+  listMarketSnapshots(root: string): Promise<IpcResponse<"snapshots/list">>;
+  snapshotDiff(root: string, fromId: string, toId: string): Promise<IpcResponse<"snapshots/diff">>;
+  listingPriceHistory(root: string): Promise<IpcResponse<"snapshots/history">>;
+
   loadAiConfig(): Promise<IpcResponse<"ai/config/load">>;
   saveAiConfig(request: IpcRequest<"ai/config/save">): Promise<IpcResponse<"ai/config/save">>;
   testAi(providerId: IpcRequest<"ai/test">["providerId"]): Promise<IpcResponse<"ai/test">>;
@@ -128,6 +133,11 @@ export function createDesktopClient(raw: RawInvoke): DesktopClient {
     listRuns: (root) => invoke(raw, "runs/list", { root }),
     listProvenance: (root) => invoke(raw, "provenance/list", { root }),
     readHistory: (root, kind, runId) => invoke(raw, "history/read", { root, kind, runId }),
+
+    captureMarketSnapshot: (root, note) => invoke(raw, "snapshots/capture", { root, note }),
+    listMarketSnapshots: (root) => invoke(raw, "snapshots/list", { root }),
+    snapshotDiff: (root, fromId, toId) => invoke(raw, "snapshots/diff", { root, fromId, toId }),
+    listingPriceHistory: (root) => invoke(raw, "snapshots/history", { root }),
 
     loadAiConfig: () => invoke(raw, "ai/config/load", {}),
     saveAiConfig: (request) => invoke(raw, "ai/config/save", request),

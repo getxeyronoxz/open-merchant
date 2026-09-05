@@ -99,6 +99,43 @@ export function useArtifacts(root: string) {
   });
 }
 
+// --- market snapshots (phase 2) ------------------------------------------------
+
+export function useMarketSnapshots(root: string) {
+  return useQuery({
+    queryKey: ["snapshots", root],
+    queryFn: () => client.listMarketSnapshots(root),
+  });
+}
+
+export function useMarketPriceHistory(root: string) {
+  return useQuery({
+    queryKey: ["snapshot-history", root],
+    queryFn: () => client.listingPriceHistory(root),
+  });
+}
+
+export function useCaptureMarketSnapshot(root: string) {
+  const invalidate = useInvalidator();
+  return useMutation({
+    mutationFn: (note: string) => client.captureMarketSnapshot(root, note),
+    onSuccess: () =>
+      invalidate(
+        ["snapshots", root],
+        ["snapshot-history", root],
+        ["runs", root],
+      ),
+  });
+}
+
+export function useSnapshotDiff(root: string, fromId: string | null, toId: string | null) {
+  return useQuery({
+    queryKey: ["snapshot-diff", root, fromId, toId],
+    queryFn: () => client.snapshotDiff(root, fromId as string, toId as string),
+    enabled: fromId !== null && toId !== null,
+  });
+}
+
 function useInvalidator() {
   const queryClient = useQueryClient();
   return (...keys: string[][]) => {

@@ -34,10 +34,13 @@ import type {
   EconomicsScenario,
   EvidenceSource,
   GenerationOrigin,
+  ListingPriceHistory,
   Manifest,
+  MarketSnapshot,
   ProvenanceRecord,
   ReportSections,
   RunRecord,
+  SnapshotDiff,
 } from "@open-merchant/shared";
 import { AppError } from "@open-merchant/shared";
 
@@ -619,6 +622,41 @@ export class MerchantService {
 
   listRuns(root: string): Promise<RunRecord[]> {
     return this.withStore(root, (store) => store.journal.listRuns());
+  }
+
+  /** Captures an immutable market snapshot and journals it. */
+  async captureMarketSnapshot(root: string, note: string): Promise<MarketSnapshot> {
+    const store = await this.openStore(root);
+    return this.run(async () => {
+      const startedAt = new Date().toISOString();
+      const runId = `RUN-${randomUUID()}`;
+      const result = await store.captureMarketSnapshot(note);
+      const competitorText = await store.readArtifactText(ArtifactPaths.competitors).catch(() => "");
+      await store.journal.appendRun({
+        runId,
+        operation: "snapshotCaptured",
+        startedAt,
+        completedAt: new Date().toISOString(),
+        status: "succeeded",
+        appVersion: this.appVersion,
+        inputArtifacts: [fingerprintContents(ArtifactPaths.competitors, competitorText)],
+        outputArtifacts: [result.fingerprint],
+        errorSummary: null,
+      });
+      return result.snapshot;
+    });
+  }
+
+  listMarketSnapshots(root: string): Promise<MarketSnapshot[]> {
+    return this.withStore(root, (store) => store.listMarketSnapshots());
+  }
+
+  snapshotDiff(root: string, fromId: string, toId: string): Promise<SnapshotDiff> {
+    return this.withStore(root, (store) => store.snapshotDiff(fromId, toId));
+  }
+
+  listingPriceHistory(root: string): Promise<ListingPriceHistory[]> {
+    return this.withStore(root, (store) => store.listingPriceHistory());
   }
 
   listProvenance(root: string): Promise<ProvenanceRecord[]> {

@@ -6,6 +6,7 @@ export * from "./provenance";
 export * from "./history";
 export * from "./economics";
 export * from "./statistics";
+export * from "./snapshots";
 export * from "./validation";
 export * from "./report";
 export * from "./workspace";

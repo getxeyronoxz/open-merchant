@@ -21,6 +21,44 @@ export const ArtifactPaths = {
   opportunityReport: "reports/opportunity-report.md",
 } as const;
 
+/** Directory holding immutable market snapshots (phase 2). */
+export const MARKET_SNAPSHOTS_DIR = "market/snapshots";
+const SNAPSHOT_ID_PATTERN = /^SNAP-\d{8}T\d{6}Z-[0-9a-f]{4}$/u;
+const SNAPSHOT_FILE_PATTERN = /^SNAP-\d{8}T\d{6}Z-[0-9a-f]{4}\.json$/u;
+
+/**
+ * Resolves a market snapshot file inside the known snapshots directory with
+ * the same traversal, symlink, and escape guards as known artifacts. Snapshot
+ * ids are strictly shaped, so an id can never smuggle a path.
+ */
+export async function resolveSnapshotFile(workspaceRoot: string, snapshotId: string): Promise<string> {
+  if (!SNAPSHOT_ID_PATTERN.test(snapshotId)) {
+    throw new ArtifactPathError(`Unsafe snapshot id: ${snapshotId}`);
+  }
+  const absolute = join(workspaceRoot, MARKET_SNAPSHOTS_DIR, `${snapshotId}.json`);
+  try {
+    const stats = await lstat(absolute);
+    if (stats.isSymbolicLink()) {
+      throw new ArtifactPathError(`Snapshot is a symbolic link: ${snapshotId}`);
+    }
+    const real = await realpath(absolute);
+    const realRoot = await realpath(workspaceRoot);
+    if (!real.startsWith(realRoot + sep) && real !== realRoot) {
+      throw new ArtifactPathError(`Snapshot escapes the workspace: ${snapshotId}`);
+    }
+  } catch (error) {
+    if (error instanceof ArtifactPathError) throw error;
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw new ArtifactPathError(`Cannot access snapshot ${snapshotId}: ${String(error)}`);
+    }
+  }
+  return absolute;
+}
+
+export function isSnapshotFileName(name: string): boolean {
+  return SNAPSHOT_FILE_PATTERN.test(name);
+}
+
 export type KnownArtifact = keyof typeof ArtifactPaths;
 
 export const KNOWN_ARTIFACT_PATHS: readonly string[] = Object.values(ArtifactPaths);

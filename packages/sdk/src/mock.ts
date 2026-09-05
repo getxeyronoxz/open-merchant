@@ -5,8 +5,11 @@ import type {
   CostAssumptions,
   EconomicsScenario,
   EvidenceSource,
+  ListingPriceHistory,
+  MarketSnapshot,
   ProjectSnapshot,
   ReportSections,
+  SnapshotDiff,
 } from "@open-merchant/shared";
 import { AppError, emptyReportSections } from "@open-merchant/shared";
 
@@ -22,6 +25,7 @@ export interface MockProjectState {
   snapshot: ProjectSnapshot;
   evidence: EvidenceSource[];
   competitors: Competitor[];
+  marketSnapshots: MarketSnapshot[];
   assumptions: CostAssumptions | null;
   scenarios: EconomicsScenario[];
   sections: ReportSections;
@@ -71,6 +75,26 @@ const EMPTY_STATS: CompetitorStatistics = {
   median: null,
 };
 
+/** Dev/test-only statistics over money strings; mirrors core's rounding shape. */
+function mockCompetitorStatistics(competitors: Competitor[]): CompetitorStatistics {
+  const prices = competitors
+    .map((competitor) => competitor.price)
+    .filter((price): price is NonNullable<typeof price> => price !== null)
+    .map(Number)
+    .sort((a, b) => a - b);
+  if (prices.length === 0) return EMPTY_STATS;
+  const sum = prices.reduce((total, price) => total + price, 0);
+  const lower = prices[Math.floor((prices.length - 1) / 2)] as number;
+  const upper = prices[Math.ceil((prices.length - 1) / 2)] as number;
+  return {
+    validPriceCount: prices.length,
+    minimum: (prices[0] as number).toFixed(2),
+    maximum: (prices[prices.length - 1] as number).toFixed(2),
+    average: (sum / prices.length).toFixed(2),
+    median: ((lower + upper) / 2).toFixed(2),
+  };
+}
+
 function requireProject(projects: MockProjectState[], root: string): MockProjectState {
   const found = projects.find((project) => project.snapshot.root === root);
   if (!found) {
@@ -97,6 +121,7 @@ export function createMockDesktopClient(
   const now = () => new Date().toISOString();
   const historyByProject = new Map<string, Record<"scenarios" | "report", Map<string, string>>>();
   let snapshotCounter = 0;
+  let mockSnapshotCounter = 0;
 
   const saveSnapshot = (root: string, kind: "scenarios" | "report", contents: string): void => {
     const runId = `RUN-mock-${String(snapshotCounter++).padStart(4, "0")}`;
@@ -159,6 +184,7 @@ export function createMockDesktopClient(
         },
         evidence: [],
         competitors: [],
+        marketSnapshots: [],
         assumptions: emptyMockAssumptions(currency),
         scenarios: [],
         sections: emptyReportSections(),
@@ -212,25 +238,96 @@ export function createMockDesktopClient(
       return {};
     },
 
-    competitorStatistics: async (root) => {
-      const prices = requireProject(projects, root)
-        .competitors.map((competitor) => competitor.price)
-        .filter((price): price is NonNullable<typeof price> => price !== null)
-        .map(Number)
-        .sort((a, b) => a - b);
-      if (prices.length === 0) return { statistics: EMPTY_STATS };
-      const sum = prices.reduce((total, price) => total + price, 0);
-      const lower = prices[Math.floor((prices.length - 1) / 2)] as number;
-      const upper = prices[Math.ceil((prices.length - 1) / 2)] as number;
-      return {
-        statistics: {
-          validPriceCount: prices.length,
-          minimum: (prices[0] as number).toFixed(2),
-          maximum: (prices[prices.length - 1] as number).toFixed(2),
-          average: (sum / prices.length).toFixed(2),
-          median: ((lower + upper) / 2).toFixed(2),
-        },
+    competitorStatistics: async (root) => ({
+      statistics: mockCompetitorStatistics(requireProject(projects, root).competitors),
+    }),
+
+    captureMarketSnapshot: async (root, note) => {
+      const project = requireProject(projects, root);
+      await Promise.resolve();
+      const stamp = new Date();
+      const pad = (value: number, length: number): string => String(value).padStart(length, "0");
+      const id =
+        `SNAP-${pad(stamp.getUTCFullYear(), 4)}${pad(stamp.getUTCMonth() + 1, 2)}${pad(stamp.getUTCDate(), 2)}` +
+        `T${pad(stamp.getUTCHours(), 2)}${pad(stamp.getUTCMinutes(), 2)}${pad(stamp.getUTCSeconds(), 2)}Z-` +
+        `${mockSnapshotCounter.toString(16).padStart(4, "0")}`;
+      mockSnapshotCounter += 1;
+      const capturedAt = stamp.toISOString();
+      const snapshot: MarketSnapshot = {
+        id,
+        capturedAt,
+        note,
+        listingCount: project.competitors.length,
+        statistics: mockCompetitorStatistics(project.competitors),
+        listings: project.competitors.map((competitor) => ({ ...competitor })),
       };
+      project.marketSnapshots.unshift(snapshot);
+      return { snapshot };
+    },
+    listMarketSnapshots: async (root) => ({
+      snapshots: requireProject(projects, root).marketSnapshots.map((snapshot) => ({ ...snapshot })),
+    }),
+    snapshotDiff: async (root, fromId, toId) => {
+      const snapshots = requireProject(projects, root).marketSnapshots;
+      const from = snapshots.find((snapshot) => snapshot.id === fromId);
+      const to = snapshots.find((snapshot) => snapshot.id === toId);
+      if (!from) {
+        throw new AppError({ code: "not-found", message: `Market snapshot not found: ${fromId}` });
+      }
+      if (!to) {
+        throw new AppError({ code: "not-found", message: `Market snapshot not found: ${toId}` });
+      }
+      const keyOf = (listing: Competitor): string =>
+        [listing.brand, listing.product, listing.marketplace]
+          .map((value) => value.trim().toLowerCase())
+          .join(" | ");
+      const fromByKey = new Map(from.listings.map((listing) => [keyOf(listing), listing]));
+      const toByKey = new Map(to.listings.map((listing) => [keyOf(listing), listing]));
+      const added = to.listings.filter((listing) => !fromByKey.has(keyOf(listing)));
+      const removed = from.listings.filter((listing) => !toByKey.has(keyOf(listing)));
+      const priceChanges: SnapshotDiff["priceChanges"] = [];
+      for (const [key, next] of toByKey) {
+        const previous = fromByKey.get(key);
+        if (!previous || previous.price === next.price) continue;
+        priceChanges.push({
+          key,
+          product: next.product,
+          brand: next.brand,
+          marketplace: next.marketplace,
+          fromPrice: previous.price,
+          toPrice: next.price,
+        });
+      }
+      const diff: SnapshotDiff = { fromId: from.id, toId: to.id, added, removed, priceChanges };
+      return { diff };
+    },
+    listingPriceHistory: async (root) => {
+      const snapshots = [...requireProject(projects, root).marketSnapshots].reverse();
+      const byKey = new Map<string, ListingPriceHistory>();
+      for (const snapshot of snapshots) {
+        for (const listing of snapshot.listings) {
+          const key = [listing.brand, listing.product, listing.marketplace]
+            .map((value) => value.trim().toLowerCase())
+            .join(" | ");
+          let entry = byKey.get(key);
+          if (!entry) {
+            entry = {
+              key,
+              product: listing.product,
+              brand: listing.brand,
+              marketplace: listing.marketplace,
+              points: [],
+            };
+            byKey.set(key, entry);
+          }
+          entry.points.push({
+            snapshotId: snapshot.id,
+            capturedAt: snapshot.capturedAt,
+            price: listing.price,
+          });
+        }
+      }
+      return { history: [...byKey.values()].sort((a, b) => a.key.localeCompare(b.key)) };
     },
 
     loadAssumptions: (root) => {

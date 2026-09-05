@@ -7,9 +7,13 @@ import {
   economicsScenarioSchema,
   evidenceSourceSchema,
   isoDateTimeSchema,
+  listingPriceHistorySchema,
   manifestSchema,
+  marketSnapshotSchema,
   reportSectionsSchema,
+  snapshotDiffSchema,
 } from "./artifacts";
+import { marketSnapshotIdSchema } from "./money";
 import {
   auditReportSchema,
   competitorDraftSchema,
@@ -215,6 +219,29 @@ export const ipc = {
       runId: z.string().min(1),
     }),
     response: z.object({ text: z.string().nullable() }),
+  },
+
+  // --- market snapshots (phase 2) -------------------------------------------
+
+  "snapshots/capture": {
+    request: z.object({ root: z.string(), note: z.string() }),
+    response: z.object({ snapshot: marketSnapshotSchema }),
+  },
+  "snapshots/list": {
+    request: rootOnlyInputSchema,
+    response: z.object({ snapshots: z.array(marketSnapshotSchema) }),
+  },
+  "snapshots/diff": {
+    request: z.object({
+      root: z.string(),
+      fromId: marketSnapshotIdSchema,
+      toId: marketSnapshotIdSchema,
+    }),
+    response: z.object({ diff: snapshotDiffSchema }),
+  },
+  "snapshots/history": {
+    request: rootOnlyInputSchema,
+    response: z.object({ history: z.array(listingPriceHistorySchema) }),
   },
 
   // --- AI copilot -----------------------------------------------------------

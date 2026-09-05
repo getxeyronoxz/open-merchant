@@ -1,4 +1,4 @@
-import { mkdir, rm, stat } from "node:fs/promises";
+import { mkdir, readdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 
 import {
@@ -8,14 +8,18 @@ import {
   economicsScenarioSchema,
   evidenceSourceSchema,
   manifestSchema,
+  marketSnapshotSchema,
   reportSectionsSchema,
   type ArtifactFingerprint,
   type Competitor,
   type CostAssumptions,
   type EconomicsScenario,
   type EvidenceSource,
+  type ListingPriceHistory,
   type Manifest,
+  type MarketSnapshot,
   type ReportSections,
+  type SnapshotDiff,
 } from "@open-merchant/shared";
 
 import { writeFileAtomically } from "./atomic";
@@ -23,11 +27,20 @@ import { fingerprintContents } from "./fingerprint";
 import { HISTORY_DIR, HistoryStore } from "./history";
 import {
   ArtifactPaths,
+  MARKET_SNAPSHOTS_DIR,
   WORKSPACE_DIR,
+  isSnapshotFileName,
   readArtifactIfPresent,
   resolveKnownArtifact,
+  resolveSnapshotFile,
 } from "./layout";
 import { RunJournal } from "./provenance";
+import {
+  buildMarketSnapshot,
+  diffSnapshots,
+  listingPriceHistories,
+  newSnapshotId,
+} from "./snapshots";
 import { projectFolderName } from "./workspace";
 import {
   validateAssumptions,
@@ -270,6 +283,73 @@ export class WorkspaceStore {
 
   async loadOpportunityReport(): Promise<string | null> {
     return readArtifactIfPresent(await resolveKnownArtifact(this.root, ArtifactPaths.opportunityReport));
+  }
+
+  // --- market snapshots (phase 2) ----------------------------------------------
+
+  /**
+   * Captures an immutable snapshot of the current competitor listing set.
+   * Snapshots are never edited or deleted; history is derived from sequence.
+   * Returns the snapshot plus the fingerprint of the file written.
+   */
+  async captureMarketSnapshot(
+    note: string,
+    id = newSnapshotId(),
+    capturedAt = new Date().toISOString(),
+  ): Promise<{ snapshot: MarketSnapshot; fingerprint: ArtifactFingerprint }> {
+    const competitors = await this.loadCompetitors();
+    const snapshot = buildMarketSnapshot(competitors, id, capturedAt, note);
+    const contents = `${JSON.stringify(snapshot, null, 2)}\n`;
+    await mkdir(join(this.root, MARKET_SNAPSHOTS_DIR), { recursive: true });
+    const path = await resolveSnapshotFile(this.root, id);
+    await writeFileAtomically(path, contents);
+    return { snapshot, fingerprint: fingerprintContents(`${MARKET_SNAPSHOTS_DIR}/${id}.json`, contents) };
+  }
+
+  /** All snapshots, newest first. Malformed files are rejected loudly. */
+  async listMarketSnapshots(): Promise<MarketSnapshot[]> {
+    let names: string[];
+    try {
+      names = (await readdir(join(this.root, MARKET_SNAPSHOTS_DIR))).filter(isSnapshotFileName);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw new WorkspaceError(`Cannot list market snapshots: ${String(error)}`);
+    }
+    const snapshots: MarketSnapshot[] = [];
+    for (const name of names.sort()) {
+      const raw = await readArtifactIfPresent(
+        await resolveSnapshotFile(this.root, name.replace(/\.json$/u, "")),
+      );
+      if (raw === null) continue;
+      try {
+        snapshots.push(marketSnapshotSchema.parse(JSON.parse(raw)));
+      } catch (error) {
+        throw new WorkspaceError(
+          `Market snapshot ${name} is malformed and was left unchanged: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
+    return snapshots.sort((a, b) =>
+      a.capturedAt < b.capturedAt ? 1 : a.capturedAt > b.capturedAt ? -1 : a.id < b.id ? 1 : -1,
+    );
+  }
+
+  /** Diff of two recorded snapshots; unknown ids are a loud error. */
+  async snapshotDiff(fromId: string, toId: string): Promise<SnapshotDiff> {
+    const snapshots = await this.listMarketSnapshots();
+    const from = snapshots.find((snapshot) => snapshot.id === fromId);
+    const to = snapshots.find((snapshot) => snapshot.id === toId);
+    if (!from) throw new WorkspaceError(`Market snapshot not found: ${fromId}`);
+    if (!to) throw new WorkspaceError(`Market snapshot not found: ${toId}`);
+    return diffSnapshots(from, to);
+  }
+
+  /** Per-listing price points across all snapshots, oldest first. */
+  async listingPriceHistory(): Promise<ListingPriceHistory[]> {
+    const snapshots = await this.listMarketSnapshots();
+    return listingPriceHistories([...snapshots].reverse());
   }
 
   // --- artifact inspection ------------------------------------------------------
