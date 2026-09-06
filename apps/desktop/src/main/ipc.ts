@@ -158,6 +158,9 @@ export function registerIpcHandlers(
     "monitor/margin": channel<"monitor/margin">(async ({ root }) => ({
       monitor: await service.marginMonitor(root),
     })),
+    "journal/decision": channel<"journal/decision">(async ({ root }) => ({
+      journal: await service.decisionJournal(root),
+    })),
 
     "ai/config/load": channel<"ai/config/load">(() => aiConfig.publicConfig()),
     "ai/config/save": channel<"ai/config/save">(async (input) => {

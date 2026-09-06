@@ -185,6 +185,29 @@ export const marginMonitorSchema = z.object({
   flags: z.array(marginFlagSchema),
 });
 
+/**
+ * Decision journal (phase 2): dated report generations plus evidence that has
+ * gone stale. The journal answers "would I still make this decision today?".
+ */
+export const journalEntrySchema = z.object({
+  runId: z.string(),
+  completedAt: isoDateTimeSchema,
+  status: z.literal("succeeded"),
+});
+
+export const staleEvidenceSchema = z.object({
+  id: evidenceSourceIdSchema,
+  title: z.string(),
+  observedAt: isoDateTimeSchema,
+  ageDays: z.number().int().nonnegative(),
+});
+
+export const decisionJournalSchema = z.object({
+  entries: z.array(journalEntrySchema),
+  staleEvidence: z.array(staleEvidenceSchema),
+  staleAfterDays: z.number().int().positive(),
+});
+
 export type Manifest = z.infer<typeof manifestSchema>;
 export type Observation = z.infer<typeof observationSchema>;
 export type EvidenceSource = z.infer<typeof evidenceSourceSchema>;
@@ -201,6 +224,9 @@ export type ListingPricePoint = z.infer<typeof listingPricePointSchema>;
 export type ListingPriceHistory = z.infer<typeof listingPriceHistorySchema>;
 export type MarginFlag = z.infer<typeof marginFlagSchema>;
 export type MarginMonitorResult = z.infer<typeof marginMonitorSchema>;
+export type JournalEntry = z.infer<typeof journalEntrySchema>;
+export type StaleEvidence = z.infer<typeof staleEvidenceSchema>;
+export type DecisionJournal = z.infer<typeof decisionJournalSchema>;
 export type ReportSections = z.infer<typeof reportSectionsSchema>;
 
 export function emptyReportSections(): ReportSections {

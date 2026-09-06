@@ -382,6 +382,27 @@ export function createMockDesktopClient(
       };
     },
 
+    decisionJournal: async (root) => {
+      const project = requireProject(projects, root);
+      await Promise.resolve();
+      const now = new Date();
+      const staleAfterMs = 30 * 24 * 60 * 60 * 1000;
+      const staleEvidence = project.evidence
+        .map((source) => ({
+          id: source.id,
+          title: source.title,
+          observedAt: source.observedAt,
+          ageDays: Math.max(
+            0,
+            Math.floor((now.getTime() - Date.parse(source.observedAt)) / 86_400_000),
+          ),
+        }))
+        .filter((entry) => now.getTime() - Date.parse(entry.observedAt) > staleAfterMs)
+        .sort((a, b) => a.observedAt.localeCompare(b.observedAt));
+      // The mock tracks no runs; report entries exist only in the real shell.
+      return { journal: { entries: [], staleEvidence, staleAfterDays: 30 } };
+    },
+
     loadAssumptions: (root) => {
       const project = requireProject(projects, root);
       if (!project.assumptions) {

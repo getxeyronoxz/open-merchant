@@ -9,6 +9,7 @@ import { client } from "../../../client";
 import { diffLines, type DiffLineKind } from "../../../lib/diff";
 import {
   useArtifacts,
+  useDecisionJournal,
   useProvenance,
   useReadHistory,
   useRuns,
@@ -379,12 +380,152 @@ export function ArtifactsScreen({
         </>
       ) : null}
 
+      <DecisionJournalCard root={root} />
+
       <div className="om-card om-card--inset" style={{ marginTop: "var(--om-space-4)" }}>
         <p className="om-eyebrow">Local-First Verification</p>
         <p className="om-section-sub" style={{ marginTop: "var(--om-space-2)" }}>
           Every decision file in this workspace is stored in human-readable formats (.json, .jsonl, .md) on your local drive with cryptographic sha-256 provenance, and every generation keeps an immutable snapshot under .openmerchant/history/ so past versions can always be compared.
         </p>
       </div>
+    </section>
+  );
+}
+
+/**
+ * Phase 2 — decision journal: dated report generations, any-two side-by-side
+ * comparison, and stale-evidence flags ("would I still decide this today?").
+ */
+function DecisionJournalCard({ root }: { root: string }) {
+  const journal = useDecisionJournal(root);
+  const [pickedA, setPickedA] = useState<string | null>(null);
+  const [pickedB, setPickedB] = useState<string | null>(null);
+
+  const entries = journal.data?.journal.entries ?? [];
+  const aId = pickedA ?? (entries.length >= 2 ? (entries[entries.length - 2] as (typeof entries)[number]).runId : null);
+  const bId = pickedB ?? (entries.length > 0 ? (entries[entries.length - 1] as (typeof entries)[number]).runId : null);
+
+  const a = useReadHistory(root, "report", aId);
+  const b = useReadHistory(root, "report", bId);
+  const diff = useMemo(
+    () => (a.data?.text && b.data?.text ? diffLines(a.data.text, b.data.text) : null),
+    [a.data?.text, b.data?.text],
+  );
+
+  const stale = journal.data?.journal.staleEvidence ?? [];
+  const staleAfterDays = journal.data?.journal.staleAfterDays ?? 30;
+
+  return (
+    <section className="om-card" aria-label="Decision journal">
+      <p className="om-eyebrow">Decision journal</p>
+      <p className="om-field__hint">
+        Every generated report, dated. Compare any two generations and see which evidence has gone
+        stale — would you still make this decision today?
+      </p>
+
+      {journal.isError ? (
+        <ErrorState error={journal.error} onRetry={() => journal.refetch()} />
+      ) : null}
+
+      {entries.length === 0 ? (
+        <EmptyState title="No reports yet">
+          <span>Generate your first report to start the journal.</span>
+        </EmptyState>
+      ) : (
+        <>
+          <div className="screen__grid">
+            <div className="om-field">
+              <label className="om-label" htmlFor="journal-from">
+                Earlier report
+              </label>
+              <select
+                className="om-input"
+                id="journal-from"
+                onChange={(event) => setPickedA(event.target.value || null)}
+                value={aId ?? ""}
+              >
+                {entries.map((entry) => (
+                  <option key={entry.runId} value={entry.runId}>
+                    {new Date(entry.completedAt).toLocaleString()}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="om-field">
+              <label className="om-label" htmlFor="journal-to">
+                Later report
+              </label>
+              <select
+                className="om-input"
+                id="journal-to"
+                onChange={(event) => setPickedB(event.target.value || null)}
+                value={bId ?? ""}
+              >
+                {entries.map((entry) => (
+                  <option key={entry.runId} value={entry.runId}>
+                    {new Date(entry.completedAt).toLocaleString()}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {aId !== null && bId !== null && aId === bId ? (
+            <p className="om-field__hint">Pick two different generations to compare.</p>
+          ) : a.isError || b.isError ? (
+            <ErrorState
+              error={(a.error ?? b.error) as unknown}
+              onRetry={() => {
+                a.refetch();
+                b.refetch();
+              }}
+            />
+          ) : a.isPending || b.isPending ? (
+            <p className="om-loading">
+              <span className="om-spinner" /> Loading reports…
+            </p>
+          ) : diff ? (
+            <div className="diff">
+              {diff.before.map((line, index) => (
+                <div className="diff__row" key={index}>
+                  <div className={`diff__line ${diffLineClass(line.kind)}`}>
+                    <span className="diff__sign">{line.kind === "del" ? "−" : ""}</span>
+                    <span>{line.text}</span>
+                  </div>
+                  <div className={`diff__line ${diffLineClass(diff.after[index]?.kind ?? "same")}`}>
+                    <span className="diff__sign">{diff.after[index]?.kind === "add" ? "+" : ""}</span>
+                    <span>{diff.after[index]?.text ?? ""}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {stale.length > 0 ? (
+            <>
+              <p className="om-eyebrow">
+                Stale evidence — older than {staleAfterDays} days
+              </p>
+              <ul className="artifacts__provenance">
+                {stale.map((entry) => (
+                  <li key={entry.id} className="om-ledger__row">
+                    <span className="om-data">{entry.id}</span>
+                    <span aria-hidden="true" className="om-ledger__leader" />
+                    <span>{entry.title}</span>
+                    <span className="om-badge om-badge--warn">
+                      {entry.ageDays} days old
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : journal.data ? (
+            <p className="om-field__hint">
+              All evidence is under {staleAfterDays} days old — nothing stale.
+            </p>
+          ) : null}
+        </>
+      )}
     </section>
   );
 }

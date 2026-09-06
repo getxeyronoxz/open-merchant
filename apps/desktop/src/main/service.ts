@@ -7,6 +7,7 @@ import {
   WorkspaceStore,
   calculateScenarios,
   competitorStatistics,
+  decisionJournal,
   fingerprintContents,
   importV0Project,
   marginMonitor,
@@ -37,6 +38,7 @@ import type {
   GenerationOrigin,
   ListingPriceHistory,
   Manifest,
+  DecisionJournal,
   MarginMonitorResult,
   MarketSnapshot,
   ProvenanceRecord,
@@ -675,6 +677,13 @@ export class MerchantService {
         latest?.id ?? null,
       );
     });
+  }
+
+  /** Dated report generations plus stale evidence, as of now. */
+  decisionJournal(root: string): Promise<DecisionJournal> {
+    return this.withStore(root, async (store) =>
+      decisionJournal(await store.journal.listRuns(), await store.loadEvidence(), new Date()),
+    );
   }
 
   listProvenance(root: string): Promise<ProvenanceRecord[]> {

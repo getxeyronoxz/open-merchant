@@ -84,6 +84,7 @@ export interface DesktopClient {
   snapshotDiff(root: string, fromId: string, toId: string): Promise<IpcResponse<"snapshots/diff">>;
   listingPriceHistory(root: string): Promise<IpcResponse<"snapshots/history">>;
   marginMonitor(root: string): Promise<IpcResponse<"monitor/margin">>;
+  decisionJournal(root: string): Promise<IpcResponse<"journal/decision">>;
 
   loadAiConfig(): Promise<IpcResponse<"ai/config/load">>;
   saveAiConfig(request: IpcRequest<"ai/config/save">): Promise<IpcResponse<"ai/config/save">>;
@@ -140,6 +141,7 @@ export function createDesktopClient(raw: RawInvoke): DesktopClient {
     snapshotDiff: (root, fromId, toId) => invoke(raw, "snapshots/diff", { root, fromId, toId }),
     listingPriceHistory: (root) => invoke(raw, "snapshots/history", { root }),
     marginMonitor: (root) => invoke(raw, "monitor/margin", { root }),
+    decisionJournal: (root) => invoke(raw, "journal/decision", { root }),
 
     loadAiConfig: () => invoke(raw, "ai/config/load", {}),
     saveAiConfig: (request) => invoke(raw, "ai/config/save", request),

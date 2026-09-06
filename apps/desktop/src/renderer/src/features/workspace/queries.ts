@@ -144,6 +144,13 @@ export function useMarginMonitor(root: string) {
   });
 }
 
+export function useDecisionJournal(root: string) {
+  return useQuery({
+    queryKey: ["decision-journal", root],
+    queryFn: () => client.decisionJournal(root),
+  });
+}
+
 function useInvalidator() {
   const queryClient = useQueryClient();
   return (...keys: string[][]) => {
@@ -162,6 +169,7 @@ const ROOT_KEYS = (root: string) => ({
   sections: ["sections", root],
   report: ["report", root],
   marginMonitor: ["margin-monitor", root],
+  decisionJournal: ["decision-journal", root],
 });
 
 export function useSaveEvidence(root: string) {
@@ -172,10 +180,7 @@ export function useSaveEvidence(root: string) {
       sources: EvidenceSource[];
       origin?: GenerationOrigin;
     }) => client.saveEvidence(root, input.sources, input.origin),
-    onSuccess: (_result, input) => {
-      void input;
-      invalidate(keys.evidence);
-    },
+    onSuccess: () => invalidate(keys.evidence, keys.decisionJournal),
   });
 }
 
@@ -223,7 +228,7 @@ export function useGenerateReport(root: string) {
   const keys = ROOT_KEYS(root);
   return useMutation({
     mutationFn: () => client.generateReport(root),
-    onSuccess: () => invalidate(keys.report, keys.scenarios),
+    onSuccess: () => invalidate(keys.report, keys.scenarios, keys.decisionJournal),
   });
 }
 

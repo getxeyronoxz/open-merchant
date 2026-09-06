@@ -9,6 +9,7 @@ import {
   isoDateTimeSchema,
   listingPriceHistorySchema,
   manifestSchema,
+  decisionJournalSchema,
   marginMonitorSchema,
   marketSnapshotSchema,
   reportSectionsSchema,
@@ -247,6 +248,10 @@ export const ipc = {
   "monitor/margin": {
     request: rootOnlyInputSchema,
     response: z.object({ monitor: marginMonitorSchema }),
+  },
+  "journal/decision": {
+    request: rootOnlyInputSchema,
+    response: z.object({ journal: decisionJournalSchema }),
   },
 
   // --- AI copilot -----------------------------------------------------------
