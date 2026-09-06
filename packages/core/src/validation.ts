@@ -109,4 +109,12 @@ export function validateAssumptions(assumptions: CostAssumptions, projectCurrenc
       fail("Scenario prices must be positive");
     }
   }
+
+  const threshold = assumptions.marginThresholdPercent ?? null;
+  if (threshold !== null) {
+    const value = amountOf(threshold);
+    if (value.isNegative() || value.greaterThan(HUNDRED)) {
+      fail("Margin threshold must be between 0 and 100");
+    }
+  }
 }

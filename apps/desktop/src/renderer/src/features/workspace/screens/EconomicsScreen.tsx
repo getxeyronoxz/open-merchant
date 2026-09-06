@@ -7,6 +7,7 @@ import { useProject } from "../../../state/project";
 import {
   useAssumptions,
   useCalculateScenarios,
+  useMarginMonitor,
   useReviewEconomics,
   useSaveAssumptions,
   useScenarios,
@@ -64,6 +65,8 @@ export function EconomicsScreen({
           scenariosQuery={scenariosQuery}
         />
       </div>
+
+      <MarginMonitorCard root={root} />
 
       {scenarios.length > 0 && onNavigate ? (
         <div className="om-card screen__nav-foot">
@@ -152,6 +155,19 @@ function AssumptionsForm({ root, initial }: { root: string; initial: CostAssumpt
           />
         </Field>
       ))}
+
+      <p className="om-eyebrow">Margin monitor</p>
+      <Field hint="0–100 — flags scenarios whose margin at market price falls below this" label="Minimum acceptable margin %">
+        <input
+          className="om-input om-money"
+          inputMode="decimal"
+          onChange={(event) =>
+            setDraft({ ...draft, marginThresholdPercent: event.target.value || null })
+          }
+          pattern="\d+(\.\d{1,2})?"
+          value={draft.marginThresholdPercent ?? ""}
+        />
+      </Field>
 
       <div className="screen__form-foot">
         <button className="om-button om-button--primary" disabled={save.isPending} type="submit">
@@ -267,5 +283,92 @@ function ScenarioPanel({
         </>
       )}
     </aside>
+  );
+}
+
+/**
+ * Phase 2 — margin monitoring: deterministic drift flags computed in the core
+ * from the saved scenarios against the latest snapshot's median market price.
+ */
+function MarginMonitorCard({ root }: { root: string }) {
+  const monitor = useMarginMonitor(root);
+
+  if (monitor.isPending) {
+    return (
+      <section className="om-card" aria-label="Margin monitor">
+        <p className="om-eyebrow">Margin monitor</p>
+        <p className="om-loading">
+          <span className="om-spinner" /> Watching market drift…
+        </p>
+      </section>
+    );
+  }
+  if (monitor.isError) {
+    return (
+      <section className="om-card" aria-label="Margin monitor">
+        <p className="om-eyebrow">Margin monitor</p>
+        <ErrorState error={monitor.error} onRetry={() => monitor.refetch()} />
+      </section>
+    );
+  }
+
+  const data = monitor.data.monitor;
+  const breached = data.flags.filter((flag) => flag.status === "breached");
+  const watching = data.flags.filter((flag) => flag.status === "watch");
+
+  return (
+    <section className="om-card" aria-label="Margin monitor">
+      <p className="om-eyebrow">Margin monitor</p>
+      {data.thresholdPercent === null ? (
+        <p className="om-field__hint">
+          Set a minimum acceptable margin % in the assumptions to watch market drift.
+        </p>
+      ) : data.marketPrice === null ? (
+        <p className="om-field__hint">
+          Capture a market snapshot on the Competitors tab — the monitor compares your scenarios
+          against its median price.
+        </p>
+      ) : (
+        <>
+          <LedgerRow label="Market reference (median)" value={data.marketPrice} tone="brass" />
+          <LedgerRow label="Your minimum margin" value={`${data.thresholdPercent}%`} />
+          {breached.length > 0 ? (
+            <p className="om-badge om-badge--danger" role="status">
+              {breached.length === data.flags.length
+                ? "All scenarios breach the threshold at market price"
+                : `${breached.length} scenario${breached.length > 1 ? "s" : ""} breach the threshold at market price`}
+            </p>
+          ) : watching.length > 0 ? (
+            <p className="om-badge om-badge--brass" role="status">
+              {watching.length} scenario{watching.length > 1 ? "s" : ""} near the threshold
+            </p>
+          ) : (
+            <p className="om-badge om-badge--accent" role="status">
+              All scenarios healthy at market price
+            </p>
+          )}
+          <div className="om-ledger">
+            {data.flags.map((flag) => (
+              <LedgerRow
+                key={flag.scenario}
+                label={`${flag.scenario} — sell ${flag.sellingPrice}`}
+                value={
+                  flag.marginAtMarketPrice === null
+                    ? "—"
+                    : `${flag.marginAtMarketPrice}% (${flag.status})`
+                }
+                tone={
+                  flag.status === "breached"
+                    ? "muted"
+                    : flag.status === "watch"
+                      ? "brass"
+                      : undefined
+                }
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </section>
   );
 }

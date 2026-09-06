@@ -6,6 +6,7 @@ import type {
   EconomicsScenario,
   EvidenceSource,
   ListingPriceHistory,
+  MarginFlag,
   MarketSnapshot,
   ProjectSnapshot,
   ReportSections,
@@ -41,6 +42,7 @@ export function emptyMockAssumptions(currency: string): CostAssumptions {
     paymentFeeRate: "0.00",
     otherCosts: "0.00",
     scenarioPrices: { low: null, base: null, high: null },
+    marginThresholdPercent: null,
   };
 }
 
@@ -328,6 +330,56 @@ export function createMockDesktopClient(
         }
       }
       return { history: [...byKey.values()].sort((a, b) => a.key.localeCompare(b.key)) };
+    },
+
+    marginMonitor: async (root) => {
+      const project = requireProject(projects, root);
+      await Promise.resolve();
+      const assumptions = project.assumptions;
+      const latest = project.marketSnapshots[0] ?? null;
+      const marketPrice = latest?.statistics.median ?? null;
+      const threshold = assumptions?.marginThresholdPercent ?? null;
+      const scopedAssumptions =
+        assumptions && project.scenarios.length > 0 ? assumptions : null;
+      const flags: MarginFlag[] = [];
+      if (scopedAssumptions) {
+        for (const scenario of project.scenarios) {
+          const current = Number(scenario.grossMarginPercent);
+          let marginAtMarket: number | null = null;
+          if (marketPrice !== null) {
+            const price = Number(marketPrice);
+            const totalCost =
+              Number(scopedAssumptions.acquisitionCost) +
+              Number(scopedAssumptions.shippingCost) +
+              (price * Number(scopedAssumptions.marketplaceFeeRate)) / 100 +
+              (price * Number(scopedAssumptions.paymentFeeRate)) / 100 +
+              Number(scopedAssumptions.otherCosts);
+            marginAtMarket = price > 0 ? ((price - totalCost) / price) * 100 : null;
+          }
+          let status: "healthy" | "watch" | "breached" | "unmonitored" = "unmonitored";
+          if (threshold !== null && marginAtMarket !== null) {
+            const limit = Number(threshold);
+            status =
+              marginAtMarket < limit ? "breached" : marginAtMarket < limit + 5 ? "watch" : "healthy";
+          }
+          flags.push({
+            scenario: scenario.scenario,
+            sellingPrice: scenario.sellingPrice,
+            grossMarginPercent: scenario.grossMarginPercent,
+            marginAtMarketPrice: marginAtMarket === null ? null : marginAtMarket.toFixed(2),
+            driftPercent: marginAtMarket === null ? null : (marginAtMarket - current).toFixed(2),
+            status,
+          });
+        }
+      }
+      return {
+        monitor: {
+          thresholdPercent: threshold ?? null,
+          marketPrice,
+          marketSource: latest?.id ?? null,
+          flags,
+        },
+      };
     },
 
     loadAssumptions: (root) => {

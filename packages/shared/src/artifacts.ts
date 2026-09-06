@@ -84,6 +84,8 @@ export const costAssumptionsSchema = z.object({
   paymentFeeRate: moneyStringSchema,
   otherCosts: moneyStringSchema,
   scenarioPrices: scenarioPricesSchema,
+  /** Minimum acceptable gross margin percent (phase 2 margin monitor). Absent in older files. */
+  marginThresholdPercent: moneyStringSchema.nullable().optional(),
 });
 
 export const scenarioNameSchema = z.enum(["low", "base", "high"]);
@@ -163,6 +165,26 @@ export const listingPriceHistorySchema = z.object({
   points: z.array(listingPricePointSchema),
 });
 
+/**
+ * Margin monitor (phase 2): deterministic comparison of each scenario's
+ * margin against the market reference price from the latest snapshot.
+ */
+export const marginFlagSchema = z.object({
+  scenario: scenarioNameSchema,
+  sellingPrice: moneyStringSchema,
+  grossMarginPercent: moneyStringSchema,
+  marginAtMarketPrice: moneyStringSchema.nullable(),
+  driftPercent: moneyStringSchema.nullable(),
+  status: z.enum(["healthy", "watch", "breached", "unmonitored"]),
+});
+
+export const marginMonitorSchema = z.object({
+  thresholdPercent: moneyStringSchema.nullable(),
+  marketPrice: moneyStringSchema.nullable(),
+  marketSource: z.string().nullable(),
+  flags: z.array(marginFlagSchema),
+});
+
 export type Manifest = z.infer<typeof manifestSchema>;
 export type Observation = z.infer<typeof observationSchema>;
 export type EvidenceSource = z.infer<typeof evidenceSourceSchema>;
@@ -177,6 +199,8 @@ export type SnapshotPriceChange = z.infer<typeof snapshotPriceChangeSchema>;
 export type SnapshotDiff = z.infer<typeof snapshotDiffSchema>;
 export type ListingPricePoint = z.infer<typeof listingPricePointSchema>;
 export type ListingPriceHistory = z.infer<typeof listingPriceHistorySchema>;
+export type MarginFlag = z.infer<typeof marginFlagSchema>;
+export type MarginMonitorResult = z.infer<typeof marginMonitorSchema>;
 export type ReportSections = z.infer<typeof reportSectionsSchema>;
 
 export function emptyReportSections(): ReportSections {

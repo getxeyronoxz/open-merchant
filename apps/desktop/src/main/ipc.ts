@@ -155,6 +155,9 @@ export function registerIpcHandlers(
     "snapshots/history": channel<"snapshots/history">(async ({ root }) => ({
       history: await service.listingPriceHistory(root),
     })),
+    "monitor/margin": channel<"monitor/margin">(async ({ root }) => ({
+      monitor: await service.marginMonitor(root),
+    })),
 
     "ai/config/load": channel<"ai/config/load">(() => aiConfig.publicConfig()),
     "ai/config/save": channel<"ai/config/save">(async (input) => {

@@ -79,6 +79,7 @@ export function emptyAssumptions(currency: string): CostAssumptions {
     paymentFeeRate: "0.00",
     otherCosts: "0.00",
     scenarioPrices: { low: null, base: null, high: null },
+    marginThresholdPercent: null,
   });
 }
 

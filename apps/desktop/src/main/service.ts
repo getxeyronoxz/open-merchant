@@ -9,6 +9,7 @@ import {
   competitorStatistics,
   fingerprintContents,
   importV0Project,
+  marginMonitor,
   nextSequentialId,
   renderOpportunityReport,
 } from "@open-merchant/core";
@@ -36,6 +37,7 @@ import type {
   GenerationOrigin,
   ListingPriceHistory,
   Manifest,
+  MarginMonitorResult,
   MarketSnapshot,
   ProvenanceRecord,
   ReportSections,
@@ -657,6 +659,22 @@ export class MerchantService {
 
   listingPriceHistory(root: string): Promise<ListingPriceHistory[]> {
     return this.withStore(root, (store) => store.listingPriceHistory());
+  }
+
+  /** Deterministic margin-drift monitor over the latest snapshot's median. */
+  marginMonitor(root: string): Promise<MarginMonitorResult> {
+    return this.withStore(root, async (store) => {
+      const assumptions = await store.loadAssumptions();
+      const scenarios = await store.loadScenarios();
+      const snapshots = await store.listMarketSnapshots();
+      const latest = snapshots[0] ?? null;
+      return marginMonitor(
+        assumptions,
+        scenarios,
+        latest?.statistics.median ?? null,
+        latest?.id ?? null,
+      );
+    });
   }
 
   listProvenance(root: string): Promise<ProvenanceRecord[]> {

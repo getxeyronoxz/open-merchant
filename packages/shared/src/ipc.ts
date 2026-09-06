@@ -9,6 +9,7 @@ import {
   isoDateTimeSchema,
   listingPriceHistorySchema,
   manifestSchema,
+  marginMonitorSchema,
   marketSnapshotSchema,
   reportSectionsSchema,
   snapshotDiffSchema,
@@ -242,6 +243,10 @@ export const ipc = {
   "snapshots/history": {
     request: rootOnlyInputSchema,
     response: z.object({ history: z.array(listingPriceHistorySchema) }),
+  },
+  "monitor/margin": {
+    request: rootOnlyInputSchema,
+    response: z.object({ monitor: marginMonitorSchema }),
   },
 
   // --- AI copilot -----------------------------------------------------------

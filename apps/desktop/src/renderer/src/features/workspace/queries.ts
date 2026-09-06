@@ -124,6 +124,7 @@ export function useCaptureMarketSnapshot(root: string) {
         ["snapshots", root],
         ["snapshot-history", root],
         ["runs", root],
+        ["margin-monitor", root],
       ),
   });
 }
@@ -133,6 +134,13 @@ export function useSnapshotDiff(root: string, fromId: string | null, toId: strin
     queryKey: ["snapshot-diff", root, fromId, toId],
     queryFn: () => client.snapshotDiff(root, fromId as string, toId as string),
     enabled: fromId !== null && toId !== null,
+  });
+}
+
+export function useMarginMonitor(root: string) {
+  return useQuery({
+    queryKey: ["margin-monitor", root],
+    queryFn: () => client.marginMonitor(root),
   });
 }
 
@@ -153,6 +161,7 @@ const ROOT_KEYS = (root: string) => ({
   scenarios: ["scenarios", root],
   sections: ["sections", root],
   report: ["report", root],
+  marginMonitor: ["margin-monitor", root],
 });
 
 export function useSaveEvidence(root: string) {
@@ -184,7 +193,7 @@ export function useSaveAssumptions(root: string) {
   const keys = ROOT_KEYS(root);
   return useMutation({
     mutationFn: (assumptions: CostAssumptions) => client.saveAssumptions(root, assumptions),
-    onSuccess: () => invalidate(keys.assumptions),
+    onSuccess: () => invalidate(keys.assumptions, keys.marginMonitor),
   });
 }
 
@@ -193,7 +202,7 @@ export function useCalculateScenarios(root: string) {
   const keys = ROOT_KEYS(root);
   return useMutation({
     mutationFn: () => client.calculateScenarios(root),
-    onSuccess: () => invalidate(keys.scenarios),
+    onSuccess: () => invalidate(keys.scenarios, keys.marginMonitor),
   });
 }
 
