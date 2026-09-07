@@ -13,6 +13,7 @@ import {
   marginMonitor,
   nextSequentialId,
   renderOpportunityReport,
+  worstFlagStatus,
 } from "@open-merchant/core";
 import {
   AiParseError,
@@ -41,6 +42,7 @@ import type {
   DecisionJournal,
   MarginMonitorResult,
   MarketSnapshot,
+  PortfolioEntry,
   ProvenanceRecord,
   ReportSections,
   RunRecord,
@@ -683,6 +685,77 @@ export class MerchantService {
   decisionJournal(root: string): Promise<DecisionJournal> {
     return this.withStore(root, async (store) =>
       decisionJournal(await store.journal.listRuns(), await store.loadEvidence(), new Date()),
+    );
+  }
+
+  /**
+   * Portfolio overview (phase 2): every known project with decision status,
+   * snapshot age, and margin flags — sorted so attention-needing projects
+   * surface first. Projects that cannot be opened still appear, flagged.
+   */
+  async portfolioOverview(
+    recents: readonly { name: string; path: string }[],
+  ): Promise<PortfolioEntry[]> {
+    const entries = await Promise.all(
+      recents.map(async (recent): Promise<PortfolioEntry> => {
+        try {
+          const store = await this.openStore(recent.path);
+          const runs = await store.journal.listRuns();
+          const reportRuns = runs
+            .filter((run) => run.operation === "reportGenerated" && run.status === "succeeded")
+            .sort((a, b) => a.completedAt.localeCompare(b.completedAt));
+          const lastReportAt =
+            reportRuns.length > 0
+              ? (reportRuns[reportRuns.length - 1] as RunRecord).completedAt
+              : null;
+          const assumptions = await store.loadAssumptions();
+          const scenarios = await store.loadScenarios();
+          const snapshots = await store.listMarketSnapshots();
+          const latest = snapshots[0] ?? null;
+          const monitor = marginMonitor(
+            assumptions,
+            scenarios,
+            latest?.statistics.median ?? null,
+            latest?.id ?? null,
+          );
+          const flags = monitor.flags.filter(
+            (flag): flag is typeof flag & { status: "healthy" | "watch" | "breached" } =>
+              flag.status !== "unmonitored",
+          );
+          return {
+            root: recent.path,
+            name: store.manifest.name,
+            currency: store.manifest.currency,
+            hasReport: reportRuns.length > 0,
+            lastReportAt,
+            snapshotCapturedAt: latest?.capturedAt ?? null,
+            snapshotAgeDays:
+              latest === null
+                ? null
+                : Math.max(0, Math.floor((Date.now() - Date.parse(latest.capturedAt)) / 86_400_000)),
+            thresholdPercent: monitor.thresholdPercent,
+            worstStatus: worstFlagStatus(flags),
+            flags: flags.map((flag) => ({ scenario: flag.scenario, status: flag.status })),
+          };
+        } catch {
+          return {
+            root: recent.path,
+            name: recent.name,
+            currency: "",
+            hasReport: false,
+            lastReportAt: null,
+            snapshotCapturedAt: null,
+            snapshotAgeDays: null,
+            thresholdPercent: null,
+            worstStatus: "none",
+            flags: [],
+          };
+        }
+      }),
+    );
+    const severity = { breached: 0, watch: 1, healthy: 2, none: 3 } as const;
+    return entries.sort(
+      (a, b) => severity[a.worstStatus] - severity[b.worstStatus] || a.name.localeCompare(b.name),
     );
   }
 

@@ -151,6 +151,13 @@ export function useDecisionJournal(root: string) {
   });
 }
 
+export function usePortfolioOverview() {
+  return useQuery({
+    queryKey: ["portfolio"],
+    queryFn: () => client.portfolioOverview(),
+  });
+}
+
 function useInvalidator() {
   const queryClient = useQueryClient();
   return (...keys: string[][]) => {

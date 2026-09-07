@@ -108,6 +108,54 @@ function requireProject(projects: MockProjectState[], root: string): MockProject
   return found;
 }
 
+/** Mock margin flags: shared by marginMonitor and the portfolio overview. */
+function mockMarginFlags(project: MockProjectState): MarginFlag[] {
+  const assumptions = project.assumptions;
+  const latest = project.marketSnapshots[0] ?? null;
+  const marketPrice = latest?.statistics.median ?? null;
+  const threshold = assumptions?.marginThresholdPercent ?? null;
+  if (!assumptions) return [];
+  const flags: MarginFlag[] = [];
+  for (const scenario of project.scenarios) {
+    const current = Number(scenario.grossMarginPercent);
+    let marginAtMarket: number | null = null;
+    if (marketPrice !== null) {
+      const price = Number(marketPrice);
+      const totalCost =
+        Number(assumptions.acquisitionCost) +
+        Number(assumptions.shippingCost) +
+        (price * Number(assumptions.marketplaceFeeRate)) / 100 +
+        (price * Number(assumptions.paymentFeeRate)) / 100 +
+        Number(assumptions.otherCosts);
+      marginAtMarket = price > 0 ? ((price - totalCost) / price) * 100 : null;
+    }
+    let status: "healthy" | "watch" | "breached" | "unmonitored" = "unmonitored";
+    if (threshold !== null && marginAtMarket !== null) {
+      const limit = Number(threshold);
+      status =
+        marginAtMarket < limit ? "breached" : marginAtMarket < limit + 5 ? "watch" : "healthy";
+    }
+    flags.push({
+      scenario: scenario.scenario,
+      sellingPrice: scenario.sellingPrice,
+      grossMarginPercent: scenario.grossMarginPercent,
+      marginAtMarketPrice: marginAtMarket === null ? null : marginAtMarket.toFixed(2),
+      driftPercent: marginAtMarket === null ? null : (marginAtMarket - current).toFixed(2),
+      status,
+    });
+  }
+  return flags;
+}
+
+function mockWorstStatus(
+  flags: readonly { status: "healthy" | "watch" | "breached" | "unmonitored" }[],
+): "healthy" | "watch" | "breached" | "none" {
+  if (flags.length === 0) return "none";
+  if (flags.some((flag) => flag.status === "breached")) return "breached";
+  if (flags.some((flag) => flag.status === "watch")) return "watch";
+  return "healthy";
+}
+
 const MOCK_ORIGIN: AiOrigin = {
   kind: "agent",
   agentId: "mock-agent",
@@ -335,49 +383,13 @@ export function createMockDesktopClient(
     marginMonitor: async (root) => {
       const project = requireProject(projects, root);
       await Promise.resolve();
-      const assumptions = project.assumptions;
       const latest = project.marketSnapshots[0] ?? null;
-      const marketPrice = latest?.statistics.median ?? null;
-      const threshold = assumptions?.marginThresholdPercent ?? null;
-      const scopedAssumptions =
-        assumptions && project.scenarios.length > 0 ? assumptions : null;
-      const flags: MarginFlag[] = [];
-      if (scopedAssumptions) {
-        for (const scenario of project.scenarios) {
-          const current = Number(scenario.grossMarginPercent);
-          let marginAtMarket: number | null = null;
-          if (marketPrice !== null) {
-            const price = Number(marketPrice);
-            const totalCost =
-              Number(scopedAssumptions.acquisitionCost) +
-              Number(scopedAssumptions.shippingCost) +
-              (price * Number(scopedAssumptions.marketplaceFeeRate)) / 100 +
-              (price * Number(scopedAssumptions.paymentFeeRate)) / 100 +
-              Number(scopedAssumptions.otherCosts);
-            marginAtMarket = price > 0 ? ((price - totalCost) / price) * 100 : null;
-          }
-          let status: "healthy" | "watch" | "breached" | "unmonitored" = "unmonitored";
-          if (threshold !== null && marginAtMarket !== null) {
-            const limit = Number(threshold);
-            status =
-              marginAtMarket < limit ? "breached" : marginAtMarket < limit + 5 ? "watch" : "healthy";
-          }
-          flags.push({
-            scenario: scenario.scenario,
-            sellingPrice: scenario.sellingPrice,
-            grossMarginPercent: scenario.grossMarginPercent,
-            marginAtMarketPrice: marginAtMarket === null ? null : marginAtMarket.toFixed(2),
-            driftPercent: marginAtMarket === null ? null : (marginAtMarket - current).toFixed(2),
-            status,
-          });
-        }
-      }
       return {
         monitor: {
-          thresholdPercent: threshold ?? null,
-          marketPrice,
+          thresholdPercent: project.assumptions?.marginThresholdPercent ?? null,
+          marketPrice: latest?.statistics.median ?? null,
           marketSource: latest?.id ?? null,
-          flags,
+          flags: mockMarginFlags(project),
         },
       };
     },
@@ -401,6 +413,44 @@ export function createMockDesktopClient(
         .sort((a, b) => a.observedAt.localeCompare(b.observedAt));
       // The mock tracks no runs; report entries exist only in the real shell.
       return { journal: { entries: [], staleEvidence, staleAfterDays: 30 } };
+    },
+
+    portfolioOverview: async () => {
+      await Promise.resolve();
+      const severity = { breached: 0, watch: 1, healthy: 2, none: 3 } as const;
+      const entries = projects.map((project) => {
+        const flags = mockMarginFlags(project)
+          .filter(
+            (flag): flag is MarginFlag & { status: "healthy" | "watch" | "breached" } =>
+              flag.status !== "unmonitored",
+          )
+          .map(({ scenario, status }) => ({
+            scenario,
+            status,
+          }));
+        const latest = project.marketSnapshots[0] ?? null;
+        return {
+          root: project.snapshot.root,
+          name: project.snapshot.manifest.name,
+          currency: project.snapshot.manifest.currency,
+          hasReport: project.generatedReport !== null,
+          lastReportAt: null,
+          snapshotCapturedAt: latest?.capturedAt ?? null,
+          snapshotAgeDays:
+            latest === null
+              ? null
+              : Math.max(0, Math.floor((Date.now() - Date.parse(latest.capturedAt)) / 86_400_000)),
+          thresholdPercent: project.assumptions?.marginThresholdPercent ?? null,
+          worstStatus: mockWorstStatus(flags),
+          flags,
+        };
+      });
+      return {
+        projects: entries.sort(
+          (a, b) =>
+            severity[a.worstStatus] - severity[b.worstStatus] || a.name.localeCompare(b.name),
+        ),
+      };
     },
 
     loadAssumptions: (root) => {

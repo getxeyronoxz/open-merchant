@@ -161,6 +161,9 @@ export function registerIpcHandlers(
     "journal/decision": channel<"journal/decision">(async ({ root }) => ({
       journal: await service.decisionJournal(root),
     })),
+    "portfolio/overview": channel<"portfolio/overview">(async () => ({
+      projects: await service.portfolioOverview(await recents.list()),
+    })),
 
     "ai/config/load": channel<"ai/config/load">(() => aiConfig.publicConfig()),
     "ai/config/save": channel<"ai/config/save">(async (input) => {

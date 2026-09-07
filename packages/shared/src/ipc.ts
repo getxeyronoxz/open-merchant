@@ -11,6 +11,7 @@ import {
   manifestSchema,
   decisionJournalSchema,
   marginMonitorSchema,
+  portfolioEntrySchema,
   marketSnapshotSchema,
   reportSectionsSchema,
   snapshotDiffSchema,
@@ -252,6 +253,10 @@ export const ipc = {
   "journal/decision": {
     request: rootOnlyInputSchema,
     response: z.object({ journal: decisionJournalSchema }),
+  },
+  "portfolio/overview": {
+    request: z.object({}),
+    response: z.object({ projects: z.array(portfolioEntrySchema) }),
   },
 
   // --- AI copilot -----------------------------------------------------------

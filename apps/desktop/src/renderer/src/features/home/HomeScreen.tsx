@@ -5,6 +5,7 @@ import { EmptyState, ErrorState, LedgerRow } from "@open-merchant/ui";
 
 import { client } from "../../client";
 import { useProject } from "../../state/project";
+import { usePortfolioOverview } from "../workspace/queries";
 
 /**
  * Home: create a project folder you own, reopen a recent one, or import a
@@ -14,6 +15,7 @@ import { useProject } from "../../state/project";
 export function HomeScreen() {
   const { openProject } = useProject();
   const queryClient = useQueryClient();
+  const portfolioQuery = usePortfolioOverview();
 
   const [parentDirectory, setParentDirectory] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -258,10 +260,97 @@ export function HomeScreen() {
         ) : null}
       </aside>
 
+      <PortfolioOverviewCard
+        openRecent={(path) => openRecent.mutate(path)}
+        portfolioQuery={portfolioQuery}
+      />
+
       <footer className="home__footer">
         <span>AGPL-3.0-only · Xeyronox</span>
         <span>Your files stay on this device</span>
       </footer>
     </main>
+  );
+}
+
+/**
+ * Phase 2 — portfolio view: every known project on one screen, worst-margin
+ * projects first, so the seller sees what needs attention in one glance.
+ */
+function PortfolioOverviewCard({
+  openRecent,
+  portfolioQuery,
+}: {
+  openRecent: (path: string) => void;
+  portfolioQuery: { isPending: boolean; isError: boolean; error: unknown; refetch: () => void; data?: { projects: { root: string; name: string; worstStatus: "healthy" | "watch" | "breached" | "none"; lastReportAt: string | null; snapshotAgeDays: number | null }[] } };
+}) {
+  if (portfolioQuery.isPending || portfolioQuery.isError) {
+    return portfolioQuery.isError ? (
+      <section className="om-card" aria-label="Portfolio">
+        <p className="om-eyebrow">Portfolio</p>
+        <ErrorState error={portfolioQuery.error} onRetry={() => portfolioQuery.refetch()} />
+      </section>
+    ) : null;
+  }
+
+  const projects = portfolioQuery.data?.projects ?? [];
+  if (projects.length === 0) return null;
+
+  const badgeClass = (status: string): string =>
+    status === "breached"
+      ? "om-badge om-badge--danger"
+      : status === "watch"
+        ? "om-badge om-badge--brass"
+        : status === "healthy"
+          ? "om-badge om-badge--accent"
+          : "om-badge";
+
+  return (
+    <section className="om-card" aria-label="Portfolio" style={{ margin: "0 auto var(--om-space-6)", width: "min(760px, 100%)" }}>
+      <p className="om-eyebrow">Portfolio</p>
+      <p className="om-field__hint">Every project on one screen — what needs attention today?</p>
+      <table className="om-table">
+        <thead>
+          <tr>
+            <th>Project</th>
+            <th>Last report</th>
+            <th>Last snapshot</th>
+            <th>Margin status</th>
+            <th>
+              <span className="visually-hidden">Actions</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {projects.map((project) => (
+            <tr key={project.root}>
+              <td>
+                <strong>{project.name}</strong>
+              </td>
+              <td>
+                {project.lastReportAt ? new Date(project.lastReportAt).toLocaleDateString() : "—"}
+              </td>
+              <td>
+                {project.snapshotAgeDays === null
+                  ? "—"
+                  : `${project.snapshotAgeDays} day${project.snapshotAgeDays === 1 ? "" : "s"} ago`}
+              </td>
+              <td>
+                <span className={badgeClass(project.worstStatus)}>{project.worstStatus}</span>
+              </td>
+              <td>
+                <button
+                  className="om-button om-button--ghost"
+                  onClick={() => openRecent(project.root)}
+                  type="button"
+                >
+                  Open
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
   );
 }

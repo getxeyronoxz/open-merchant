@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { CostAssumptions } from "@open-merchant/shared";
 
 import { calculateScenarios } from "../src/economics";
-import { marginMonitor } from "../src/monitor";
+import { marginMonitor, worstFlagStatus } from "../src/monitor";
 import { WorkspaceStore } from "../src/store";
 
 const tempDirs: string[] = [];
@@ -120,5 +120,22 @@ describe("margin monitor", () => {
     expect(noMarket.flags.every((flag) => flag.status === "unmonitored")).toBe(true);
     expect(noMarket.marketPrice).toBeNull();
     expect(noMarket.marketSource).toBeNull();
+  });
+
+  it("ranks portfolio status by worst flag", () => {
+    expect(worstFlagStatus([])).toBe("none");
+    expect(worstFlagStatus([{ scenario: "low", status: "healthy" }])).toBe("healthy");
+    expect(
+      worstFlagStatus([
+        { scenario: "low", status: "healthy" },
+        { scenario: "base", status: "watch" },
+      ]),
+    ).toBe("watch");
+    expect(
+      worstFlagStatus([
+        { scenario: "low", status: "watch" },
+        { scenario: "base", status: "breached" },
+      ]),
+    ).toBe("breached");
   });
 });

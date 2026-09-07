@@ -208,6 +208,33 @@ export const decisionJournalSchema = z.object({
   staleAfterDays: z.number().int().positive(),
 });
 
+/**
+ * Portfolio overview (phase 2): every known project on one screen — decision
+ * status, snapshot age, and margin flags — so the seller sees which project
+ * needs attention first.
+ */
+export const portfolioFlagSchema = z.object({
+  scenario: scenarioNameSchema,
+  status: z.enum(["healthy", "watch", "breached"]),
+});
+
+export const portfolioEntrySchema = z.object({
+  root: z.string(),
+  name: z.string(),
+  currency: z.string(),
+  hasReport: z.boolean(),
+  lastReportAt: isoDateTimeSchema.nullable(),
+  snapshotCapturedAt: isoDateTimeSchema.nullable(),
+  snapshotAgeDays: z.number().int().nonnegative().nullable(),
+  thresholdPercent: moneyStringSchema.nullable(),
+  worstStatus: z.enum(["healthy", "watch", "breached", "none"]),
+  flags: z.array(portfolioFlagSchema),
+});
+
+export const portfolioOverviewSchema = z.object({
+  projects: z.array(portfolioEntrySchema),
+});
+
 export type Manifest = z.infer<typeof manifestSchema>;
 export type Observation = z.infer<typeof observationSchema>;
 export type EvidenceSource = z.infer<typeof evidenceSourceSchema>;
@@ -227,6 +254,9 @@ export type MarginMonitorResult = z.infer<typeof marginMonitorSchema>;
 export type JournalEntry = z.infer<typeof journalEntrySchema>;
 export type StaleEvidence = z.infer<typeof staleEvidenceSchema>;
 export type DecisionJournal = z.infer<typeof decisionJournalSchema>;
+export type PortfolioFlag = z.infer<typeof portfolioFlagSchema>;
+export type PortfolioEntry = z.infer<typeof portfolioEntrySchema>;
+export type PortfolioOverview = z.infer<typeof portfolioOverviewSchema>;
 export type ReportSections = z.infer<typeof reportSectionsSchema>;
 
 export function emptyReportSections(): ReportSections {

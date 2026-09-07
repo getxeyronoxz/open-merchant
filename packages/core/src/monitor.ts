@@ -19,6 +19,16 @@ import { MoneyError, parseAmount, roundAmount, formatAmount } from "./money";
 
 const WATCH_BUFFER_POINTS = 5;
 
+/** Worst status across monitor flags; "none" when there is nothing to flag. */
+export function worstFlagStatus(
+  flags: readonly Pick<MarginFlag, "scenario" | "status">[],
+): "healthy" | "watch" | "breached" | "none" {
+  if (flags.length === 0) return "none";
+  if (flags.some((flag) => flag.status === "breached")) return "breached";
+  if (flags.some((flag) => flag.status === "watch")) return "watch";
+  return "healthy";
+}
+
 export function marginMonitor(
   assumptions: CostAssumptions,
   scenarios: EconomicsScenario[],
