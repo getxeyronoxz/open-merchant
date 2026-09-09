@@ -39,7 +39,5 @@ linux:
   # distribution without dependency juggling (built by electron-builder; the
   # release workflow installs snapcraft/flatpak requirements).
   maintainer: Xeyronox
-snap:
-  concurrency: 1
 flatpak:
   runtimeVersion: "23.08"
