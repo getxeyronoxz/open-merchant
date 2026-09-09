@@ -415,6 +415,82 @@ export function createMockDesktopClient(
       return { journal: { entries: [], staleEvidence, staleAfterDays: 30 } };
     },
 
+    exportCsv: async (root, kind) => {
+      const project = requireProject(projects, root);
+      await Promise.resolve();
+      const rows: string[][] =
+        kind === "competitors"
+          ? [["id", "product", "brand", "price", "currency", "marketplace", "url", "notes"],
+             ...project.competitors.map((c) => [c.id, c.product, c.brand, c.price ?? "", c.currency, c.marketplace, c.url, c.notes])]
+          : kind === "evidence"
+            ? [["id", "title", "url", "observedAt"],
+               ...project.evidence.map((s) => [s.id, s.title, s.url, s.observedAt])]
+            : [["scenario", "sellingPrice", "totalCost", "grossProfit", "grossMarginPercent"],
+               ...project.scenarios.map((s) => [s.scenario, s.sellingPrice, s.totalCost, s.grossProfit, s.grossMarginPercent])];
+      return {
+        csv: rows.map((row) => row.map((field) => (/[",\n]/u.test(field) ? `"${field}"` : field)).join(",")).join("\n"),
+        filename: `mock-${kind}.csv`,
+      };
+    },
+    parseCsv: async (csv) => {
+      await Promise.resolve();
+      const lines = csv.split(/\r?\n/u).filter((line) => line.trim().length > 0);
+      const [header] = lines;
+      return { headers: (header ?? "").split(","), rowCount: Math.max(0, lines.length - 1) };
+    },
+    importCompetitorsCsv: async (root, csv) => {
+      const project = requireProject(projects, root);
+      await Promise.resolve();
+      const lines = csv.split(/\r?\n/u).filter((line) => line.trim().length > 0);
+      const [header, ...dataRows] = lines;
+      const columns = (header ?? "").split(",");
+      const productIndex = columns.findIndex((name) => name.trim().toLowerCase() === "product");
+      const priceIndex = columns.findIndex((name) => name.trim().toLowerCase() === "price");
+      if (productIndex < 0) {
+        throw new AppError({ code: "invalid-input", message: "Map the product column to import competitors" });
+      }
+      const errors: { row: number; message: string }[] = [];
+      let imported = 0;
+      dataRows.forEach((line, index) => {
+        const cells = line.split(",");
+        const product = (cells[productIndex] ?? "").trim();
+        if (product.length === 0) {
+          errors.push({ row: index + 2, message: "Product name is required" });
+          return;
+        }
+        const rawPrice = (cells[priceIndex] ?? "").trim();
+        let price: string | null = null;
+        if (rawPrice.length > 0 && !/^\d+(\.\d{1,2})?$/u.test(rawPrice)) {
+          errors.push({ row: index + 2, message: `Price "${rawPrice}" is not a valid amount` });
+          return;
+        }
+        price = rawPrice.length > 0 ? rawPrice : null;
+        project.competitors.push({
+          id: `C-${String(project.competitors.length + 1).padStart(3, "0")}`,
+          product,
+          brand: "",
+          price,
+          currency: project.snapshot.manifest.currency,
+          marketplace: "",
+          url: "",
+          sourceId: null,
+          notes: "Imported from CSV (mock)",
+          observedAt: new Date().toISOString(),
+        });
+        imported += 1;
+      });
+      return { imported, skipped: errors.length, errors };
+    },
+    createArchive: async () => {
+      throw new AppError({ code: "not-found", message: "Archives are available in the desktop app." });
+    },
+    restoreArchive: async () => {
+      throw new AppError({ code: "not-found", message: "Archives are available in the desktop app." });
+    },
+    exportReportPdf: async () => {
+      throw new AppError({ code: "not-found", message: "PDF export is available in the desktop app." });
+    },
+
     portfolioOverview: async () => {
       await Promise.resolve();
       const severity = { breached: 0, watch: 1, healthy: 2, none: 3 } as const;

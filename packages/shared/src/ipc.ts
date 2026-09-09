@@ -259,6 +259,41 @@ export const ipc = {
     response: z.object({ projects: z.array(portfolioEntrySchema) }),
   },
 
+  // --- file-first pillar (phase 2) -------------------------------------------
+
+  "csv/export": {
+    request: z.object({ root: z.string(), kind: z.enum(["competitors", "evidence", "scenarios"]) }),
+    response: z.object({ csv: z.string(), filename: z.string() }),
+  },
+  "csv/parse": {
+    request: z.object({ csv: z.string().min(1) }),
+    response: z.object({ headers: z.array(z.string()), rowCount: z.number().int().nonnegative() }),
+  },
+  "csv/import": {
+    request: z.object({
+      root: z.string(),
+      csv: z.string().min(1),
+      mapping: z.record(z.string()).optional(),
+    }),
+    response: z.object({
+      imported: z.number().int().nonnegative(),
+      skipped: z.number().int().nonnegative(),
+      errors: z.array(z.object({ row: z.number().int(), message: z.string() })),
+    }),
+  },
+  "archive/create": {
+    request: rootOnlyInputSchema,
+    response: z.object({ archiveBase64: z.string(), filename: z.string() }),
+  },
+  "archive/restore": {
+    request: z.object({ parentDirectory: z.string(), archiveBase64: z.string().min(1) }),
+    response: z.object({ snapshot: projectSnapshotSchema }),
+  },
+  "report/export-pdf": {
+    request: rootOnlyInputSchema,
+    response: z.object({ saved: z.boolean(), path: z.string().nullable() }),
+  },
+
   // --- AI copilot -----------------------------------------------------------
 
   "ai/config/load": {

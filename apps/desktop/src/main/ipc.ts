@@ -1,5 +1,7 @@
 import { type IpcChannel, type IpcRequest, type IpcResponse, AppError, ipc } from "@open-merchant/shared";
-import { app, dialog, ipcMain } from "electron";
+import { parseCsv, renderReportHtml } from "@open-merchant/core";
+import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { writeFile } from "node:fs/promises";
 
 import { RecentsStore } from "./recents";
 import type { AiConfigStore } from "./ai-config";
@@ -164,6 +166,50 @@ export function registerIpcHandlers(
     "portfolio/overview": channel<"portfolio/overview">(async () => ({
       projects: await service.portfolioOverview(await recents.list()),
     })),
+
+    "csv/export": channel<"csv/export">(async ({ root, kind }) => service.exportCsv(root, kind)),
+    "csv/parse": channel<"csv/parse">(async ({ csv }) => {
+      const rows = parseCsv(csv);
+      const [headers] = rows;
+      return { headers: headers ?? [], rowCount: Math.max(0, rows.length - 1) };
+    }),
+    "csv/import": channel<"csv/import">(async ({ root, csv, mapping }) => ({
+      ...(await service.importCompetitorsCsv(root, csv, mapping)),
+    })),
+    "archive/create": channel<"archive/create">(async ({ root }) => service.createArchive(root)),
+    "archive/restore": channel<"archive/restore">(async ({ parentDirectory, archiveBase64 }) => {
+      const result = await service.restoreArchive(parentDirectory, archiveBase64);
+      await recents.upsert(result.manifest.name, result.root);
+      return { snapshot: { root: result.root, manifest: result.manifest } };
+    }),
+    "report/export-pdf": channel<"report/export-pdf">(async ({ root }) => {
+      const markdown = await service.loadGeneratedReport(root);
+      if (markdown === null) {
+        throw new AppError({ code: "not-found", message: "Generate a report before exporting." });
+      }
+      const html = renderReportHtml(markdown, "Open Merchant — opportunity report");
+      const pdfWindow = new BrowserWindow({
+        show: false,
+        webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+      });
+      try {
+        await pdfWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+        const pdf = await pdfWindow.webContents.printToPDF({
+          printBackground: true,
+          margins: { top: 0.6, bottom: 0.6, left: 0.6, right: 0.6 },
+        });
+        const result = await dialog.showSaveDialog({
+          title: "Export report as PDF",
+          defaultPath: "opportunity-report.pdf",
+          filters: [{ name: "PDF", extensions: ["pdf"] }],
+        });
+        if (result.canceled || !result.filePath) return { saved: false, path: null };
+        await writeFile(result.filePath, pdf);
+        return { saved: true, path: result.filePath };
+      } finally {
+        pdfWindow.destroy();
+      }
+    }),
 
     "ai/config/load": channel<"ai/config/load">(() => aiConfig.publicConfig()),
     "ai/config/save": channel<"ai/config/save">(async (input) => {

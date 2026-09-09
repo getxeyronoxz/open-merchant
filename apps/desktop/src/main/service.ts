@@ -1,19 +1,25 @@
 import { randomUUID } from "node:crypto";
+import { join } from "node:path";
 
 import {
   ArtifactPaths,
   DomainError,
   ValidationError,
+  WorkspaceError,
   WorkspaceStore,
   calculateScenarios,
   competitorStatistics,
+  createArchive,
   decisionJournal,
   fingerprintContents,
   importV0Project,
   marginMonitor,
   nextSequentialId,
+  projectFolderName,
+  readArchive,
   renderOpportunityReport,
   worstFlagStatus,
+  writeFileAtomically,
 } from "@open-merchant/core";
 import {
   AiParseError,
@@ -25,28 +31,29 @@ import {
   draftResearchPlan,
   reviewEconomics,
 } from "@open-merchant/ai";
-import type {
-  AiOrigin,
-  AuditReport,
-  CompetitorDraft,
-  EconomicsReview,
-  ResearchPlan,
-  Competitor,
-  CompetitorStatistics,
-  CostAssumptions,
-  EconomicsScenario,
-  EvidenceSource,
-  GenerationOrigin,
-  ListingPriceHistory,
-  Manifest,
-  DecisionJournal,
-  MarginMonitorResult,
-  MarketSnapshot,
-  PortfolioEntry,
-  ProvenanceRecord,
-  ReportSections,
-  RunRecord,
-  SnapshotDiff,
+import {
+  manifestSchema,
+  type AiOrigin,
+  type AuditReport,
+  type Competitor,
+  type CompetitorDraft,
+  type CompetitorStatistics,
+  type CostAssumptions,
+  type DecisionJournal,
+  type EconomicsReview,
+  type EconomicsScenario,
+  type EvidenceSource,
+  type GenerationOrigin,
+  type ListingPriceHistory,
+  type Manifest,
+  type MarginMonitorResult,
+  type MarketSnapshot,
+  type PortfolioEntry,
+  type ProvenanceRecord,
+  type ReportSections,
+  type ResearchPlan,
+  type RunRecord,
+  type SnapshotDiff,
 } from "@open-merchant/shared";
 import { AppError } from "@open-merchant/shared";
 
@@ -686,6 +693,81 @@ export class MerchantService {
     return this.withStore(root, async (store) =>
       decisionJournal(await store.journal.listRuns(), await store.loadEvidence(), new Date()),
     );
+  }
+
+  /** File-first pillar: CSV export of the requested table. */
+  async exportCsv(root: string, kind: "competitors" | "evidence" | "scenarios") {
+    return this.withStore(root, async (store) => ({
+      csv: await store.exportCsv(kind),
+      filename: `${projectFolderName(store.manifest.name)}-${kind}.csv`,
+    }));
+  }
+
+  /** File-first pillar: validated CSV import with row-level error reporting. */
+  importCompetitorsCsv(
+    root: string,
+    csvText: string,
+    mapping: Record<string, string> | undefined,
+  ): Promise<{ imported: number; skipped: number; errors: { row: number; message: string }[] }> {
+    return this.withStore(root, (store) =>
+      store.importCompetitorsCsv(csvText, mapping ?? {}),
+    );
+  }
+
+  /** File-first pillar: portable single-file project archive. */
+  async createArchive(root: string): Promise<{ archiveBase64: string; filename: string }> {
+    return this.withStore(root, async (store) => {
+      const bytes = createArchive(await store.listArchiveFiles());
+      return {
+        archiveBase64: bytes.toString("base64"),
+        filename: `${projectFolderName(store.manifest.name)}-${new Date().toISOString().slice(0, 10)}.omarchive`,
+      };
+    });
+  }
+
+  /** File-first pillar: restore an archive into a fresh project folder. */
+  async restoreArchive(
+    parentDirectory: string,
+    archiveBase64: string,
+  ): Promise<{ root: string; manifest: Manifest }> {
+    const files = readArchive(Buffer.from(archiveBase64, "base64"));
+    const manifestFile = files.find((file) => file.path === ArtifactPaths.manifest);
+    if (manifestFile === undefined) {
+      throw new AppError({
+        code: "invalid-input",
+        message: "The archive does not contain a project manifest.",
+      });
+    }
+    const archived = manifestSchema.parse(JSON.parse(manifestFile.content));
+    let store: WorkspaceStore | null = null;
+    for (let attempt = 0; attempt < 5 && store === null; attempt += 1) {
+      const name = attempt === 0 ? archived.name : `${archived.name} (restored ${attempt})`;
+      try {
+        store = await WorkspaceStore.create({
+          parentDirectory,
+          name,
+          objective: archived.objective,
+          currency: archived.currency,
+        });
+      } catch (error) {
+        if (!(error instanceof WorkspaceError) || !/already exists/iu.test(error.message)) {
+          throw toAppError(error);
+        }
+      }
+    }
+    if (store === null) {
+      throw new AppError({
+        code: "already-exists",
+        message: "Could not find a free project name to restore into.",
+      });
+    }
+    // The freshly created store holds seeded defaults; overwrite everything
+    // the archive carries except the manifest (its identity stays new).
+    for (const file of files) {
+      if (file.path === ArtifactPaths.manifest) continue;
+      await writeFileAtomically(join(store.root, ...file.path.split("/")), file.content);
+    }
+    return { root: store.root, manifest: store.manifest };
   }
 
   /**

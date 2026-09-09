@@ -1046,3 +1046,22 @@ body {
 }
 
 
+
+/* --- Windows title-bar overlay (phase 2 UI pass) ----------------------------
+   The top chrome drags the window; every interactive element inside stays
+   clickable. Reserve space for the overlay controls on Windows only. */
+.shell__titlebar,
+.home__top {
+  -webkit-app-region: drag;
+}
+
+.shell__titlebar button,
+.shell__titlebar a,
+.shell__titlebar input,
+.home__top button {
+  -webkit-app-region: no-drag;
+}
+
+html.platform-win32 .shell__titlebar {
+  padding-right: 148px;
+}

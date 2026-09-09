@@ -39,9 +39,11 @@ The research-to-decision core becomes a standing tool the seller keeps open afte
 
 And a pillar for the people who chose desktop software on purpose — the file-first, unglamorous work that subscription SaaS forgot:
 
-* Portable project folders — archive a workspace to a single versioned file and restore it anywhere; old archives keep opening. Done when: an archive made on Windows opens identically on macOS and Linux.
-* Spreadsheet bridges — CSV import with column mapping and row-level validation (bad rows rejected with reasons, never silently "fixed" — supplier data is dirty and the seller must see why), and CSV export for competitors, evidence, scenarios, and snapshots. Done when: a supplier spreadsheet becomes a competitor table in under two minutes, and any table in the app can be exported back out — without a single byte leaving the machine.
-* Print-perfect output — a dedicated print stylesheet and Chromium print-to-PDF, so the generated report prints and PDFs exactly as it appears on screen, header to footer, because "send me the document" is still how business is done. Done when: the printed report is indistinguishable from the app's paper document.
+* Portable project folders — archive a workspace to a single versioned file and restore it anywhere; old archives keep opening. **Implemented 2026-09-05 — ships with the next alpha.**
+* Spreadsheet bridges — CSV import with column mapping and row-level validation (bad rows rejected with reasons, never silently "fixed" — supplier data is dirty and the seller must see why), and CSV export for competitors, evidence, scenarios, and snapshots. **Implemented 2026-09-05 — ships with the next alpha.**
+* Print-perfect output — a dedicated print stylesheet and Chromium print-to-PDF, so the generated report prints and PDFs exactly as it appears on screen, header to footer. **Implemented 2026-09-05 — ships with the next alpha.**
+
+Also in this phase: a UI improvement pass (integrated Windows title-bar overlay in the Ledger palette, portfolio table on the Home screen, explicit empty-state guidance in every new panel), stronger AI system prompts (groundedness, honesty about gaps, strict JSON discipline), and Linux universal packaging — snap and flatpak targets join AppImage in the release workflow.
 
 Phase 2 changes what the tool does; the ground rules never move: local-first, no accounts, no telemetry, no autonomous agents, and math that never touches floating point or an LLM.
 

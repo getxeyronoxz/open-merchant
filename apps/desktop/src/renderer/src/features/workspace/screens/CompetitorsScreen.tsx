@@ -14,6 +14,8 @@ import {
   useSaveCompetitors,
   useSnapshotDiff,
 } from "../queries";
+import { client } from "../../../client";
+import { useQueryClient } from "@tanstack/react-query";
 import type { SectionName } from "../useWorkflowProgress";
 
 function nextCompetitorId(existing: Competitor[]): string {
@@ -297,6 +299,8 @@ export function CompetitorsScreen({
 
       <MarketSnapshotsCard root={root} currency={projectCurrency} />
 
+      <SpreadsheetBridgeCard root={root} currency={projectCurrency} />
+
       {competitors.length > 0 && onNavigate ? (
         <div className="om-card screen__nav-foot">
           <div>
@@ -320,6 +324,183 @@ export function CompetitorsScreen({
 
 function fmt(value: string | null, currency: string): string {
   return value === null ? "—" : `${currency} ${value}`;
+}
+
+/**
+ * Phase 2 — spreadsheet bridge: CSV export of the market table and validated
+ * CSV import with auto-detected column mapping and per-row error reporting.
+ */
+function SpreadsheetBridgeCard({ root, currency }: { root: string; currency: string }) {
+  const queryClient = useQueryClient();
+  const [csvText, setCsvText] = useState<string | null>(null);
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [importResult, setImportResult] = useState<{
+    imported: number;
+    skipped: number;
+    errors: { row: number; message: string }[];
+  } | null>(null);
+  const [exportError, setExportError] = useState<unknown>(null);
+  const [importError, setImportError] = useState<unknown>(null);
+
+  const invalidateAll = () => {
+    void queryClient.invalidateQueries({ queryKey: ["competitors", root] });
+    void queryClient.invalidateQueries({ queryKey: ["statistics", root] });
+    void queryClient.invalidateQueries({ queryKey: ["snapshots", root] });
+    void queryClient.invalidateQueries({ queryKey: ["margin-monitor", root] });
+  };
+
+  const downloadCsv = async (kind: "competitors" | "evidence" | "scenarios") => {
+    setExportError(null);
+    try {
+      const result = await client.exportCsv(root, kind);
+      const blob = new Blob([result.csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = result.filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setExportError(error);
+    }
+  };
+
+  const onFileChosen = async (file: File | undefined) => {
+    setImportError(null);
+    setImportResult(null);
+    if (!file) {
+      setCsvText(null);
+      setHeaders([]);
+      return;
+    }
+    const text = await file.text();
+    setCsvText(text);
+    try {
+      const preview = await client.parseCsv(text);
+      setHeaders(preview.headers);
+      const lowered = preview.headers.map((name) => name.trim().toLowerCase());
+      const pick = (...aliases: string[]): string => {
+        const index = lowered.findIndex((name) => aliases.includes(name));
+        return index >= 0 ? (preview.headers[index] as string) : "";
+      };
+      setMapping({
+        product: pick("product", "item", "title", "name"),
+        brand: pick("brand", "manufacturer"),
+        price: pick("price", "cost", "amount"),
+        marketplace: pick("marketplace", "platform", "store"),
+        url: pick("url", "link"),
+      });
+    } catch (error) {
+      setImportError(error);
+    }
+  };
+  /* __BRIDGE_PART2__ */
+
+  const mappingSelect = (label: string, key: string, required: boolean) => (
+    <label className="om-field">
+      <span className="om-field__label">
+        {label}
+        {required ? " (required)" : ""}
+      </span>
+      <select
+        className="om-input"
+        onChange={(event) => setMapping({ ...mapping, [key]: event.target.value })}
+        value={mapping[key] ?? ""}
+      >
+        <option value="">— not mapped —</option>
+        {headers.map((header) => (
+          <option key={header} value={header}>
+            {header}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+
+  const runImport = () => {
+    if (!csvText) return;
+    client
+      .importCompetitorsCsv(root, csvText, mapping)
+      .then((result) => {
+        setImportResult(result);
+        invalidateAll();
+      })
+      .catch((error) => setImportError(error));
+  };
+
+  return (
+    <section className="om-card" aria-label="Spreadsheet bridge">
+      <p className="om-eyebrow">Spreadsheet bridge</p>
+      <p className="om-field__hint">
+        Take the market table into any spreadsheet, or bring supplier prices in as CSV. Imported
+        rows are validated one by one — bad rows are reported, never silently fixed.
+      </p>
+      <div style={{ display: "flex", gap: "var(--om-space-3)", flexWrap: "wrap" }}>
+        <button className="om-button om-button--secondary" onClick={() => void downloadCsv("competitors")} type="button">
+          Export competitors CSV
+        </button>
+        <button className="om-button om-button--ghost" onClick={() => void downloadCsv("evidence")} type="button">
+          Export evidence CSV
+        </button>
+        <button className="om-button om-button--ghost" onClick={() => void downloadCsv("scenarios")} type="button">
+          Export scenarios CSV
+        </button>
+      </div>
+      {exportError ? <ErrorState error={exportError} /> : null}
+
+      <div className="om-field" style={{ marginTop: "var(--om-space-3)" }}>
+        <span className="om-field__label">Import competitors from CSV</span>
+        <input
+          accept=".csv,text/csv"
+          className="om-input"
+          onChange={(event) => void onFileChosen(event.target.files?.[0])}
+          type="file"
+        />
+      </div>
+      {csvText !== null && headers.length > 0 ? (
+        <>
+          <p className="om-eyebrow">Column mapping</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "var(--om-space-3)" }}>
+            {mappingSelect("Product", "product", true)}
+            {mappingSelect("Brand", "brand", false)}
+            {mappingSelect("Price", "price", false)}
+            {mappingSelect("Marketplace", "marketplace", false)}
+            {mappingSelect("URL", "url", false)}
+          </div>
+          <button
+            className="om-button om-button--primary"
+            disabled={!mapping.product}
+            onClick={runImport}
+            type="button"
+          >
+            Import rows
+          </button>
+        </>
+      ) : null}
+      {importError ? <ErrorState error={importError} /> : null}
+      {importResult ? (
+        <p className="om-badge om-badge--accent" role="status">
+          Imported {importResult.imported} rows
+          {importResult.skipped > 0 ? ` — ${importResult.skipped} skipped (see errors)` : ""}
+        </p>
+      ) : null}
+      {importResult !== null && importResult.errors.length > 0 ? (
+        <ul className="artifacts__provenance">
+          {importResult.errors.map((error) => (
+            <li key={`${error.row}-${error.message}`} className="om-ledger__row">
+              <span className="om-badge om-badge--danger">row {error.row}</span>
+              <span aria-hidden="true" className="om-ledger__leader" />
+              <span>{error.message}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <p className="om-field__hint" style={{ marginTop: "var(--om-space-2)" }}>
+        Prices are {currency}-denominated and must be plain amounts, e.g. 499.00.
+      </p>
+    </section>
+  );
 }
 
 /**

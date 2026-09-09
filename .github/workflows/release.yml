@@ -30,6 +30,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Universal Linux packages (snap + flatpak) need their builders present.
+      - name: Install Linux packaging tooling
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y snapcraft flatpak flatpak-builder
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
       - name: Build renderer + main + preload
         run: pnpm --filter @open-merchant/desktop build
 

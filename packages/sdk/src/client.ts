@@ -86,6 +86,12 @@ export interface DesktopClient {
   marginMonitor(root: string): Promise<IpcResponse<"monitor/margin">>;
   decisionJournal(root: string): Promise<IpcResponse<"journal/decision">>;
   portfolioOverview(): Promise<IpcResponse<"portfolio/overview">>;
+  exportCsv(root: string, kind: IpcRequest<"csv/export">["kind"]): Promise<IpcResponse<"csv/export">>;
+  parseCsv(csv: string): Promise<IpcResponse<"csv/parse">>;
+  importCompetitorsCsv(root: string, csv: string, mapping?: Record<string, string>): Promise<IpcResponse<"csv/import">>;
+  createArchive(root: string): Promise<IpcResponse<"archive/create">>;
+  restoreArchive(parentDirectory: string, archiveBase64: string): Promise<IpcResponse<"archive/restore">>;
+  exportReportPdf(root: string): Promise<IpcResponse<"report/export-pdf">>;
 
   loadAiConfig(): Promise<IpcResponse<"ai/config/load">>;
   saveAiConfig(request: IpcRequest<"ai/config/save">): Promise<IpcResponse<"ai/config/save">>;
@@ -144,6 +150,14 @@ export function createDesktopClient(raw: RawInvoke): DesktopClient {
     marginMonitor: (root) => invoke(raw, "monitor/margin", { root }),
     decisionJournal: (root) => invoke(raw, "journal/decision", { root }),
     portfolioOverview: () => invoke(raw, "portfolio/overview", {}),
+    exportCsv: (root, kind) => invoke(raw, "csv/export", { root, kind }),
+    parseCsv: (csv) => invoke(raw, "csv/parse", { csv }),
+    importCompetitorsCsv: (root, csv, mapping) =>
+      invoke(raw, "csv/import", { root, csv, mapping }),
+    createArchive: (root) => invoke(raw, "archive/create", { root }),
+    restoreArchive: (parentDirectory, archiveBase64) =>
+      invoke(raw, "archive/restore", { parentDirectory, archiveBase64 }),
+    exportReportPdf: (root) => invoke(raw, "report/export-pdf", { root }),
 
     loadAiConfig: () => invoke(raw, "ai/config/load", {}),
     saveAiConfig: (request) => invoke(raw, "ai/config/save", request),

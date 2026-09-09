@@ -14,6 +14,8 @@ import {
   useReadHistory,
   useRuns,
 } from "../queries";
+import { useQueryClient } from "@tanstack/react-query";
+import { useProject } from "../../../state/project";
 import type { SectionName } from "../useWorkflowProgress";
 
 const REPORT_ARTIFACT = "reports/opportunity-report.md";
@@ -380,6 +382,8 @@ export function ArtifactsScreen({
         </>
       ) : null}
 
+      <DataBackupsCard onRestored={() => undefined} />
+
       <DecisionJournalCard root={root} />
 
       <div className="om-card om-card--inset" style={{ marginTop: "var(--om-space-4)" }}>
@@ -526,6 +530,155 @@ function DecisionJournalCard({ root }: { root: string }) {
           ) : null}
         </>
       )}
+    </section>
+  );
+}
+
+/**
+ * Phase 2 — data & backups: CSV exports, portable single-file archive
+ * create/restore, and print-perfect PDF export of the generated report.
+ */
+function DataBackupsCard({ onRestored }: { onRestored: () => void }) {
+  const queryClient = useQueryClient();
+  const { project, openProject } = useProject();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  const root = project?.root ?? "";
+
+  const run = async (label: string, work: () => Promise<void>) => {
+    setBusy(label);
+    setError(null);
+    setMessage(null);
+    try {
+      await work();
+    } catch (caught) {
+      setError(caught);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const download = (content: string, filename: string, type: string) => {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportCsv = (kind: "competitors" | "evidence" | "scenarios") =>
+    run(`csv-${kind}`, async () => {
+      const result = await client.exportCsv(root, kind);
+      download(result.csv, result.filename, "text/csv");
+      setMessage(`Exported ${result.filename}`);
+    });
+
+  const exportPdf = () =>
+    run("pdf", async () => {
+      const result = await client.exportReportPdf(root);
+      setMessage(result.saved ? `Saved PDF to ${result.path ?? ""}` : "PDF export canceled.");
+    });
+
+  const exportArchive = () =>
+    run("archive", async () => {
+      const result = await client.createArchive(root);
+      download(atob(result.archiveBase64), result.filename, "application/octet-stream");
+      setMessage(`Archive saved as ${result.filename}`);
+    });
+
+  const restoreArchive = (file: File | undefined) => {
+    if (!file || !project) return;
+    void run("restore", async () => {
+      const archiveBase64 = btoa(
+        Array.from(new Uint8Array(await file.arrayBuffer()))
+          .map((byte) => String.fromCharCode(byte))
+          .join(""),
+      );
+      const choose = await client.chooseDirectory("Choose where to restore the project");
+      if (choose.path === null) {
+        setMessage("Restore canceled — no folder chosen.");
+        return;
+      }
+      const result = await client.restoreArchive(choose.path, archiveBase64);
+      void queryClient.invalidateQueries({ queryKey: ["recents"] });
+      void queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+      onRestored();
+      openProject(result.snapshot);
+      setMessage(`Restored project at ${result.snapshot.root}`);
+    });
+  };
+
+  return (
+    <section className="om-card" aria-label="Data and backups">
+      <p className="om-eyebrow">Data &amp; backups</p>
+      <p className="om-field__hint">
+        Everything is plain files in your project folder. Archive packs the whole workspace —
+        evidence, competitors, snapshots, reports — into one portable file.
+      </p>
+      <div style={{ display: "flex", gap: "var(--om-space-3)", flexWrap: "wrap" }}>
+        <button
+          className="om-button om-button--secondary"
+          disabled={busy !== null || root === ""}
+          onClick={() => void exportCsv("competitors")}
+          type="button"
+        >
+          Competitors CSV
+        </button>
+        <button
+          className="om-button om-button--ghost"
+          disabled={busy !== null || root === ""}
+          onClick={() => void exportCsv("evidence")}
+          type="button"
+        >
+          Evidence CSV
+        </button>
+        <button
+          className="om-button om-button--ghost"
+          disabled={busy !== null || root === ""}
+          onClick={() => void exportCsv("scenarios")}
+          type="button"
+        >
+          Scenarios CSV
+        </button>
+        <button
+          className="om-button om-button--secondary"
+          disabled={busy !== null || root === ""}
+          onClick={() => void exportPdf()}
+          type="button"
+        >
+          {busy === "pdf" ? "Rendering…" : "Export report PDF"}
+        </button>
+        <button
+          className="om-button om-button--primary"
+          disabled={busy !== null || root === ""}
+          onClick={() => void exportArchive()}
+          type="button"
+        >
+          {busy === "archive" ? "Packing…" : "Create archive (.omarchive)"}
+        </button>
+      </div>
+      <div className="om-field" style={{ marginTop: "var(--om-space-3)" }}>
+        <span className="om-field__label">Restore from archive</span>
+        <input
+          accept=".omarchive,application/json"
+          className="om-input"
+          disabled={busy !== null}
+          onChange={(event) => restoreArchive(event.target.files?.[0])}
+          type="file"
+        />
+        <span className="om-field__hint">
+          Restores into a new project folder — never overwrites existing work.
+        </span>
+      </div>
+      {message ? (
+        <p className="om-badge om-badge--accent" role="status">
+          {message}
+        </p>
+      ) : null}
+      {error ? <ErrorState error={error} /> : null}
     </section>
   );
 }

@@ -23,10 +23,13 @@ import {
 } from "@open-merchant/shared";
 
 import { writeFileAtomically } from "./atomic";
+import { serializeCompetitorsCsv, serializeEvidenceCsv, serializeScenariosCsv, importCompetitorsFromCsv, type CompetitorColumnMapping } from "./csv";
+import type { ArchiveFile } from "./archive";
 import { fingerprintContents } from "./fingerprint";
 import { HISTORY_DIR, HistoryStore } from "./history";
 import {
   ArtifactPaths,
+  KNOWN_ARTIFACT_PATHS,
   MARKET_SNAPSHOTS_DIR,
   WORKSPACE_DIR,
   isSnapshotFileName,
@@ -35,6 +38,7 @@ import {
   resolveSnapshotFile,
 } from "./layout";
 import { RunJournal } from "./provenance";
+import { nextSequentialId } from "./ids";
 import {
   buildMarketSnapshot,
   diffSnapshots,
@@ -351,6 +355,54 @@ export class WorkspaceStore {
   async listingPriceHistory(): Promise<ListingPriceHistory[]> {
     const snapshots = await this.listMarketSnapshots();
     return listingPriceHistories([...snapshots].reverse());
+  }
+
+  /** File-first pillar: CSV export of the requested table. */
+  async exportCsv(kind: "competitors" | "evidence" | "scenarios"): Promise<string> {
+    if (kind === "competitors") return serializeCompetitorsCsv(await this.loadCompetitors());
+    if (kind === "evidence") return serializeEvidenceCsv(await this.loadEvidence());
+    return serializeScenariosCsv(await this.loadScenarios());
+  }
+
+  /** File-first pillar: validated CSV import, appending auto-id'd rows. */
+  async importCompetitorsCsv(
+    csvText: string,
+    mapping: Partial<CompetitorColumnMapping>,
+  ): Promise<{ imported: number; skipped: number; errors: { row: number; message: string }[] }> {
+    const existing = await this.loadCompetitors();
+    const result = importCompetitorsFromCsv(csvText, mapping, this.manifestValue.currency);
+    const competitors = [...existing];
+    for (const competitor of result.competitors) {
+      const id = nextSequentialId("C", competitors.map((entry) => entry.id));
+      competitors.push({ ...competitor, id });
+    }
+    await this.saveCompetitors(competitors);
+    return { imported: result.competitors.length, skipped: result.skipped, errors: result.errors };
+  }
+
+  /** Every archivable file of this workspace (known layout + snapshots). */
+  async listArchiveFiles(): Promise<ArchiveFile[]> {
+    const files: ArchiveFile[] = [];
+    for (const relative of KNOWN_ARTIFACT_PATHS) {
+      files.push({ path: relative, content: await this.readArtifactOrEmpty(relative) });
+    }
+    let names: string[] = [];
+    try {
+      names = (await readdir(join(this.root, MARKET_SNAPSHOTS_DIR))).filter(isSnapshotFileName);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw new WorkspaceError(`Cannot list market snapshots: ${String(error)}`);
+      }
+    }
+    for (const name of names.sort()) {
+      files.push({
+        path: `${MARKET_SNAPSHOTS_DIR}/${name}`,
+        content: await readArtifactIfPresent(join(this.root, MARKET_SNAPSHOTS_DIR, name)).then(
+          (text) => text ?? "",
+        ),
+      });
+    }
+    return files;
   }
 
   // --- artifact inspection ------------------------------------------------------

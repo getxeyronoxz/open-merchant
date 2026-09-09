@@ -17,6 +17,20 @@ function createMainWindow() {
     show: false,
     title: "Open Merchant",
     backgroundColor: "#0d0f0e",
+    // Integrated, VS Code-style title bar on Windows: the renderer top edge
+    // doubles as the drag region and the system controls adopt the Ledger
+    // palette. Linux keeps its native frame + our custom menu (overlay
+    // controls are unreliable across Linux window managers).
+    ...(process.platform === "win32"
+      ? {
+          titleBarStyle: "hidden" as const,
+          titleBarOverlay: {
+            color: "#0d0f0e",
+            symbolColor: "#e8e4d8",
+            height: 40,
+          },
+        }
+      : {}),
     // Packaged builds get the icon embedded in the executable; development
     // points at the source asset so the taskbar shows the mark too.
     ...(app.isPackaged
@@ -71,6 +85,13 @@ function buildApplicationMenu() {
             autoUpdater.checkForUpdates().catch(() => {
               // Offline or no feed: the updater stays silent.
             });
+          },
+        },
+        { type: "separator" },
+        {
+          label: "Open Merchant on GitHub",
+          click: () => {
+            void shell.openExternal("https://github.com/getxeyronoxz/open-merchant");
           },
         },
         { type: "separator" },
