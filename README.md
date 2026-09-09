@@ -8,7 +8,7 @@ It is built for solo ecommerce sellers, founders, and product researchers who wa
 
 ## What Open Merchant does
 
-Create a project folder, record a research objective and evidence, compare competitor listings, enter cost assumptions and selling-price scenarios, calculate deterministic unit economics, and generate an evidence-linked Markdown opportunity report. AI assistants can draft evidence entries, report sections, research plans, and integrity checks — but every draft is clearly marked and nothing is saved until you accept it.
+Create a project folder, record a research objective and evidence, compare competitor listings, enter cost assumptions and selling-price scenarios, calculate deterministic unit economics, and generate an evidence-linked Markdown opportunity report — exportable to PDF. Market snapshots preserve every price you saw, the margin monitor and decision journal keep watching the decision, and the portfolio view lines up all your projects. Import competitors from spreadsheets (validated row by row), export anything as CSV, and back a project up as one portable archive. AI assistants can draft evidence entries, report sections, research plans, and integrity checks — but every draft is clearly marked and nothing is saved until you accept it.
 
 ## Platforms
 
@@ -49,7 +49,7 @@ Ground rules:
 
 ## Install & auto-updates
 
-Download the current installer for your platform from [GitHub Releases](https://github.com/getxeyronoxz/open-merchant/releases). The app keeps itself current: on startup it passively checks this project's own Releases feed, downloads updates in the background (delta downloads where supported), and offers to restart — or simply applies the update on quit. Checks are read-only against GitHub; nothing about your projects or usage leaves your machine.
+Download the current installer for your platform from [GitHub Releases](https://github.com/getxeyronoxz/open-merchant/releases) — Windows installer (`.exe`), macOS disk image (`.dmg`), or Linux AppImage, snap, and flatpak. The app keeps itself current: on startup it passively checks this project's own Releases feed, downloads updates in the background (delta downloads where supported), and offers to restart — or simply applies the update on quit. Checks are read-only against GitHub; nothing about your projects or usage leaves your machine.
 
 ### Running the installers before CA signing
 
@@ -114,7 +114,9 @@ apps/desktop/      Electron app (main, preload, renderer)
 packages/shared/   Zod schemas: artifacts, IPC contract, errors, agent outputs
 packages/core/     Domain engine: exact-decimal money, economics, statistics,
                    validation, report rendering, atomic workspace store,
-                   path guards, run/provenance journals, V0 import
+                   path guards, run/provenance journals, market snapshots,
+                   margin monitor, decision journal, CSV in/out, archives,
+                   print-to-PDF rendering, V0 import
 packages/ai/       Provider-agnostic LLM seam (Anthropic, OpenAI, Gemini, and
                    local-endpoint adapters, mock provider) and the specialists
 packages/sdk/      Typed DesktopClient over the validated IPC contract +

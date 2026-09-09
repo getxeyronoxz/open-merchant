@@ -20,11 +20,11 @@ React 19 renderer (apps/desktop/src/renderer)
 | Area | Responsibility |
 | --- | --- |
 | `packages/shared` | Single source of truth: zod schemas for every artifact, the IPC contract map, coded errors, agent output shapes |
-| `packages/core` | Exact-decimal money and economics, statistics, validation, report rendering, atomic file store, known-layout path guards, run/provenance journals, V0→V2 import. No Electron imports — headless-capable and fully unit-tested |
+| `packages/core` | Exact-decimal money and economics, statistics, validation, report rendering, atomic file store, known-layout path guards, run/provenance journals, V0→V2 import. Phase 2 adds market snapshots (immutable captures + derived history/diffs), the margin monitor, the decision journal, CSV in/out, portable `.omarchive` archives, and print-to-PDF rendering. No Electron imports — headless-capable and fully unit-tested |
 | `packages/ai` | `LlmProvider` seam (Anthropic, OpenAI, Gemini, and local OpenAI-compatible endpoints such as Ollama/LM Studio behind a BYO-key/base-URL registry, deterministic mock) plus six specialist agents producing zod-validated drafts |
 | `packages/sdk` | Typed `DesktopClient`; responses re-validated before reaching the UI; failures become coded `AppError`s |
 | `packages/ui` | Design tokens ("The Merchant's Ledger") and primitives: Button, Field, ErrorState, EmptyState, LedgerRow |
-| `apps/desktop/main` | Window lifecycle, native dialogs, safeStorage-sealed AI key store, per-call `WorkspaceStore` opens |
+| `apps/desktop/main` | Window lifecycle, native dialogs, safeStorage-sealed AI key store, per-call `WorkspaceStore` opens, PDF rendering via a hidden `printToPDF` window, portfolio aggregation over the recents store |
 | `apps/desktop/preload` | Exposes exactly one `invoke(channel, payload)` method; rejects channels outside the contract |
 
 ## Canonical workspace (format v2)
@@ -37,7 +37,9 @@ project/
     provenance.jsonl
   evidence/sources.jsonl
   market/competitors.json
-  economics/assumptions.json
+  market/snapshots/               # phase 2: immutable timestamped captures
+    SNAP-<utcstamp>-<hex>.json
+  economics/assumptions.json      # includes the margin-monitor threshold
   economics/scenarios.json        # generated
   reports/report-sections.json
   reports/opportunity-report.md   # generated
@@ -55,7 +57,11 @@ Agents draft; humans accept. Assistant output is validated JSON tied to shared s
 
 ## Updates and releases
 
-Packaged builds check the project's own GitHub Releases feed (`latest.yml`, published by a `v*` tag build on GitHub runners) via `electron-updater` and download delta updates in the background. When an update is ready, the renderer shows a non-blocking banner — restart now, or keep working and it installs on quit. The notice travels over the same validated IPC contract as everything else (`update:status` push events plus an `update/install` channel), never a native dialog. There is no telemetry and no third-party service: the update check is a passive read of the owner's release feed, so the local-first boundary holds.
+Packaged builds check the project's own GitHub Releases feed (`latest.yml`, published by a `v*` tag build on GitHub runners) via `electron-updater` and download delta updates in the background. When an update is ready, the renderer shows a non-blocking banner — restart now, or keep working and it installs on quit. The notice travels over the same validated IPC contract as everything else (`update:status` push events plus an `update/install` channel), never a native dialog. There is no telemetry and no third-party service: the update check is a passive read of the owner's release feed, so the local-first boundary holds. Linux ships three containerized formats — AppImage, snap, and flatpak — built by the same tagged workflow.
+
+## Phase 2 cockpit
+
+The post-decision layer is computed, never stored twice: market snapshots are immutable files under `market/snapshots/`; the margin monitor derives drift flags from the saved scenarios plus the latest snapshot's median price; the decision journal derives dated entries from the run journal and staleness from evidence `observedAt` timestamps. CSV import/export, `.omarchive` single-file backups (deflated, versioned, path-guarded envelope), and report PDF export all run through the same validated IPC contract — nothing leaves the machine.
 
 ## Verification map
 
