@@ -4,6 +4,8 @@ All notable changes to Open Merchant are documented in this file.
 
 ## [Unreleased]
 
+## [1.0.0-alpha.4] - 2026-09-17
+
 ### Added
 - Phase 2 cockpit: market snapshots (immutable timestamped captures with per-listing price history and snapshot diffs), margin monitoring (per-project threshold with market-drift flags), decision journal (any-two report comparison plus stale-evidence flags), and a portfolio overview (every project on one screen, worst-margin first).
 - File-first pillar: CSV export for competitors, evidence, and scenarios; validated CSV import with auto-detected column mapping and per-row error reporting; portable single-file `.omarchive` project backups; and print-perfect PDF export of the generated report.
