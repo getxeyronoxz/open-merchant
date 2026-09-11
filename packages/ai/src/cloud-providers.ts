@@ -7,10 +7,32 @@ import { hashPrompt, type CompletionRequest, type CompletionResult, type LlmProv
  */
 
 export class AiProviderError extends Error {
-  constructor(message: string) {
+  readonly status?: number;
+  readonly raw?: string;
+
+  constructor(message: string, options?: { status?: number; raw?: string }) {
     super(message);
     this.name = "AiProviderError";
+    this.status = options?.status;
+    this.raw = options?.raw;
   }
+}
+
+/** Human-readable framing for the HTTP statuses providers actually return. */
+function providerErrorMessage(status: number): string {
+  if (status === 401 || status === 403) {
+    return "The provider rejected the API key (HTTP 401). Check the key in AI settings.";
+  }
+  if (status === 404) {
+    return "The provider does not recognize this model ID (HTTP 404). Check the Model ID in AI settings.";
+  }
+  if (status === 429) {
+    return "The provider is rate-limiting this key (HTTP 429). Wait a moment and try again.";
+  }
+  if (status >= 500) {
+    return `The provider is temporarily unavailable (HTTP ${status}) — often a temporary load spike. Try again in a moment.`;
+  }
+  return `The provider rejected the request (HTTP ${status}).`;
 }
 
 async function postJson(url: string, headers: Record<string, string>, body: unknown): Promise<unknown> {
@@ -27,8 +49,11 @@ async function postJson(url: string, headers: Record<string, string>, body: unkn
     );
   }
   if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new AiProviderError(`Provider returned ${response.status}: ${detail.slice(0, 400)}`);
+    const raw = (await response.text().catch(() => "")).slice(0, 400);
+    throw new AiProviderError(providerErrorMessage(response.status), {
+      status: response.status,
+      raw,
+    });
   }
   return response.json() as Promise<unknown>;
 }

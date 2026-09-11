@@ -61,7 +61,7 @@ import type { AiConfigStore } from "./ai-config";
 import type { HistoryKind } from "@open-merchant/core";
 
 /** Maps agent-layer failures to coded app errors. */
-async function runAgent<T>(work: () => Promise<T>): Promise<T> {
+export async function runAgent<T>(work: () => Promise<T>): Promise<T> {
   try {
     return await work();
   } catch (error) {
@@ -76,6 +76,7 @@ async function runAgent<T>(work: () => Promise<T>): Promise<T> {
       throw new AppError({
         code: "ai-provider-error",
         message: error.message,
+        detail: error.raw,
       });
     }
     throw error;

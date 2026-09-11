@@ -529,7 +529,7 @@ function MarketSnapshotsCard({ root, currency }: { root: string; currency: strin
   return (
     <section className="om-card" aria-label="Market snapshots">
       <div className="screen__grid">
-        <div>
+        <div className="screen__stack">
           <p className="om-eyebrow">Market snapshots</p>
           <p className="om-field__hint">
             Freeze the whole listing set at a moment in time. Snapshots are immutable; price

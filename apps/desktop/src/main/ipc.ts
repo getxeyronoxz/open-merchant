@@ -5,6 +5,7 @@ import { writeFile } from "node:fs/promises";
 
 import { RecentsStore } from "./recents";
 import type { AiConfigStore } from "./ai-config";
+import { runAgent } from "./service";
 import type { MerchantService } from "./service";
 
 /**
@@ -216,14 +217,18 @@ export function registerIpcHandlers(
       await aiConfig.save(input);
       return {};
     }),
-    "ai/test": channel<"ai/test">(async ({ providerId }) => {
-      const provider = await aiConfig.getProvider(providerId);
-      const completion = await provider.complete({
-        system: "Reply with the single word: ready",
-        prompt: "Connection test.",
-      });
-      return { reply: completion.text.trim().slice(0, 80) };
-    }),
+    "ai/test": channel<"ai/test">(({ providerId }) =>
+      // Same coded-error mapping as the agent channels: a provider failure
+      // must surface as `ai-provider-error`, never as a storage fault.
+      runAgent(async () => {
+        const provider = await aiConfig.getProvider(providerId);
+        const completion = await provider.complete({
+          system: "Reply with the single word: ready",
+          prompt: "Connection test.",
+        });
+        return { reply: completion.text.trim().slice(0, 80) };
+      }),
+    ),
     "ai/draft-evidence": channel<"ai/draft-evidence">(async ({ root, url, pageText }) =>
       service.draftEvidence(root, url, pageText),
     ),

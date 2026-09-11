@@ -411,6 +411,14 @@ body {
   gap: var(--om-space-4);
 }
 
+/* Two-column pair whose right side is an inset stats/compare card. */
+.screen__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  gap: var(--om-space-5);
+  align-items: start;
+}
+
 .plan__steps {
   margin: 0;
   padding-left: var(--om-space-5);
@@ -437,7 +445,8 @@ body {
 }
 
 @media (max-width: 1000px) {
-  .screen__columns {
+  .screen__columns,
+  .screen__grid {
     grid-template-columns: 1fr;
   }
 }
