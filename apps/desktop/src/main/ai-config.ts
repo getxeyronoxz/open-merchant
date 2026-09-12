@@ -22,11 +22,19 @@ import { z } from "zod";
 
 const PROVIDER_IDS = providerIdSchema.options;
 
+/**
+ * Suggested starting models per provider — kept current with the providers'
+ * own docs as of September 2026. Anthropic's dateless `claude-sonnet-5` is a
+ * pinned canonical ID; `gpt-5.6-terra` is OpenAI's cost/intelligence balance
+ * pick; `gemini-3.8-flash` is the newest stable Flash (gemini-2.0-flash is
+ * shut down); `qwen3.5:9b` is the best 8 GB-VRAM-tier general local model.
+ * These are only defaults — users can enter any model ID.
+ */
 const DEFAULT_MODELS: Record<string, string> = {
-  anthropic: "claude-sonnet-4-5",
-  openai: "gpt-4o",
-  gemini: "gemini-2.0-flash",
-  "local-openai": "llama3.1",
+  anthropic: "claude-sonnet-5",
+  openai: "gpt-5.6-terra",
+  gemini: "gemini-3.8-flash",
+  "local-openai": "qwen3.5:9b",
 };
 
 const DEFAULT_BASE_URLS: Record<string, string> = {

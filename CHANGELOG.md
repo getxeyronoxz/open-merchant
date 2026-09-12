@@ -15,6 +15,8 @@ All notable changes to Open Merchant are documented in this file.
 ### Changed
 - Windows builds use an integrated title-bar overlay in the Ledger palette; the top chrome drags the window and every control inside stays clickable.
 - Home screen gains the portfolio overview table; new panels carry explicit empty-state guidance.
+- AI settings: connection-test failures surface as `ai-provider-error` with human-readable provider messages (key rejected / unknown model / rate limit / temporary overload) instead of raw provider JSON mislabeled as `storage-error`.
+- AI settings: default model IDs refreshed to current provider lineups (Anthropic `claude-sonnet-5`, OpenAI `gpt-5.6-terra`, Gemini `gemini-3.8-flash`, local `qwen3.5:9b`); the Competitors snapshot card and decision-journal report pickers get their intended two-column layout with proper spacing.
 
 ## [1.0.0-alpha.3] - 2026-09-03
 

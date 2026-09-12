@@ -687,9 +687,14 @@ export function createMockDesktopClient(
 
     loadAiConfig: async () => ({
       activeProvider: null,
-      models: { anthropic: "claude-sonnet-4-5", openai: "gpt-4o" },
+      models: {
+        anthropic: "claude-sonnet-5",
+        openai: "gpt-5.6-terra",
+        gemini: "gemini-3.8-flash",
+        "local-openai": "qwen3.5:9b",
+      },
       hasKeys: {},
-      baseUrls: {},
+      baseUrls: { "local-openai": "http://localhost:11434/v1" },
       encryptionAvailable: true,
     }),
     saveAiConfig: async (_request) => {
