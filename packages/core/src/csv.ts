@@ -144,6 +144,7 @@ export interface CompetitorColumnMapping {
   price: string;
   marketplace: string;
   url: string;
+  notes: string;
 }
 
 export interface CompetitorImportRowError {
@@ -163,6 +164,7 @@ const HEADER_ALIASES: Record<keyof CompetitorColumnMapping, readonly string[]> =
   price: ["price", "cost", "amount", "selling price"],
   marketplace: ["marketplace", "market", "platform", "store"],
   url: ["url", "link", "listing url", "product url"],
+  notes: ["notes", "note", "comments", "remarks"],
 };
 
 /** Auto-detects a column mapping from the CSV header (case-insensitive aliases). */
@@ -206,6 +208,7 @@ export function importCompetitorsFromCsv(
     price: mapping.price ?? detected.price ?? "",
     marketplace: mapping.marketplace ?? detected.marketplace ?? "",
     url: mapping.url ?? detected.url ?? "",
+    notes: mapping.notes ?? detected.notes ?? "",
   };
   if (effective.product === "" || columnIndex(header, effective.product) < 0) {
     throw new ValidationError("Map the product column to import competitors");
@@ -217,6 +220,7 @@ export function importCompetitorsFromCsv(
     price: columnIndex(header, effective.price),
     marketplace: columnIndex(header, effective.marketplace),
     url: columnIndex(header, effective.url),
+    notes: columnIndex(header, effective.notes),
   };
 
   const competitors: Omit<Competitor, "id">[] = [];
@@ -258,7 +262,7 @@ export function importCompetitorsFromCsv(
       marketplace: cell(indexes.marketplace),
       url: cell(indexes.url),
       sourceId: null,
-      notes: "",
+      notes: cell(indexes.notes),
       observedAt: new Date().toISOString(),
     });
   }
