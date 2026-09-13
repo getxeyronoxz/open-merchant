@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import type { GenerationOrigin, ReportSections } from "@open-merchant/shared";
-import { ErrorState, Field, LedgerRow } from "@open-merchant/ui";
+import { errorFrom, ErrorState, Field, LedgerRow } from "@open-merchant/ui";
 
 import {
   useAuditReport,
@@ -100,7 +100,21 @@ export function ReportScreen({
             {generate.isPending ? "Generating…" : "Generate report"}
           </button>
           {generate.isError ? (
-            <ErrorState error={generate.error} onRetry={() => generate.mutate()} />
+            errorFrom(generate.error).code === "invalid-input" ? (
+              // A validation failure is not transient — retrying without
+              // fixing the input would fail identically. Point at the fix.
+              <ErrorState error={generate.error}>
+                <button
+                  className="om-button om-button--secondary"
+                  onClick={() => onNavigate?.("Economics")}
+                  type="button"
+                >
+                  Open Economics to set selling prices →
+                </button>
+              </ErrorState>
+            ) : (
+              <ErrorState error={generate.error} onRetry={() => generate.mutate()} />
+            )
           ) : null}
 
           {generatedQuery.isPending ? (
