@@ -111,6 +111,18 @@ export function HomeScreen() {
           and the report behind it. Your files, your machine, exact numbers.
         </p>
 
+        <div className="home__proof" aria-label="Privacy posture">
+          <span>
+            <span className="om-dot" /> No accounts
+          </span>
+          <span>
+            <span className="om-dot" /> No cloud sync
+          </span>
+          <span>
+            <span className="om-dot" /> No telemetry
+          </span>
+        </div>
+
         <div className="om-ledger home__workflow" aria-label="How a decision comes together">
           <LedgerRow label="Capture" value="Evidence & competitors" tone="muted" />
           <LedgerRow label="Model" value="Deterministic economics" tone="muted" />
@@ -121,7 +133,19 @@ export function HomeScreen() {
       <aside className="home__panel om-card">
         {parentDirectory === null ? (
           <>
-            <h2 className="home__panel-title">Continue your research</h2>
+            <div className="home__panel-head">
+              <h2 className="home__panel-title">Continue your research</h2>
+              {recentsQuery.data && recentsQuery.data.projects.length > 0 ? (
+                <span className="om-badge">{recentsQuery.data.projects.length}</span>
+              ) : null}
+            </div>
+            <button
+              className="om-button om-button--primary home__new"
+              onClick={() => chooseDirectory.mutate()}
+              type="button"
+            >
+              <span aria-hidden="true">+</span> New workspace
+            </button>
             {recentsQuery.isError ? <ErrorState error={recentsQuery.error} onRetry={() => recentsQuery.refetch()} /> : null}
             {recentsQuery.isPending ? (
               <p className="om-loading">
@@ -165,29 +189,32 @@ export function HomeScreen() {
                 <span>Pick where it lives below, name the decision, and you're in.</span>
               </EmptyState>
             ) : null}
-            <ul className="home__recents">
-              {(recentsQuery.data?.projects ?? []).map((recent) => (
-                <li key={recent.path}>
-                  <button
-                    className="home__recent"
-                    disabled={openRecent.isPending}
-                    onClick={() => openRecent.mutate(recent.path)}
-                    type="button"
-                  >
-                    <span className="home__recent-avatar">{recent.name.slice(0, 1).toUpperCase()}</span>
-                    <span className="home__recent-copy">
-                      <strong>{recent.name}</strong>
-                      <span className="om-data">{recent.path}</span>
-                    </span>
-                    <span aria-hidden="true">→</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-
-            <button className="om-button om-button--primary" onClick={() => chooseDirectory.mutate()} type="button">
-              Create a project
-            </button>
+            {recentsQuery.data && recentsQuery.data.projects.length > 0 ? (
+              <>
+                <div className="home__divider">Recent decisions</div>
+                <ul className="home__recents">
+                  {recentsQuery.data.projects.map((recent) => (
+                    <li key={recent.path}>
+                      <button
+                        className="home__recent"
+                        disabled={openRecent.isPending}
+                        onClick={() => openRecent.mutate(recent.path)}
+                        type="button"
+                      >
+                        <span className="home__recent-avatar">{recent.name.slice(0, 1).toUpperCase()}</span>
+                        <span className="home__recent-copy">
+                          <strong>{recent.name}</strong>
+                          <span className="om-data">{recent.path}</span>
+                        </span>
+                        <span aria-hidden="true" className="home__recent-arrow">
+                          →
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
             {chooseDirectory.isError ? <ErrorState error={chooseDirectory.error} /> : null}
           </>
         ) : (
@@ -306,7 +333,7 @@ function PortfolioOverviewCard({
           : "om-badge";
 
   return (
-    <section className="om-card" aria-label="Portfolio" style={{ margin: "0 auto var(--om-space-6)", width: "min(760px, 100%)" }}>
+    <section className="om-card home__portfolio" aria-label="Portfolio">
       <p className="om-eyebrow">Portfolio</p>
       <p className="om-field__hint">Every project on one screen — what needs attention today?</p>
       <table className="om-table">

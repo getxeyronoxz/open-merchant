@@ -58,7 +58,7 @@ body {
   padding: var(--om-space-6) var(--om-space-5) var(--om-space-5);
   display: grid;
   grid-template-columns: 1.2fr 0.9fr;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr auto auto;
   gap: var(--om-space-7) var(--om-space-7);
   align-items: start;
   animation: om-enter var(--om-motion-base) both;
@@ -91,10 +91,13 @@ body {
 
 .home__hero {
   padding-top: var(--om-space-6);
+  display: grid;
+  gap: var(--om-space-4);
+  justify-items: start;
 }
 
 .home__thesis {
-  margin: var(--om-space-4) 0 0;
+  margin: 0;
   font-family: var(--om-font-display);
   font-weight: 400;
   font-size: clamp(var(--om-text-xl), 4.2vw, var(--om-text-2xl));
@@ -111,18 +114,49 @@ body {
 
 .home__lede {
   max-width: 46ch;
+  margin: 0;
   color: var(--om-text-secondary);
 }
 
+/* Quiet trust strip: the product's posture at a glance. */
+.home__proof {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--om-space-2) var(--om-space-4);
+  color: var(--om-text-muted);
+  font-size: var(--om-text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--om-tracking-caps);
+}
+
+.home__proof span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--om-space-2);
+}
+
+.home__proof .om-dot {
+  background: var(--om-accent);
+  opacity: 0.55;
+}
+
 .home__workflow {
-  margin-top: var(--om-space-6);
+  margin-top: var(--om-space-2);
   max-width: 380px;
 }
 
 .home__panel {
-  align-self: center;
+  align-self: start;
   display: grid;
   gap: var(--om-space-4);
+  min-width: 0;
+}
+
+.home__panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--om-space-3);
 }
 
 .home__panel-title {
@@ -130,6 +164,32 @@ body {
   font-family: var(--om-font-display);
   font-weight: 400;
   font-size: var(--om-text-lg);
+}
+
+/* The primary move sits first, full width, impossible to miss. */
+.home__new {
+  width: 100%;
+  justify-content: center;
+  padding-block: var(--om-space-3);
+  font-size: var(--om-text-md);
+}
+
+.home__divider {
+  display: flex;
+  align-items: center;
+  gap: var(--om-space-3);
+  color: var(--om-text-muted);
+  font-size: var(--om-text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--om-tracking-caps);
+}
+
+.home__divider::before,
+.home__divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--om-border-subtle);
 }
 
 .home__recents {
@@ -155,18 +215,34 @@ body {
   transition:
     border-color var(--om-motion-fast),
     transform var(--om-motion-fast),
-    background-color var(--om-motion-fast);
+    background-color var(--om-motion-fast),
+    box-shadow var(--om-motion-fast);
 }
 
 .home__recent:hover:not(:disabled) {
-  transform: translateX(3px);
-}
-
-.home__recent:hover:not(:disabled),
-.home__recent:focus-visible {
-  outline: none;
+  transform: translateY(-1px);
   border-color: var(--om-accent);
   background: var(--om-surface-hover);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.28);
+}
+
+.home__recent:focus-visible {
+  outline: 2px solid var(--om-accent);
+  outline-offset: 2px;
+}
+
+.home__recent-arrow {
+  margin-left: auto;
+  color: var(--om-text-muted);
+  transition:
+    transform var(--om-motion-fast),
+    color var(--om-motion-fast);
+}
+
+.home__recent:hover:not(:disabled) .home__recent-arrow,
+.home__recent:focus-visible .home__recent-arrow {
+  transform: translateX(3px);
+  color: var(--om-accent);
 }
 
 .home__recent-avatar {
@@ -179,6 +255,14 @@ body {
   color: var(--om-accent);
   font-family: var(--om-font-display);
   flex-shrink: 0;
+  transition:
+    background-color var(--om-motion-fast),
+    color var(--om-motion-fast);
+}
+
+.home__recent:hover:not(:disabled) .home__recent-avatar {
+  background: var(--om-accent);
+  color: var(--om-accent-contrast);
 }
 
 .home__recent-copy {
@@ -188,13 +272,17 @@ body {
 }
 
 /* ---------- Home first-run walkthrough ---------- */
+
 .home__welcome {
   display: grid;
   gap: var(--om-space-2);
+  border-top: 2px solid var(--om-brass-soft);
 }
 
 .home__welcome-title {
-  font-size: var(--om-text-sm);
+  font-family: var(--om-font-display);
+  font-weight: 400;
+  font-size: var(--om-text-md);
 }
 
 .home__welcome-note {
@@ -212,8 +300,15 @@ body {
   grid-column: 1 / -1;
   display: flex;
   justify-content: space-between;
+  border-top: 1px solid var(--om-border-subtle);
+  padding-top: var(--om-space-4);
   color: var(--om-text-muted);
   font-size: var(--om-text-xs);
+}
+
+/* Portfolio spans the full row so no column sits empty beneath the panel. */
+.home__portfolio {
+  grid-column: 1 / -1;
 }
 
 @media (max-width: 900px) {
@@ -221,6 +316,7 @@ body {
     grid-template-columns: 1fr;
     gap: var(--om-space-6);
   }
+}
 }
 
 /* ---------- Workspace shell ---------- */

@@ -62,7 +62,7 @@ describe("Open Merchant E2E", () => {
   });
 
   it("creates a project through the real IPC and lands in the workspace", async () => {
-    await page.getByRole("button", { name: "Create a project" }).click();
+    await page.getByRole("button", { name: "New workspace" }).click();
     await page.getByPlaceholder("Mechanical keyboards India").fill("E2E Keyboards");
     await page
       .locator(".home__form textarea")
@@ -96,7 +96,7 @@ describe("Open Merchant E2E", () => {
 describe("Open Merchant E2E deep workflow", () => {
   it("walks evidence → competitors → economics → report across the real stack", async () => {
     // --- create project ---
-    await page.getByRole("button", { name: "Create a project" }).click();
+    await page.getByRole("button", { name: "New workspace" }).click();
     await page.getByPlaceholder("Mechanical keyboards India").fill("Deep Flow");
     await page.locator(".home__form textarea").fill("Test the full research pipeline.");
     await page.locator(".home__form button[type='submit']").click();
@@ -191,7 +191,7 @@ describe("Open Merchant E2E deep workflow", () => {
 
 describe("Open Merchant E2E persistence", () => {
   it("reopens a recent project with state intact after a full restart", async () => {
-    await page.getByRole("button", { name: "Create a project" }).click();
+    await page.getByRole("button", { name: "New workspace" }).click();
     await page.getByPlaceholder("Mechanical keyboards India").fill("Persistent");
     await page.locator(".home__form textarea").fill("Check reopen behavior.");
     await page.locator(".home__form button[type='submit']").click();

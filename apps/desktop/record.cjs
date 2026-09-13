@@ -48,7 +48,7 @@ async function shot(page, name, settleMs = 900) {
     await shot(page, "home-welcome");
     await page.getByRole("button", { name: "Got it" }).click();
     await page.locator(".home__welcome").waitFor({ state: "hidden" });
-    await page.getByRole("button", { name: "Create a project" }).click();
+    await page.getByRole("button", { name: "New workspace" }).click();
     await page.getByPlaceholder("Mechanical keyboards India").fill("Nova65 — India entry");
     await page
       .locator(".home__form textarea")

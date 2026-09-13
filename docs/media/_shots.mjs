@@ -12,7 +12,7 @@ await page.screenshot({ path: `${out}/app-home.png` });
 console.log("app-home.png");
 
 // Create a project through the real UI (mock client in browser).
-await page.getByRole("button", { name: "Create a project" }).click();
+await page.getByRole("button", { name: "New workspace" }).click();
 await page.getByPlaceholder("Mechanical keyboards India").fill("Mechanical Keyboards India");
 await page
   .getByPlaceholder("What commercial decision are you making?")

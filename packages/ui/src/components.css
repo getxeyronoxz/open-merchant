@@ -36,6 +36,8 @@
 .om-button--primary {
   background: var(--om-accent);
   color: var(--om-accent-contrast);
+  /* Light falls on the button's top edge - ledger depth. */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 .om-button--primary:hover:not(:disabled) {
   background: var(--om-accent-strong);
@@ -48,6 +50,7 @@
   background: var(--om-surface-overlay);
   color: var(--om-text-primary);
   border-color: var(--om-border-strong);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 .om-button--secondary:hover:not(:disabled) {
   border-color: var(--om-accent);
@@ -60,6 +63,12 @@
 .om-button--ghost:hover:not(:disabled) {
   color: var(--om-text-primary);
   background: var(--om-surface-inset);
+  border-color: var(--om-border-strong);
+}
+
+.om-button--secondary:active:not(:disabled),
+.om-button--ghost:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .om-button--danger {
