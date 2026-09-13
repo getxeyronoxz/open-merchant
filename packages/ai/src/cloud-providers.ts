@@ -70,6 +70,9 @@ export function createAnthropicProvider(options: AnthropicOptions): LlmProvider 
     modelId: options.modelId,
     async complete(request: CompletionRequest): Promise<CompletionResult> {
       const payload = (await postJson(
+        // Verified current 2026-09-12 against platform.claude.com/docs —
+        // POST /v1/messages remains the primary Messages API and
+        // "2023-06-01" the only GA anthropic-version header value.
         "https://api.anthropic.com/v1/messages",
         {
           "x-api-key": options.apiKey,
@@ -111,6 +114,10 @@ export function createOpenAiProvider(options: OpenAiOptions): LlmProvider {
     modelId: options.modelId,
     async complete(request: CompletionRequest): Promise<CompletionResult> {
       const payload = (await postJson(
+        // Verified current 2026-09-12 against developers.openai.com —
+        // /v1/chat/completions is still a supported, non-deprecated
+        // endpoint (the Responses API is the newer alternative; the v1
+        // backwards-compatibility policy explicitly covers chat/completions).
         "https://api.openai.com/v1/chat/completions",
         { authorization: `Bearer ${options.apiKey}` },
         {
@@ -148,6 +155,10 @@ export function createGeminiProvider(options: GeminiOptions): LlmProvider {
     modelId: options.modelId,
     async complete(request: CompletionRequest): Promise<CompletionResult> {
       const payload = (await postJson(
+        // Verified current 2026-09-12 against ai.google.dev — v1beta
+        // generateContent is still the documented text-generation endpoint
+        // and the x-goog-api-key header is the supported auth style (the
+        // ?key= query alternative would leak the key into URL logs).
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(options.modelId)}:generateContent`,
         { "x-goog-api-key": options.apiKey },
         {
