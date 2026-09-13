@@ -184,6 +184,49 @@ describe("HTTP provider contract suite", () => {
         await expect(testCase.create().complete(REQUEST)).rejects.toThrow(/401/u);
       });
 
+      it("retries a transient 503 and succeeds on a later attempt", async () => {
+        let count = 0;
+        const calls = stubFetch(() => {
+          count += 1;
+          return count <= 2
+            ? new Response(JSON.stringify({ error: "overloaded" }), {
+                status: 503,
+                headers: { "content-type": "application/json" },
+              })
+            : new Response(JSON.stringify(testCase.successBody("RECOVERED")), {
+                status: 200,
+                headers: { "content-type": "application/json" },
+              });
+        });
+        const result = await testCase.create().complete(REQUEST);
+        expect(result.text).toBe("RECOVERED");
+        expect(calls).toHaveLength(3);
+      });
+
+      it("exhausts retries on persistent overload, then throws with the status", async () => {
+        const calls = stubFetch(
+          () =>
+            new Response(JSON.stringify({ error: "still overloaded" }), {
+              status: 503,
+              headers: { "content-type": "application/json" },
+            }),
+        );
+        await expect(testCase.create().complete(REQUEST)).rejects.toThrow(/503/u);
+        expect(calls).toHaveLength(3);
+      });
+
+      it("never retries permanent failures like a rejected key", async () => {
+        const calls = stubFetch(
+          () =>
+            new Response(JSON.stringify({ error: "nope" }), {
+              status: 401,
+              headers: { "content-type": "application/json" },
+            }),
+        );
+        await expect(testCase.create().complete(REQUEST)).rejects.toThrow(AiProviderError);
+        expect(calls).toHaveLength(1);
+      });
+
       it("rejects empty completions with AiProviderError", async () => {
         stubFetch(
           () =>

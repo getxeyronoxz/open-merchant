@@ -35,27 +35,55 @@ function providerErrorMessage(status: number): string {
   return `The provider rejected the request (HTTP ${status}).`;
 }
 
+/**
+ * Transient statuses worth an automatic second chance — provider load
+ * spikes (5xx) and rate limits (429). Permanent failures (bad key, unknown
+ * model, bad request) are never retried: retrying those is just noise.
+ */
+const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
+const MAX_ATTEMPTS = 3;
+const RETRY_DELAYS_MS = [250, 600];
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function postJson(url: string, headers: Record<string, string>, body: unknown): Promise<unknown> {
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json", ...headers },
-      body: JSON.stringify(body),
-    });
-  } catch (error) {
-    throw new AiProviderError(
-      `Network request failed: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
-  if (!response.ok) {
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json", ...headers },
+        body: JSON.stringify(body),
+      });
+    } catch (error) {
+      if (attempt === MAX_ATTEMPTS - 1) {
+        throw new AiProviderError(
+          `Network request failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+      await sleep(RETRY_DELAYS_MS[attempt] as number);
+      continue;
+    }
+    if (response.ok) return response.json() as Promise<unknown>;
     const raw = (await response.text().catch(() => "")).slice(0, 400);
-    throw new AiProviderError(providerErrorMessage(response.status), {
-      status: response.status,
-      raw,
-    });
+    if (!RETRYABLE_STATUSES.has(response.status) || attempt === MAX_ATTEMPTS - 1) {
+      throw new AiProviderError(providerErrorMessage(response.status), {
+        status: response.status,
+        raw,
+      });
+    }
+    // Honor Retry-After when the provider sends one; otherwise back off.
+    const retryAfterSeconds = Number(response.headers.get("retry-after"));
+    const delayMs =
+      Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+        ? Math.min(retryAfterSeconds * 1000, 10_000)
+        : (RETRY_DELAYS_MS[attempt] as number);
+    await sleep(delayMs);
   }
-  return response.json() as Promise<unknown>;
+  // Unreachable: every loop iteration either returns, retries, or throws.
+  throw new AiProviderError("The provider did not respond.");
 }
 
 export interface AnthropicOptions {
