@@ -6,6 +6,7 @@ import type { GenerationOrigin, ReportSections } from "@open-merchant/shared";
 import { errorFrom, ErrorState, Field, LedgerRow } from "@open-merchant/ui";
 
 import {
+  useAssumptions,
   useAuditReport,
   useDraftSections,
   useGenerateReport,
@@ -33,6 +34,19 @@ export function ReportScreen({
   const draftAi = useDraftSections(root);
   const audit = useAuditReport(root);
   const [aiDrafted, setAiDrafted] = useState(false);
+  const assumptionsQuery = useAssumptions(root);
+
+  // Pre-flight, mirroring the deterministic engine's own validation: all
+  // three selling prices must exist before a scenario can be priced. If the
+  // assumptions probe itself fails, stay out of the way and let Generate
+  // surface the real coded error.
+  const scenarioPrices = assumptionsQuery.data?.assumptions.scenarioPrices;
+  const economicsReady =
+    assumptionsQuery.isError ||
+    (scenarioPrices != null &&
+      [scenarioPrices.low, scenarioPrices.base, scenarioPrices.high].every(
+        (price) => price !== null && price.trim() !== "",
+      ));
 
   if (sectionsQuery.isPending) {
     return (
@@ -93,7 +107,7 @@ export function ReportScreen({
         <aside className="screen__report-side">
           <button
             className="om-button om-button--primary"
-            disabled={generate.isPending}
+            disabled={generate.isPending || !economicsReady}
             onClick={() => generate.mutate()}
             type="button"
           >
@@ -163,6 +177,23 @@ export function ReportScreen({
                 </ReactMarkdown>
               </div>
             </>
+          ) : !economicsReady ? (
+            <div className="om-empty">
+              <span className="om-empty__title">Set your selling prices first</span>
+              <span>
+                The report prices every scenario deterministically. Head to Economics, enter
+                low / base / high selling prices, then generate.
+              </span>
+              {onNavigate ? (
+                <button
+                  className="om-button om-button--secondary"
+                  onClick={() => onNavigate("Economics")}
+                  type="button"
+                >
+                  Open Economics →
+                </button>
+              ) : null}
+            </div>
           ) : (
             <div className="om-empty">
               <span className="om-empty__title">No generated report yet</span>
