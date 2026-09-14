@@ -21,6 +21,7 @@ All notable changes to Open Merchant are documented in this file.
 
 ### Fixed
 - CSV import now imports the `notes` column instead of silently dropping it — competitor notes round-trip through the file-first pillar (found by new boundary tests).
+- Recent-projects list is capped at the 20 most recent workspaces (it previously grew unbounded and every entry renders on Home), and a malformed recents file is quarantined beside the fresh list instead of being silently destroyed.
 
 ## [1.0.0-alpha.3] - 2026-09-03
 

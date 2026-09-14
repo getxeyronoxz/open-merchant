@@ -14,6 +14,9 @@ import { z } from "zod";
 
 const recentsFileSchema = z.object({ projects: z.array(recentProjectSchema) });
 
+/** The recents list is a convenience — it never grows unbounded. */
+const MAX_RECENTS = 20;
+
 export class RecentsStore {
   private readonly filePath: string;
 
@@ -22,10 +25,19 @@ export class RecentsStore {
   }
 
   async list(): Promise<RecentProject[]> {
+    let raw: string;
     try {
-      const parsed = recentsFileSchema.parse(JSON.parse(await readFile(this.filePath, "utf8")));
+      raw = await readFile(this.filePath, "utf8");
+    } catch {
+      return []; // No file yet — a clean slate, nothing to preserve.
+    }
+    try {
+      const parsed = recentsFileSchema.parse(JSON.parse(raw));
       return [...parsed.projects].sort((a, b) => b.lastOpenedAt.localeCompare(a.lastOpenedAt));
     } catch {
+      // Malformed data is never silently destroyed: quarantine the file so
+      // the user's recents history survives for inspection, then start clean.
+      await rename(this.filePath, `${this.filePath}.corrupt-${Date.now()}`).catch(() => undefined);
       return [];
     }
   }
@@ -33,7 +45,7 @@ export class RecentsStore {
   async upsert(name: string, path: string): Promise<void> {
     const existing = await this.list();
     const entry: RecentProject = { name, path, lastOpenedAt: new Date().toISOString() };
-    await this.write([entry, ...existing.filter((project) => project.path !== path)]);
+    await this.write([entry, ...existing.filter((project) => project.path !== path)].slice(0, MAX_RECENTS));
   }
 
   async remove(path: string): Promise<void> {
