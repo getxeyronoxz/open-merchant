@@ -8,8 +8,16 @@ on:
   push:
     tags: ["v*"]
 
+# Only the release job needs write access; nothing else in the workflow
+# touches repo contents.
 permissions:
   contents: write
+
+# Two tags pushed in quick succession must not race each other's publish
+# (electron-builder would create/update the same GitHub Release twice).
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -18,24 +26,53 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    # Snap/flatpak builds are slow; a hung build should not burn six hours.
+    timeout-minutes: 90
+    # Optional signing slots — defined at JOB level so the verification
+    # steps below can read them in their `if:` conditions (step-level env
+    # is invisible to other steps). Add these repo secrets later and signed
+    # builds happen automatically.
+    env:
+      CSC_LINK: ${{ secrets.CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     steps:
       - uses: actions/checkout@v4
+        # Publishing uses the GH_TOKEN env var, not git credentials — don't
+        # leave the checkout token in the runner's git config.
+        with:
+          persist-credentials: false
 
       - uses: pnpm/action-setup@v4
+        # Version is read from the `packageManager` field in package.json.
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
 
+      # Electron's dist is ~100 MB per job; reuse it across runs.
+      - name: Cache Electron binaries
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron
+            ~/AppData/Local/electron/Cache
+            ~/Library/Caches/electron
+          key: electron-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
       - run: pnpm install --frozen-lockfile
 
       # Universal Linux packages (snap + flatpak) need their builders present.
+      # snapcraft is installed via snap --classic; the apt package is deprecated.
       - name: Install Linux packaging tooling
         if: matrix.os == 'ubuntu-latest'
         run: |
+          sudo snap install snapcraft --classic
           sudo apt-get update
-          sudo apt-get install -y snapcraft flatpak flatpak-builder
+          sudo apt-get install -y flatpak flatpak-builder
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
       - name: Build renderer + main + preload
@@ -55,19 +92,13 @@ jobs:
           pnpm --filter @open-merchant/desktop exec electron-builder --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Optional signing slots — add these repo secrets later and signed
-          # builds happen automatically.
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Verify Windows signature (only when a certificate is configured)
         if: matrix.os == 'windows-latest' && env.CSC_LINK != ''
         shell: pwsh
         run: |
           $exe = Get-ChildItem "apps/desktop/release/*.exe" | Select-Object -First 1
+          if (-not $exe) { throw "no installer found in apps/desktop/release" }
           $sig = Get-AuthenticodeSignature $exe.FullName
           "signature: $($sig.Status) / $($sig.SignerCertificate.Subject)"
           if ($sig.Status -ne "Valid") { throw "installer is not validly signed" }
@@ -76,8 +107,11 @@ jobs:
         if: matrix.os == 'macos-latest' && env.CSC_LINK != ''
         shell: bash
         run: |
+          set -euo pipefail
           APP=$(find apps/desktop/release -maxdepth 2 -name "*.app" | head -1)
+          if [ -z "$APP" ]; then
+            echo "no .app bundle found in apps/desktop/release" >&2
+            exit 1
+          fi
           codesign --verify --strict "$APP"
           echo "signed app verified: $APP"
-        env:
-          CSC_LINK: ${{ secrets.CSC_LINK }}

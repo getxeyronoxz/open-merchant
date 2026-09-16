@@ -31,3 +31,17 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
+
+      # Full E2E against the real Electron app and IPC stack on every push.
+      # Linux runners have no display server — xvfb provides a virtual one;
+      # Windows and macOS runners have interactive sessions out of the box.
+      - name: Electron end-to-end (real app, real IPC)
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y xvfb
+            xvfb-run --auto-servernum pnpm --filter @open-merchant/desktop test:e2e
+          else
+            pnpm --filter @open-merchant/desktop test:e2e
+          fi
