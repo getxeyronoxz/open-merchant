@@ -30,3 +30,6 @@ graphify-out/
 
 # demo recorder frames
 .om-frames/
+
+# Local Claude Code settings (per-machine)
+.claude/settings.local.json
