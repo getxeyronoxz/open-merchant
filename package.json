@@ -15,7 +15,11 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "test:unit": "pnpm -r test",
+    "test:e2e": "pnpm --filter @open-merchant/desktop test:e2e",
+    "test:all": "pnpm -r test && pnpm --filter @open-merchant/desktop test:e2e",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test:all"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

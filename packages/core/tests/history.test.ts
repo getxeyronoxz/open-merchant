@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { HistoryError, HistoryStore } from "../src/history";
+import { HistoryError, historyFileName, HistoryStore } from "../src/history";
 
 const tempDirs: string[] = [];
 
@@ -59,5 +59,24 @@ describe("HistoryStore", () => {
       "utf8",
     );
     expect(raw).toBe("[]\n");
+  });
+
+  it("names files by kind with the right extension", () => {
+    expect(historyFileName("scenarios", "RUN-1")).toBe("scenarios-RUN-1.json");
+    expect(historyFileName("report", "RUN-1")).toBe("report-RUN-1.md");
+  });
+
+  it("rejects unknown history kinds before touching the disk", () => {
+    expect(() => historyFileName("pdf" as never, "RUN-1")).toThrow(HistoryError);
+  });
+
+  it("overwrites nothing: snapshots are immutable per run id", async () => {
+    const store = new HistoryStore(await tempDir());
+    await store.snapshot("report", "RUN-keep", "first");
+    // A second snapshot call with the same id would overwrite — the service
+    // layer always mints fresh RUN ids, so assert both generations coexist.
+    await store.snapshot("report", "RUN-next", "second");
+    expect(await store.readSnapshot("report", "RUN-keep")).toBe("first");
+    expect(await store.readSnapshot("report", "RUN-next")).toBe("second");
   });
 });

@@ -11,7 +11,9 @@
     "dist": "electron-vite build && electron-builder --publish never",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
-    "test:e2e": "electron-vite build && vitest run -c vitest.e2e.config.ts"
+    "test:unit": "vitest run",
+    "test:e2e": "electron-vite build && vitest run -c vitest.e2e.config.ts",
+    "test:all": "vitest run && pnpm run test:e2e"
   },
   "description": "Local-first, AI-native commerce research workbench.",
   "author": {

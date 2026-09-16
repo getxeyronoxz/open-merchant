@@ -81,4 +81,48 @@ describe("competitor CSV import", () => {
       /Map the product column/u,
     );
   });
+
+  it("rejects an empty file instead of importing nothing silently", () => {
+    expect(() => importCompetitorsFromCsv("", {}, "INR")).toThrow(/empty/iu);
+    // A whitespace-only file has no header row to map, so the importer must
+    // still refuse loudly rather than import zero rows as success.
+    expect(() => importCompetitorsFromCsv("   \n  ", {}, "INR")).toThrow(
+      /Map the product column|empty/iu,
+    );
+  });
+
+  it("rejects negative prices and strips currency symbols deterministically", () => {
+    const result = importCompetitorsFromCsv(
+      "product,price\nKeyboard A,-50.00\nKeyboard B,₹ 599.50\nKeyboard C,+749",
+      {},
+      "INR",
+    );
+    expect(result.competitors.map((entry) => entry.product)).toEqual(["Keyboard B", "Keyboard C"]);
+    expect(result.errors).toEqual([{ row: 2, message: 'Price "-50.00" is negative' }]);
+    expect(result.competitors[0]?.price).toBe("599.50");
+    expect(result.competitors[1]?.price).toBe("749");
+  });
+
+  it("skips blank lines without counting them as errors", () => {
+    const result = importCompetitorsFromCsv(
+      "product,price\nKeyboard A,499.00\n\n   \nKeyboard B,599.50\n",
+      {},
+      "INR",
+    );
+    expect(result.competitors).toHaveLength(2);
+    expect(result.errors).toEqual([]);
+    expect(result.skipped).toBe(0);
+  });
+
+  it("respects an explicit column mapping over auto-detection", () => {
+    const result = importCompetitorsFromCsv(
+      "Item,Store,Notes\nKeyboard A,Example,ships fast",
+      { product: "Item", marketplace: "Store", notes: "Notes" },
+      "INR",
+    );
+    expect(result.errors).toEqual([]);
+    expect(result.competitors[0]?.product).toBe("Keyboard A");
+    expect(result.competitors[0]?.marketplace).toBe("Example");
+    expect(result.competitors[0]?.notes).toBe("ships fast");
+  });
 });
