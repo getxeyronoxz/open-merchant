@@ -54,6 +54,7 @@ Entry criteria: the Phase 2 cockpit is in real use — sellers actually keep sna
 * Plugin surface — community report sections and importers, loaded locally and fully inspectable before they run.
 * Team-readable exports — hand a colleague the whole decision as files, not accounts; still no cloud.
 * Standing reviews — locally scheduled reminders that resurface a stale decision ("you haven't re-checked this market in 30 days"); the timer lives in the app, not on a server.
+* Project currency change — a project's currency is fixed at creation today (every price, cost, scenario, and snapshot is validated against the manifest currency; mixed-currency data is rejected loudly). Phase 3 adds a deliberate "Change currency" flow: the user enters the conversion rate by hand (no network, no live FX — the ground rules bind), every stored monetary amount is converted in arbitrary-precision decimals, the old and new values are journaled like any meaningful operation, and the change requires explicit confirmation because it touches every artifact in the folder.
 
 ## 🌌 Exploratory — experiments, not product promises
 These are ideas tested in local prototypes and throwaway branches only. Nothing in this section is a feature, a commitment, or an announcement: none of it appears in the shipped software, release notes, or marketing at that time. An idea ships only if it graduates — rewritten as a real entry with entry criteria inside a committed phase first. (The former exploratory items — connectors, plugins, team exports — graduated into Phase 3 above.)
