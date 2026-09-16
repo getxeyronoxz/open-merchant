@@ -569,6 +569,23 @@ function DataBackupsCard({ onRestored }: { onRestored: () => void }) {
     URL.revokeObjectURL(url);
   };
 
+  const downloadBinary = (base64: string, filename: string, type: string) => {
+    // Binary-safe download: the old text-blob path ran UTF-8 encoding over
+    // the decoded bytes and corrupted every byte >= 0x80.
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    const blob = new Blob([bytes as BlobPart], { type });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
   const exportCsv = (kind: "competitors" | "evidence" | "scenarios") =>
     run(`csv-${kind}`, async () => {
       const result = await client.exportCsv(root, kind);
@@ -585,7 +602,7 @@ function DataBackupsCard({ onRestored }: { onRestored: () => void }) {
   const exportArchive = () =>
     run("archive", async () => {
       const result = await client.createArchive(root);
-      download(atob(result.archiveBase64), result.filename, "application/octet-stream");
+      downloadBinary(result.archiveBase64, result.filename, "application/octet-stream");
       setMessage(`Archive saved as ${result.filename}`);
     });
 
