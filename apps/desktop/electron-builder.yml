@@ -39,10 +39,14 @@ linux:
   # distribution without dependency juggling (built by electron-builder; the
   # release workflow installs snapcraft/flatpak requirements).
   maintainer: Xeyronox
-# Snap names must be lowercase letters/digits/hyphens — without this,
-# electron-builder derives the name from the scoped package
-# (@open-merchant/desktop) and mksquashfs fails to create the output file.
-snap:
-  name: open-merchant
+  # (Snap-specific options live in the top-level `snap:` block below — the
+  # LinuxConfiguration schema has no snap key.)
 flatpak:
   runtimeVersion: "23.08"
+# The snap artifact filename must not contain the scoped package name:
+# electron-builder derives it from "${name}" (the package name
+# @open-merchant/desktop) and the "/" makes mksquashfs fail with "Could not
+# create destination file". Override the file name explicitly (the snap's
+# internal name is already open-merchant via executableName).
+snap:
+  artifactName: open-merchant-${version}-${arch}.${ext}
