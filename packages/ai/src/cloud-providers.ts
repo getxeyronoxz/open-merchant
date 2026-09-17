@@ -223,7 +223,12 @@ export interface LocalOpenAiOptions {
 
 export function createLocalOpenAiProvider(options: LocalOpenAiOptions): LlmProvider {
   const id = "local-openai";
-  const normalized = options.baseUrl.trim().replace(/\/+$/u, "");
+  // Trim trailing slashes without a regex: CodeQL flags /\/+$/u as a
+  // polynomial regular expression on uncontrolled input (user-provided URL).
+  let normalized = options.baseUrl.trim();
+  while (normalized.endsWith("/")) {
+    normalized = normalized.slice(0, -1);
+  }
   if (!/^https?:\/\//u.test(normalized)) {
     throw new AiProviderError(
       `Local endpoint URL must start with http:// or https:// — got "${options.baseUrl}"`,
