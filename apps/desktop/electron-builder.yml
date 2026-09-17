@@ -53,4 +53,7 @@ flatpak:
 # credentials — this repo ships everything through GitHub Releases only.
 snap:
   artifactName: open-merchant-${version}-${arch}.${ext}
-  publish: github
+  publish:
+    provider: github
+    owner: getxeyronoxz
+    repo: open-merchant
