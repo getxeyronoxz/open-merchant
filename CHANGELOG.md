@@ -22,6 +22,11 @@ All notable changes to Open Merchant are documented in this file.
 - Report: generation stays disabled with a "set your selling prices first" guide (and a jump to Economics) until all three scenario prices exist — the missing-prices error is now prevented, not just reported. When generation still fails on invalid input (e.g. prices removed after the fact), the error offers "Open Economics" to fix the cause instead of a retry that would fail identically; transient failures keep their retry button.
 - CI: the Electron end-to-end suite runs on every push to `dev`; the release workflow is hardened with a concurrency guard against racing publishes, a job timeout, an Electron-binary cache, and a least-privilege checkout.
 
+### Security
+- Fixed all open Dependabot and CodeQL alerts ahead of launch: vitest upgraded 3.2.7 → 4.1.11 across every package (path-traversal via `@vitest/mocker` redirect mock, CVE-2026-84373), `js-yaml` pinned to the patched 4.3.2 via a pnpm override (merge-keys CPU exhaustion, CVE-2026-84375), and the local-endpoint URL trim in the AI provider layer rewritten without a polynomial regular expression (CodeQL #4).
+- Snap packages now build under a valid explicit name (`open-merchant`) instead of deriving one from the scoped package name, which made `mksquashfs` fail on release runs.
+- Known, documented exception: `extract-zip` 2.0.1 (CVE-2026-56876, symlink path traversal) has no patched release. It is a dev-only transitive dependency of the `electron` package used solely to unzip the official Electron distribution on developer machines — it is never shipped in installers and never processes user-supplied archives. The alert is dismissed with reason `no_fix_planned` until upstream publishes a fix.
+
 ### Fixed
 - Binary-safe `.omarchive` download: archives downloaded from Files & history were decoded through UTF-8 text (corrupting every byte ≥ 0x80) and could not be restored; they now download as raw bytes.
 - CSV import now imports the `notes` column instead of silently dropping it — competitor notes round-trip through the file-first pillar (found by new boundary tests).
