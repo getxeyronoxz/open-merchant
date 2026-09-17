@@ -48,5 +48,9 @@ flatpak:
 # @open-merchant/desktop) and the "/" makes mksquashfs fail with "Could not
 # create destination file". Override the file name explicitly (the snap's
 # internal name is already open-merchant via executableName).
+# `publish: github` keeps the snap OUT of the Snap Store: snap targets
+# default to publishing there, which fails on CI without Snap Store
+# credentials — this repo ships everything through GitHub Releases only.
 snap:
   artifactName: open-merchant-${version}-${arch}.${ext}
+  publish: github
