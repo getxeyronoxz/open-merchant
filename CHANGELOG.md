@@ -13,16 +13,20 @@ All notable changes to Open Merchant are documented in this file.
 - AI assistants: stronger shared system prompts — groundedness, honesty about gaps, analyst-grade tone, and strict JSON discipline.
 
 ### Changed
-- Windows builds use an integrated title-bar overlay in the Ledger palette; the top chrome drags the window and every control inside stays clickable.
+- Home screen redesign: the recents panel now leads with a full-width "New workspace" call-to-action above a ruled divider of recent decisions (with a count badge), the hero gains a quiet trust strip (no accounts / no cloud sync / no telemetry), the portfolio card spans its full row instead of stranding in a half-empty grid column, recent listings get lift-and-glow hover with a sliding arrow, and buttons gain ledger-style inset highlights with consistent press feedback.
 - Home screen gains the portfolio overview table; new panels carry explicit empty-state guidance.
+- Windows builds use an integrated title-bar overlay in the Ledger palette; the top chrome drags the window and every control inside stays clickable.
 - AI settings: connection-test failures surface as `ai-provider-error` with human-readable provider messages (key rejected / unknown model / rate limit / temporary overload) instead of raw provider JSON mislabeled as `storage-error`.
 - AI settings: default model IDs refreshed to current provider lineups (Anthropic `claude-sonnet-5`, OpenAI `gpt-5.6-terra`, Gemini `gemini-3.8-flash`, local `qwen3.5:9b`); the Competitors snapshot card and decision-journal report pickers get their intended two-column layout with proper spacing.
 - AI providers: transient failures (HTTP 429/5xx — load spikes and rate limits) are retried automatically with short backoff, honoring the provider's `Retry-After` when sent; permanent failures (rejected key, unknown model) fail immediately. A Gemini 503 "high demand" spike now usually recovers without a manual retry.
-- Report: generation stays disabled with a "set your selling prices first" guide (and a jump to Economics) until all three scenario prices exist — the missing-prices error is now prevented, not just reported.
+- Report: generation stays disabled with a "set your selling prices first" guide (and a jump to Economics) until all three scenario prices exist — the missing-prices error is now prevented, not just reported. When generation still fails on invalid input (e.g. prices removed after the fact), the error offers "Open Economics" to fix the cause instead of a retry that would fail identically; transient failures keep their retry button.
+- CI: the Electron end-to-end suite runs on every push to `dev`; the release workflow is hardened with a concurrency guard against racing publishes, a job timeout, an Electron-binary cache, and a least-privilege checkout.
 
 ### Fixed
+- Binary-safe `.omarchive` download: archives downloaded from Files & history were decoded through UTF-8 text (corrupting every byte ≥ 0x80) and could not be restored; they now download as raw bytes.
 - CSV import now imports the `notes` column instead of silently dropping it — competitor notes round-trip through the file-first pillar (found by new boundary tests).
 - Recent-projects list is capped at the 20 most recent workspaces (it previously grew unbounded and every entry renders on Home), and a malformed recents file is quarantined beside the fresh list instead of being silently destroyed.
+- Snap packaging: an invalid snap option was dropped so local `dist` builds (and the snap target) run cleanly.
 
 ## [1.0.0-alpha.3] - 2026-09-03
 
@@ -78,13 +82,6 @@ All notable changes to Open Merchant are documented in this file.
 ### Removed
 
 - Legacy planning documents under `docs/superpowers/` and the superseded manual smoke/demo guides.
-
-## [Unreleased]
-
-### Added
-
-- Custom slim application menu (File/Edit/View/Help) replacing the stock Electron template — Check for Updates… (Ctrl+U), clipboard roles preserved, zoom controls, GitHub link, and an About dialog with the running version.
-- Non-blocking in-app update banner: when a new version is downloaded, the renderer offers Restart now / Not now over the validated `update:status` push channel and an `update/install` IPC surface — replacing the native message box. Dismissing keeps working; the update still installs on quit.
 
 ## [0.1.0] - 2026-08-08
 
