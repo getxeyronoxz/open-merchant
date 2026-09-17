@@ -9,6 +9,11 @@
   "engines": {
     "node": ">=22"
   },
+  "pnpm": {
+    "overrides": {
+      "js-yaml@<4.3.2": "4.3.2"
+    }
+  },
   "scripts": {
     "dev": "pnpm --filter @open-merchant/desktop dev",
     "build": "pnpm -r build",
@@ -31,6 +36,6 @@
     "prettier": "^3.9.6",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.70.0",
-    "vitest": "^3.2.7"
+    "vitest": "^4.1.11"
   }
 }
