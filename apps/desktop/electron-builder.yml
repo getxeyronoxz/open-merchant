@@ -39,5 +39,10 @@ linux:
   # distribution without dependency juggling (built by electron-builder; the
   # release workflow installs snapcraft/flatpak requirements).
   maintainer: Xeyronox
+# Snap names must be lowercase letters/digits/hyphens — without this,
+# electron-builder derives the name from the scoped package
+# (@open-merchant/desktop) and mksquashfs fails to create the output file.
+snap:
+  name: open-merchant
 flatpak:
   runtimeVersion: "23.08"
