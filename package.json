@@ -12,6 +12,9 @@
   "pnpm": {
     "overrides": {
       "js-yaml@<4.3.2": "4.3.2"
+    },
+    "patchedDependencies": {
+      "extract-zip@2.0.1": "patches/extract-zip@2.0.1.patch"
     }
   },
   "scripts": {

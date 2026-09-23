@@ -7,6 +7,11 @@ settings:
 overrides:
   js-yaml@<4.3.2: 4.3.2
 
+patchedDependencies:
+  extract-zip@2.0.1:
+    hash: ddk2bzm2uqqdxncpvsrovhmoay
+    path: patches/extract-zip@2.0.1.patch
+
 importers:
 
   .:
@@ -3798,7 +3803,7 @@ snapshots:
     dependencies:
       '@electron/get': 2.0.3
       '@types/node': 22.20.2
-      extract-zip: 2.0.1
+      extract-zip: 2.0.1(patch_hash=ddk2bzm2uqqdxncpvsrovhmoay)
     transitivePeerDependencies:
       - supports-color
 
@@ -3949,7 +3954,7 @@ snapshots:
 
   extend@3.0.2: {}
 
-  extract-zip@2.0.1:
+  extract-zip@2.0.1(patch_hash=ddk2bzm2uqqdxncpvsrovhmoay):
     dependencies:
       debug: 4.4.3
       get-stream: 5.2.0
