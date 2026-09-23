@@ -60,6 +60,17 @@ pnpm --filter @open-merchant/desktop dist
 - For UI changes, verify keyboard focus, content order, and reduced-motion
   behavior in addition to automated tests.
 
+## Commit authorship and merges
+
+- Commits land under the repository owner's identity (Xeyronox). Do **not** add
+  `Co-Authored-By` trailers or any other authorship attribution — human or AI —
+  unless the owner explicitly requests it for that change.
+- AI assistants may draft and propose changes; the owner authors every commit.
+  No assistant, collaborator, or automation merges pull requests — only the
+  repository owner merges, and PRs stay open until the owner decides.
+- Generated or scripted commits (recorders, generators, release tooling) also
+  carry the owner's identity only.
+
 Report security vulnerabilities through [SECURITY.md](SECURITY.md), not
 public issues. By participating, you agree to follow the
 [Code of Conduct](CODE_OF_CONDUCT.md).
