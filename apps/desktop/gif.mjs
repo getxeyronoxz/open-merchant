@@ -17,9 +17,9 @@ const framesDir = process.env.OM_FRAMES_DIR || join(here, ".om-frames");
 const outPath =
   process.env.OM_GIF_OUT || join(here, "..", "..", "docs", "media", "demo-loop.gif");
 
-/** Per-frame hold time in ms; names may carry a suffix from the recorder. */
+/** Per-frame hold time in ms; NN-k- names are keyframes, NN-m- are motion frames. */
 const delayFor = (name) => {
-  if (name.includes("scroll")) return 220;
+  if (name.includes("-m-")) return 90; // motion plays ~11fps — smooth, readable
   if (name.includes("report-")) return 1400;
   if (name.includes("results") || name.includes("stats")) return 1500;
   if (name.includes("home-") || name.includes("objective")) return 1200;
