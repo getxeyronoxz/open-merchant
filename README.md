@@ -152,6 +152,16 @@ the direction of the product.
 - One writer per project at a time; do not edit a project elsewhere while Open Merchant has unsaved changes.
 - The checked-in example project contains clearly-marked demo data, not live commercial claims.
 
+## Star History
+
+<a href="https://www.star-history.com/?repos=getxeyronoxz%2Fopen-merchant&type=timeline&logscale=&releases=&legend=bottom-right">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=getxeyronoxz/open-merchant&type=timeline&theme=dark&logscale&legend=bottom-right" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=getxeyronoxz/open-merchant&type=timeline&logscale&legend=bottom-right" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=getxeyronoxz/open-merchant&type=timeline&logscale&legend=bottom-right" />
+ </picture>
+</a>
+
 ## License
 
 Open Merchant is licensed under the GNU Affero General Public License v3.0 only (`AGPL-3.0-only`).
