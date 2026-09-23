@@ -47,6 +47,12 @@ Ground rules:
 - **No autonomous browsing.** Assistants read only what you paste into them.
 - Commerce math is never done by an AI or by floating point — see below.
 
+## Getting around
+
+- The toolbar always shows **where you are**: project, section, and the project folder on disk.
+- **Alt+1…7** jumps straight to the six workspace sections and AI settings — the rail shows the numbers, and shortcuts are ignored while you type.
+- The **walkthrough guide** keeps the six steps (objective → evidence → competitors → economics → report → files) one click away with progress badges, and reopening a project resumes at its first incomplete step.
+
 ## Install & auto-updates
 
 Download the current installer for your platform from [GitHub Releases](https://github.com/getxeyronoxz/open-merchant/releases) — Windows installer (`.exe`), macOS disk image (`.dmg`), or Linux AppImage, snap, and flatpak. The app keeps itself current: on startup it passively checks this project's own Releases feed, downloads updates in the background (delta downloads where supported), and offers to restart — or simply applies the update on quit. Checks are read-only against GitHub; nothing about your projects or usage leaves your machine.
@@ -106,6 +112,8 @@ pnpm test       # all package tests
 pnpm lint       # eslint
 pnpm typecheck  # strict TS across the monorepo
 ```
+
+The demo GIF in this README is produced by `apps/desktop/record.cjs` — a scripted run over a real build (no AI keys, no network) — and assembled into `docs/media/demo-loop.gif` by `apps/desktop/gif.mjs`.
 
 ### Repository layout
 

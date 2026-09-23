@@ -4,6 +4,23 @@ All notable changes to Open Merchant are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Workspace orientation: the toolbar now shows a project / section breadcrumb alongside the ellipsized folder path, so you always know where you are and where the files live.
+- Alt+1…7 section shortcuts jump between the six workspace sections and AI settings without reaching for the mouse; the rail shows the numbers and nav buttons expose `aria-keyshortcuts` for accessibility hosts. Shortcuts are ignored while typing.
+- README: a "Getting around" section (breadcrumb, shortcuts, walkthrough guide), a note on how the demo GIF is produced, and a Star History chart.
+
+### Changed
+- Haptic UI pass across the app: all four button variants lift on hover and sink on press (polish now owned by the `@open-merchant/ui` design system), and every clickable ledger surface — nav rail, recent-project cards, walkthrough steps, provider tiles, history rows, artifact rows, diff tabs — answers the pointer with consistent press feedback.
+- Demo recorder v2 (`record.cjs`): captures motion frames during typing, scrolling, hovering, and panel transitions (select-all before typing so pre-filled money fields pass `pattern` validation, and waiting for the assumptions-saved badge before Calculate); `gif.mjs` holds motion frames 90ms and keyframes longer, so the regenerated `docs/media/demo-loop.gif` reads like a screen recording.
+- ROADMAP Phase 3 rewritten as the connected-workbench plan (MCP server mode, triage inbox, MCP connector client, standing reviews, plugin surface, currency change, interchange spec), gated on the draft-gate principle, with the competitive research note in `docs/research/phase-3-connected-workbench.md`.
+- Docs & repo hygiene: architecture verification map gains the real-app Electron E2E row; owner-only authorship and dependency-alert triage policy documented; local agent scratch output (`.agent/`) ignored.
+
+### Security
+- `extract-zip` patched against CVE-2026-19693 (GHSA-7pqw-9j4j-h8q3): pinned the upstream containment fix through `pnpm.patchedDependencies` so writes through a symlink at the entry's final path component are refused. Build-time-only dependency of the Electron install script; never shipped in installers.
+
+### Fixed
+- Electron end-to-end suite: vitest `hookTimeout` raised to 60s — cold CI runners exceeded the 10s default launching Electron under xvfb even though every test passed.
+
 ## [1.0.0-alpha.4] - 2026-09-17
 
 ### Added
