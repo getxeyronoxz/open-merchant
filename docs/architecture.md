@@ -23,6 +23,7 @@ React 19 renderer (apps/desktop/src/renderer)
 | `packages/core` | Exact-decimal money and economics, statistics, validation, report rendering, atomic file store, known-layout path guards, run/provenance journals, V0→V2 import. Phase 2 adds market snapshots (immutable captures + derived history/diffs), the margin monitor, the decision journal, CSV in/out, portable `.omarchive` archives, and print-to-PDF rendering. No Electron imports — headless-capable and fully unit-tested |
 | `packages/ai` | `LlmProvider` seam (Anthropic, OpenAI, Gemini, and local OpenAI-compatible endpoints such as Ollama/LM Studio behind a BYO-key/base-URL registry, deterministic mock) plus six specialist agents producing zod-validated drafts |
 | `packages/sdk` | Typed `DesktopClient`; responses re-validated before reaching the UI; failures become coded `AppError`s |
+| `packages/mcp` | Read-only MCP server (`@open-merchant/mcp`, stdio only): exposes one project folder's artifacts as MCP resources, validates every read against the shared schemas, journals each read as an `mcpArtifactRead` run, and registers no tools — writes are refused by construction |
 | `packages/ui` | Design tokens ("The Merchant's Ledger") and primitives: Button, Field, ErrorState, EmptyState, LedgerRow |
 | `apps/desktop/main` | Window lifecycle, native dialogs, safeStorage-sealed AI key store, per-call `WorkspaceStore` opens, PDF rendering via a hidden `printToPDF` window, portfolio aggregation over the recents store |
 | `apps/desktop/preload` | Exposes exactly one `invoke(channel, payload)` method; rejects channels outside the contract |
@@ -62,6 +63,10 @@ Packaged builds check the project's own GitHub Releases feed (`latest.yml`, publ
 ## Phase 2 cockpit
 
 The post-decision layer is computed, never stored twice: market snapshots are immutable files under `market/snapshots/`; the margin monitor derives drift flags from the saved scenarios plus the latest snapshot's median price; the decision journal derives dated entries from the run journal and staleness from evidence `observedAt` timestamps. CSV import/export, `.omarchive` single-file backups (deflated, versioned, path-guarded envelope), and report PDF export all run through the same validated IPC contract — nothing leaves the machine.
+
+## MCP lane (read-only, stdio)
+
+`packages/mcp` runs outside the app process: any MCP host (Claude Desktop, an IDE agent, a script) spawns `open-merchant-mcp <project-folder>` over stdio — no network socket exists in the package. It reads only the known workspace layout through `@open-merchant/core`'s path guards, validates the exact bytes against `@open-merchant/shared` schemas before serving them, and appends one `mcpArtifactRead` record per successful read to `runs.jsonl`. It registers resources and zero tools: a host attempting any write fails loudly at the protocol level, so external reads stay observable and the write path never loosens.
 
 ## Verification map
 
