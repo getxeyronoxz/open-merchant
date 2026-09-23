@@ -80,6 +80,33 @@ function Shell({
     setSection(target);
   }, [section, setSection, workflow.progress]);
 
+  // Alt+1…7: jump between rail sections without reaching for the mouse; digits
+  // follow rail order with the assistant last. Ignored while typing.
+  useEffect(() => {
+    const shortcutSections: SectionName[] = [
+      ...sections.map((item) => item.name),
+      assistantSection.name,
+    ];
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!event.altKey || event.ctrlKey || event.metaKey) return;
+      const digit = Number(event.key);
+      if (!Number.isInteger(digit) || digit < 1 || digit > shortcutSections.length) return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
+      ) {
+        return;
+      }
+      const next = shortcutSections[digit - 1];
+      if (!next) return;
+      event.preventDefault();
+      setSection(next);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [setSection]);
+
   if (!project) return null;
 
   const counts: Partial<Record<SectionName, number | undefined>> = {
@@ -88,6 +115,8 @@ function Shell({
   };
 
   const stepMap = new Map(workflow.steps.map((s) => [s.id, s]));
+  const sectionLabel =
+    sections.find((item) => item.name === section)?.label ?? assistantSection.label;
 
   return (
     <main className="shell">
@@ -116,16 +145,22 @@ function Shell({
             </span>
           </div>
 
-          <p className="shell__rail-label">Workspace</p>
+          <p className="shell__rail-label">
+            Workspace
+            <span className="shell__kbd-hint" title="Jump sections: Alt+1 … Alt+7">
+              Alt+1–7
+            </span>
+          </p>
           <nav aria-label="Workspace sections">
             <ul className="shell__nav">
-              {sections.map((item) => {
+              {sections.map((item, index) => {
                 const count = counts[item.name];
                 const step = stepMap.get(item.name);
                 return (
                   <li key={item.name}>
                     <button
                       aria-current={section === item.name ? "page" : undefined}
+                      aria-keyshortcuts={`Alt+${index + 1}`}
                       className={`shell__nav-item${section === item.name ? " is-active" : ""}`}
                       onClick={() => setSection(item.name)}
                       type="button"
@@ -150,6 +185,7 @@ function Shell({
             <li>
               <button
                 aria-current={section === assistantSection.name ? "page" : undefined}
+                aria-keyshortcuts="Alt+7"
                 className={`shell__nav-item${section === assistantSection.name ? " is-active" : ""}`}
                 onClick={() => setSection(assistantSection.name)}
                 type="button"
@@ -171,7 +207,12 @@ function Shell({
 
         <section className="shell__stage">
           <header className="shell__toolbar">
-            <span className="om-data" title={root}>
+            <span className="shell__crumb">
+              <strong>{project.manifest.name}</strong>
+              <span aria-hidden="true">/</span>
+              <span>{sectionLabel}</span>
+            </span>
+            <span className="om-data shell__toolbar-path" title={root}>
               {root}
             </span>
           </header>
