@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -82,5 +82,51 @@ describe("ReadOnlyProject", () => {
     expect(text).not.toBeNull();
     expect(JSON.parse(text ?? "")).toHaveProperty("id", fixture.snapshotId);
     await expect(project.loadSnapshotText("../../escape")).rejects.toThrow("Unsafe snapshot id");
+  });
+
+  it("refuses a snapshot directory link without listing outside files", async () => {
+    const linked = await createFixture();
+    const outside = await mkdtemp(join(tmpdir(), "om-mcp-outside-"));
+    const outsideName = "SNAP-20000101T000000Z-beef.json";
+    await writeFile(join(outside, outsideName), "outside secret", "utf8");
+    const snapshotsDir = join(linked.root, "market", "snapshots");
+    await rename(snapshotsDir, `${snapshotsDir}-original`);
+    await symlink(outside, snapshotsDir, process.platform === "win32" ? "junction" : "dir");
+
+    const linkedProject = await ReadOnlyProject.open(linked.root);
+    await expect(linkedProject.listSnapshotIds()).rejects.toThrow(/symbolic link/iu);
+    await expect(
+      linkedProject.loadSnapshotText("SNAP-20000101T000000Z-beef"),
+    ).rejects.toThrow();
+
+    await cleanupFixture(linked);
+    await rm(outside, { recursive: true, force: true });
+  });
+
+  it("refuses to replace a linked run journal during an audited read", async () => {
+    const linked = await createFixture();
+    const outside = await mkdtemp(join(tmpdir(), "om-mcp-journal-"));
+    const outsideJournal = join(outside, "runs.jsonl");
+    await mkdir(outsideJournal);
+    const sentinel = join(outsideJournal, "sentinel.txt");
+    await writeFile(sentinel, "outside sentinel", "utf8");
+    const runsPath = join(linked.root, ArtifactPaths.runs);
+    await rm(runsPath, { force: true });
+    await symlink(
+      outsideJournal,
+      runsPath,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+
+    const linkedProject = await ReadOnlyProject.open(linked.root);
+    await expect(linkedProject.journalRead(ArtifactPaths.manifest, "{}")).rejects.toThrow(
+      /symbolic link/iu,
+    );
+    expect(await readFile(sentinel, "utf8")).toBe("outside sentinel");
+    const stats = await import("node:fs/promises").then((fs) => fs.lstat(runsPath));
+    expect(stats.isSymbolicLink()).toBe(true);
+
+    await cleanupFixture(linked);
+    await rm(outside, { recursive: true, force: true });
   });
 });

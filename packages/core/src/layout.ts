@@ -23,6 +23,14 @@ export const ArtifactPaths = {
 
 /** Directory holding immutable market snapshots (phase 2). */
 export const MARKET_SNAPSHOTS_DIR = "market/snapshots";
+export const KNOWN_WORKSPACE_DIRECTORIES = [
+  WORKSPACE_DIR,
+  "evidence",
+  "market",
+  MARKET_SNAPSHOTS_DIR,
+  "economics",
+  "reports",
+] as const;
 const SNAPSHOT_ID_PATTERN = /^SNAP-\d{8}T\d{6}Z-[0-9a-f]{4}$/u;
 const SNAPSHOT_FILE_PATTERN = /^SNAP-\d{8}T\d{6}Z-[0-9a-f]{4}\.json$/u;
 
@@ -67,6 +75,10 @@ export function isKnownArtifactPath(relativePath: string): boolean {
   return (KNOWN_ARTIFACT_PATHS as readonly string[]).includes(relativePath);
 }
 
+export function isKnownWorkspaceDirectory(relativePath: string): boolean {
+  return (KNOWN_WORKSPACE_DIRECTORIES as readonly string[]).includes(relativePath);
+}
+
 export class ArtifactPathError extends Error {
   constructor(message: string) {
     super(message);
@@ -104,6 +116,48 @@ export async function resolveKnownArtifact(workspaceRoot: string, relativePath: 
     // Missing file is acceptable — callers treat it as an empty/default value.
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
       throw new ArtifactPathError(`Cannot access artifact ${relativePath}: ${String(error)}`);
+    }
+  }
+  return absolute;
+}
+
+/**
+ * Resolves a directory in the known workspace layout. Directory listings are
+ * guarded exactly like file reads: traversal and unknown names are rejected,
+ * symbolic links/junctions are refused, and realpath containment prevents a
+ * link from exposing anything outside the project.
+ */
+export async function resolveKnownDirectory(
+  workspaceRoot: string,
+  relativePath: string,
+): Promise<string> {
+  if (isAbsolute(relativePath) || relativePath.split(/[\\/]/).includes("..")) {
+    throw new ArtifactPathError(`Unsafe workspace directory: ${relativePath}`);
+  }
+  if (!isKnownWorkspaceDirectory(relativePath)) {
+    throw new ArtifactPathError(`Unknown workspace directory: ${relativePath}`);
+  }
+
+  const absolute = join(workspaceRoot, ...relativePath.split("/"));
+  try {
+    const stats = await lstat(absolute);
+    if (stats.isSymbolicLink()) {
+      throw new ArtifactPathError(`Workspace directory is a symbolic link: ${relativePath}`);
+    }
+    if (!stats.isDirectory()) {
+      throw new ArtifactPathError(`Workspace path is not a directory: ${relativePath}`);
+    }
+    const real = await realpath(absolute);
+    const realRoot = await realpath(workspaceRoot);
+    if (!real.startsWith(realRoot + sep)) {
+      throw new ArtifactPathError(`Workspace directory escapes the project: ${relativePath}`);
+    }
+  } catch (error) {
+    if (error instanceof ArtifactPathError) throw error;
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw new ArtifactPathError(
+        `Cannot access workspace directory ${relativePath}: ${String(error)}`,
+      );
     }
   }
   return absolute;

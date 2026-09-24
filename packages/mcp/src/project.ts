@@ -10,11 +10,13 @@ import {
   fingerprintContents,
   isSnapshotFileName,
   readArtifactIfPresent,
+  resolveKnownDirectory,
   resolveKnownArtifact,
   resolveSnapshotFile,
   validateAssumptions,
   validateCompetitors,
   validateEvidenceSources,
+  WORKSPACE_DIR,
 } from "@open-merchant/core";
 import {
   competitorSchema,
@@ -153,7 +155,8 @@ export class ReadOnlyProject {
   /** Snapshot ids on disk, sorted; a missing directory reads as empty. */
   async listSnapshotIds(): Promise<string[]> {
     try {
-      const names = await readdir(join(this.root, MARKET_SNAPSHOTS_DIR));
+      const directory = await resolveKnownDirectory(this.root, MARKET_SNAPSHOTS_DIR);
+      const names = await readdir(directory);
       return names
         .filter(isSnapshotFileName)
         .map((name) => name.slice(0, -".json".length))
@@ -174,6 +177,8 @@ export class ReadOnlyProject {
    * `mcpArtifactRead` run record fingerprinted with the exact bytes served.
    */
   async journalRead(relativePath: string, contents: string): Promise<void> {
+    await resolveKnownDirectory(this.root, WORKSPACE_DIR);
+    await resolveKnownArtifact(this.root, ArtifactPaths.runs);
     const now = new Date().toISOString();
     await this.journal.appendRun({
       runId: `RUN-MCP-${randomUUID()}`,
