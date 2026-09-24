@@ -14,8 +14,9 @@ open-merchant-mcp /path/to/project
   from `@open-merchant/core`. The only write in this package is appending an
   audit line to the project's `runs.jsonl` run journal, once per resource read.
 - **stdio transport only** — no network socket, ever.
-- **No tools** — resources only; the tool list is empty and stays empty. Write
-  attempts from a host surface as loud protocol errors, not silent no-ops.
+- **No tools** — resources only; the initialize response never advertises the
+  tools capability. `tools/list` and write attempts fail as loud protocol errors,
+  not silent no-ops.
 - Artifacts are exposed exactly as the project stores them, validated against
   the workspace format v2 zod schemas in `@open-merchant/shared`; malformed
   data is rejected loudly rather than repaired.
@@ -47,3 +48,30 @@ open-merchant-mcp /path/to/project
     }
   }
 }
+```
+
+Use an absolute path in both fields. The project folder must contain a valid
+`.openmerchant/manifest.json`; malformed workspaces are refused, never repaired.
+
+## Build and verify locally
+
+```bash
+pnpm --filter @open-merchant/mcp build
+pnpm --filter @open-merchant/mcp test
+```
+
+The test command rebuilds `dist/cli.js` first and includes a real spawned-child
+stdio test: initialize, list all resources, read each URI, confirm the run
+journal grows, verify the tools capability is absent, and attempt a write that
+must fail. Use MCP Inspector, Claude Desktop, or an IDE host for manual verification.
+
+## Troubleshooting
+
+- **`not an Open Merchant project`** — point the host at the project root, not
+  its parent folder.
+- **`manifest is malformed`** — inspect or restore the canonical project through
+  Open Merchant; the MCP server intentionally never repairs it.
+- **No resources after a tool appears** — the server advertises resources only;
+  update the host to MCP resources, not tool calls.
+- **Read appears in the project journal** — expected. Every successful resource
+  read appends one `mcpArtifactRead` record with the exact served-byte hash.
