@@ -25,6 +25,7 @@ class StdioClient {
   private readonly pending = new Map<number, (response: JsonRpcResponse) => void>();
   private nextId = 0;
   stderr = "";
+  serverInfo: Record<string, unknown> = {};
   capabilities: Record<string, unknown> = {};
 
   constructor(projectRoot: string) {
@@ -71,6 +72,7 @@ class StdioClient {
       clientInfo: { name: "spawned-vitest-host", version: "1.0.0" },
     });
     expect(response.error).toBeUndefined();
+    this.serverInfo = (response.result?.serverInfo ?? {}) as Record<string, unknown>;
     this.capabilities = (response.result?.capabilities ?? {}) as Record<string, unknown>;
     this.notify("notifications/initialized");
   }
@@ -137,6 +139,7 @@ describe("spawned open-merchant-mcp executable", () => {
     }
     expect(await mcpReadCount(fixture.root)).toBe(before + resources.length);
 
+    expect(client.serverInfo).toMatchObject({ name: "open-merchant", version: "1.0.0-alpha.0" });
     expect(client.capabilities).toHaveProperty("resources");
     expect(client.capabilities).not.toHaveProperty("tools");
     const tools = await client.request("tools/list");
@@ -148,5 +151,14 @@ describe("spawned open-merchant-mcp executable", () => {
     });
     expect(write.result).toBeUndefined();
     expect(write.error?.message).toMatch(/tool|not found/iu);
+
+    const traversal = await client.request("resources/read", {
+      uri: "openmerchant://snapshots/../../escape",
+    });
+    expect(traversal.result).toBeUndefined();
+    expect(traversal.error?.message).toMatch(/resource|snapshot|unsafe|not found/iu);
+    const unknown = await client.request("resources/read", { uri: "openmerchant://nowhere" });
+    expect(unknown.result).toBeUndefined();
+    expect(unknown.error?.message).toMatch(/resource|not found/iu);
   });
 });

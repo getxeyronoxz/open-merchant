@@ -10,9 +10,9 @@ open-merchant-mcp /path/to/project
 
 ## Ground rules (the draft gate, protocol edition)
 
-- **Read-only by construction** — the server imports no artifact-writing API
-  from `@open-merchant/core`. The only write in this package is appending an
-  audit line to the project's `runs.jsonl` run journal, once per resource read.
+- **Read-only by construction** — canonical artifacts cannot be written. The
+  only mutation is a guarded audit append to the project's `runs.jsonl`, once per
+  resource read; linked/malformed journals are refused rather than replaced.
 - **stdio transport only** — no network socket, ever.
 - **No tools** — resources only; the initialize response never advertises the
   tools capability. `tools/list` and write attempts fail as loud protocol errors,
@@ -52,6 +52,14 @@ open-merchant-mcp /path/to/project
 
 Use an absolute path in both fields. The project folder must contain a valid
 `.openmerchant/manifest.json`; malformed workspaces are refused, never repaired.
+
+### Version compatibility
+
+This server journals the `mcpArtifactRead` run operation. Use it with the
+coordinated Open Merchant `v1.0.0` desktop build (or a newer build carrying the
+same shared schema). Older alpha builds do not recognize that run operation and
+may reject the journal; do not point this pre-release MCP server at a project
+that must remain readable by an older alpha app.
 
 ## Build and verify locally
 
