@@ -236,9 +236,16 @@ export class MerchantService {
     return this.withStore(root, (store) => store.loadCompetitors());
   }
 
-  async saveCompetitors(root: string, competitors: Competitor[]): Promise<void> {
+  async saveCompetitors(
+    root: string,
+    competitors: Competitor[],
+    origin?: GenerationOrigin,
+  ): Promise<void> {
     const store = await this.openStore(root);
     await this.run(() => store.saveCompetitors(competitors));
+    if (origin?.kind === "agent") {
+      await this.journalAgentAcceptance(store, "agentDraftProduced", [ArtifactPaths.competitors], origin);
+    }
   }
 
   competitorStatistics(root: string): Promise<CompetitorStatistics> {

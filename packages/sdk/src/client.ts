@@ -52,7 +52,11 @@ export interface DesktopClient {
   ): Promise<IpcResponse<"evidence/save">>;
 
   loadCompetitors(root: string): Promise<IpcResponse<"competitors/load">>;
-  saveCompetitors(root: string, competitors: IpcRequest<"competitors/save">["competitors"]): Promise<IpcResponse<"competitors/save">>;
+  saveCompetitors(
+    root: string,
+    competitors: IpcRequest<"competitors/save">["competitors"],
+    origin?: IpcRequest<"competitors/save">["origin"],
+  ): Promise<IpcResponse<"competitors/save">>;
   competitorStatistics(root: string): Promise<IpcResponse<"competitors/statistics">>;
 
   loadAssumptions(root: string): Promise<IpcResponse<"assumptions/load">>;
@@ -123,7 +127,8 @@ export function createDesktopClient(raw: RawInvoke): DesktopClient {
     saveEvidence: (root, sources, origin) => invoke(raw, "evidence/save", { root, sources, origin }),
 
     loadCompetitors: (root) => invoke(raw, "competitors/load", { root }),
-    saveCompetitors: (root, competitors) => invoke(raw, "competitors/save", { root, competitors }),
+    saveCompetitors: (root, competitors, origin) =>
+      invoke(raw, "competitors/save", { root, competitors, origin }),
     competitorStatistics: (root) => invoke(raw, "competitors/statistics", { root }),
 
     loadAssumptions: (root) => invoke(raw, "assumptions/load", { root }),

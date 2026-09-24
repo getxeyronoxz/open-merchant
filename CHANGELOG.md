@@ -6,7 +6,8 @@ All notable changes to Open Merchant are documented in this file.
 
 ### Added
 - Workspace orientation: the toolbar now shows a project / section breadcrumb alongside the ellipsized folder path, so you always know where you are and where the files live.
-- Alt+1…7 section shortcuts jump between the six workspace sections and AI settings without reaching for the mouse; the rail shows the numbers and nav buttons expose `aria-keyshortcuts` for accessibility hosts. Shortcuts are ignored while typing.
+- Alt+1…8 section shortcuts jump between the six workspace sections, Draft Desk, and AI settings without reaching for the mouse; the rail shows the numbers and nav buttons expose `aria-keyshortcuts` for accessibility hosts. Shortcuts are ignored while typing.
+- Draft Desk: one visible triage lane for the six existing assistants. Evidence, competitor, and report-section drafts are editable and require explicit Accept/Discard; research plans, economics reviews, and report audits are review-only. Provenance (agent, provider, model, prompt hash) is visible before any acceptance.
 - README: a "Getting around" section (breadcrumb, shortcuts, walkthrough guide), a note on how the demo GIF is produced, and a Star History chart.
 
 ### Changed

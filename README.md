@@ -50,7 +50,8 @@ Ground rules:
 ## Getting around
 
 - The toolbar always shows **where you are**: project, section, and the project folder on disk.
-- **Alt+1…7** jumps straight to the six workspace sections and AI settings — the rail shows the numbers, and shortcuts are ignored while you type.
+- **Draft Desk:** all six assistants now have one visible review lane. Actionable evidence, competitor, and report-section drafts can be edited, accepted, or discarded; plans, economics reviews, and report audits remain review-only. Agent, provider, model, and prompt hash are shown before acceptance.
+- **Alt+1…8** jumps straight to the six workspace sections, Draft Desk, and AI settings — the rail shows the numbers, and shortcuts are ignored while you type.
 - The **walkthrough guide** keeps the six steps (objective → evidence → competitors → economics → report → files) one click away with progress badges, and reopening a project resumes at its first incomplete step.
 
 ## Install & auto-updates

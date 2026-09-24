@@ -195,7 +195,10 @@ export function useSaveCompetitors(root: string) {
   const invalidate = useInvalidator();
   const keys = ROOT_KEYS(root);
   return useMutation({
-    mutationFn: (competitors: Competitor[]) => client.saveCompetitors(root, competitors),
+    mutationFn: (input: Competitor[] | { competitors: Competitor[]; origin?: GenerationOrigin }) =>
+      Array.isArray(input)
+        ? client.saveCompetitors(root, input)
+        : client.saveCompetitors(root, input.competitors, input.origin),
     onSuccess: () => invalidate(keys.competitors, keys.statistics),
   });
 }

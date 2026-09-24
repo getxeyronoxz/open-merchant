@@ -96,8 +96,8 @@ export function registerIpcHandlers(
     "competitors/load": channel<"competitors/load">(async ({ root }) => ({
       competitors: await service.loadCompetitors(root),
     })),
-    "competitors/save": channel<"competitors/save">(async ({ root, competitors }) => {
-      await service.saveCompetitors(root, competitors);
+    "competitors/save": channel<"competitors/save">(async ({ root, competitors, origin }) => {
+      await service.saveCompetitors(root, competitors, origin);
       return {};
     }),
     "competitors/statistics": channel<"competitors/statistics">(async ({ root }) => ({

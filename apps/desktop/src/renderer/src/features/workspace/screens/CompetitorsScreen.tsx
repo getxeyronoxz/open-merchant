@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { Competitor, CompetitorDraft, MarketSnapshot } from "@open-merchant/shared";
+import type { AiOrigin, Competitor, CompetitorDraft, MarketSnapshot } from "@open-merchant/shared";
 import { EmptyState, ErrorState, Field, LedgerRow } from "@open-merchant/ui";
 
 import { useProject } from "../../../state/project";
@@ -41,6 +41,7 @@ export function CompetitorsScreen({
   const [form, setForm] = useState({ product: "", brand: "", price: "", marketplace: "", url: "" });
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [aiDrafts, setAiDrafts] = useState<CompetitorDraft[] | null>(null);
+  const [aiOrigin, setAiOrigin] = useState<AiOrigin | null>(null);
   const { project } = useProject();
   const projectCurrency = project?.manifest.currency ?? "";
 
@@ -105,9 +106,10 @@ export function CompetitorsScreen({
         observedAt: new Date().toISOString(),
       };
     });
-    save.mutate([...competitors, ...additions], {
+    save.mutate({ competitors: [...competitors, ...additions], origin: aiOrigin ?? undefined }, {
       onSuccess: () => {
         setAiDrafts(null);
+        setAiOrigin(null);
         setAiPanelOpen(false);
       },
     });
@@ -130,7 +132,10 @@ export function CompetitorsScreen({
             event.preventDefault();
             const data = new FormData(event.currentTarget);
             draftAi.mutate(String(data.get("pastedListings") ?? ""), {
-              onSuccess: (result) => setAiDrafts(result.competitors),
+              onSuccess: (result) => {
+                setAiDrafts(result.competitors);
+                setAiOrigin(result.origin);
+              },
             });
           }}
         >

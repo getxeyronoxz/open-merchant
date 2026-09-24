@@ -237,6 +237,37 @@ describe("MerchantService AI guards", () => {
     }
   });
 
+  it("journals accepted competitor drafts with their AI origin", async () => {
+    const parent = await tempDir();
+    const service = makeService();
+    const created = await service.createProject({
+      parentDirectory: parent,
+      name: "AI Competitors",
+      objective: "Accept a reviewed market draft.",
+      currency: "INR",
+    });
+    const origin = {
+      kind: "agent" as const,
+      agentId: "competitor-analyst",
+      providerId: "mock",
+      modelId: "mock-deterministic",
+      promptHash: "a".repeat(64),
+    };
+
+    await service.saveCompetitors(created.root, [competitor("C-001", "499.00")], origin);
+
+    const provenance = await service.listProvenance(created.root);
+    expect(provenance).toContainEqual(
+      expect.objectContaining({
+        artifactPath: ArtifactPaths.competitors,
+        origin,
+      }),
+    );
+    expect((await service.listRuns(created.root)).some(
+      (run) => run.operation === "agentDraftProduced" && run.status === "succeeded",
+    )).toBe(true);
+  });
+
   it("imports the real V0 example project end to end", async () => {
     const parent = await tempDir();
     const service = makeService();

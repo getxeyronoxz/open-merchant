@@ -151,7 +151,12 @@ export const ipc = {
     response: z.object({ competitors: z.array(competitorSchema) }),
   },
   "competitors/save": {
-    request: z.object({ root: z.string(), competitors: z.array(competitorSchema) }),
+    request: z.object({
+      root: z.string(),
+      competitors: z.array(competitorSchema),
+      // Set when the saved content originated from an accepted AI draft.
+      origin: generationOriginSchema.optional(),
+    }),
     response: z.object({}),
   },
   "competitors/statistics": {

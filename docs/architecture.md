@@ -53,7 +53,7 @@ project/
 
 ## AI model
 
-Agents draft; humans accept. Assistant output is validated JSON tied to shared schemas, surfaced in the UI marked as an AI draft, and becomes data only through a normal save channel. Saves carrying an `agent` origin journal a run and provenance records including agent id, provider, model id, prompt hash, and artifact SHA-256. Cloud-provider API keys are encrypted via Electron `safeStorage` into app-private user data; they are never returned over IPC nor written into projects. Local endpoints (Ollama, LM Studio) configure a base URL only — no key, and outbound traffic stays on the user's machine.
+Agents draft; humans accept. The Draft Desk is the visible review lane: it shows the agent, provider, model, and prompt hash before any action, keeps review-only outputs (research plan, economics review, report audit) out of the write path, and allows actionable evidence, competitor, and report-section drafts to be edited, accepted, or discarded. Accepted output crosses the same zod-validated IPC save channels as manual edits and becomes data only through that normal save channel. Saves carrying an `agent` origin journal a run and provenance records including agent id, provider, model id, prompt hash, and artifact SHA-256. Cloud-provider API keys are encrypted via Electron `safeStorage` into app-private user data; they are never returned over IPC nor written into projects. Local endpoints (Ollama, LM Studio) configure a base URL only — no key, and outbound traffic stays on the user's machine.
 
 ## Updates and releases
 

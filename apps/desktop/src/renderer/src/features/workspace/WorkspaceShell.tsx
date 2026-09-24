@@ -10,6 +10,7 @@ import { CompetitorsScreen } from "./screens/CompetitorsScreen";
 import { EconomicsScreen } from "./screens/EconomicsScreen";
 import { ReportScreen } from "./screens/ReportScreen";
 import { ArtifactsScreen } from "./screens/ArtifactsScreen";
+import { DraftDeskScreen } from "./screens/DraftDeskScreen";
 import { AiSettingsScreen } from "./screens/AiSettingsScreen";
 
 /**
@@ -27,7 +28,10 @@ const sections = [
   { name: "Artifacts", label: "Files & history" },
 ] as const;
 
-const assistantSection = { name: "AI", label: "AI settings" } as const;
+const assistantSections = [
+  { name: "Drafts", label: "Draft Desk" },
+  { name: "AI", label: "AI settings" },
+] as const;
 
 export function WorkspaceShell() {
   const { project, closeProject } = useProject();
@@ -85,7 +89,7 @@ function Shell({
   useEffect(() => {
     const shortcutSections: SectionName[] = [
       ...sections.map((item) => item.name),
-      assistantSection.name,
+      ...assistantSections.map((item) => item.name),
     ];
     const onKeyDown = (event: KeyboardEvent) => {
       if (!event.altKey || event.ctrlKey || event.metaKey) return;
@@ -116,7 +120,8 @@ function Shell({
 
   const stepMap = new Map(workflow.steps.map((s) => [s.id, s]));
   const sectionLabel =
-    sections.find((item) => item.name === section)?.label ?? assistantSection.label;
+    sections.find((item) => item.name === section)?.label ??
+    assistantSections.find((item) => item.name === section)?.label;
 
   return (
     <main className="shell">
@@ -147,8 +152,8 @@ function Shell({
 
           <p className="shell__rail-label">
             Workspace
-            <span className="shell__kbd-hint" title="Jump sections: Alt+1 … Alt+7">
-              Alt+1–7
+            <span className="shell__kbd-hint" title="Jump sections: Alt+1 … Alt+8">
+              Alt+1–8
             </span>
           </p>
           <nav aria-label="Workspace sections">
@@ -182,17 +187,20 @@ function Shell({
 
           <p className="shell__rail-label">Assistant</p>
           <ul className="shell__nav">
-            <li>
-              <button
-                aria-current={section === assistantSection.name ? "page" : undefined}
-                aria-keyshortcuts="Alt+7"
-                className={`shell__nav-item${section === assistantSection.name ? " is-active" : ""}`}
-                onClick={() => setSection(assistantSection.name)}
-                type="button"
-              >
-                <span>AI settings</span>
-              </button>
-            </li>
+            {assistantSections.map((item, index) => (
+              <li key={item.name}>
+                <button
+                  aria-current={section === item.name ? "page" : undefined}
+                  aria-keyshortcuts={`Alt+${sections.length + index + 1}`}
+                  className={`shell__nav-item${section === item.name ? " is-active" : ""}`}
+                  onClick={() => setSection(item.name)}
+                  type="button"
+                >
+                  <span>{item.label}</span>
+                  {item.name === "Drafts" ? <span className="om-badge om-badge--brass">AI</span> : null}
+                </button>
+              </li>
+            ))}
           </ul>
 
           <button
@@ -219,7 +227,7 @@ function Shell({
           <div className="shell__scroll">
             {/* key restarts the entrance animation per section */}
             <div className="shell__content" key={section}>
-              {section !== "AI" ? (
+              {section !== "AI" && section !== "Drafts" ? (
                 <WorkflowGuide
                   steps={workflow.steps}
                   currentStep={workflow.currentStep}
@@ -263,6 +271,9 @@ function Stage({
       return <ReportScreen root={root} onNavigate={onNavigate} />;
     case "Artifacts":
       return <ArtifactsScreen root={root} onNavigate={onNavigate} />;
+    case "Drafts":
+      return <DraftDeskScreen root={root} onNavigate={onNavigate} />;
+
     case "AI":
       return <AiSettingsScreen />;
   }
