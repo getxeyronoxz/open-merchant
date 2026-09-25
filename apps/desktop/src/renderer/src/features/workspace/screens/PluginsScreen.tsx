@@ -6,8 +6,9 @@ import { usePluginCatalog, usePluginSource, useSetPluginEnabled } from "../queri
 import { PluginsPanel } from "./PluginsPanel";
 
 /**
- * The plugin surface. Every plugin starts disabled and its source is one click
- * away, so nothing a stranger wrote runs before the seller has read it.
+ * The plugin surface. Every plugin starts disabled and its declared source is
+ * one click away, so nothing a stranger wrote is turned on before the seller has
+ * seen what the manifest says it is.
  */
 export function PluginsScreen() {
   const catalog = usePluginCatalog();
@@ -32,8 +33,9 @@ export function PluginsScreen() {
         <h1 className="om-section-title">Local, inspectable extensions</h1>
         <p className="om-section-sub">
           A plugin is a folder of data, not a program this app runs. Report sections and CSV
-          dialects are plain text; a connector names an external command that runs on your machine
-          and can only ever propose drafts. There is no marketplace and nothing updates itself.
+          dialects are plain text. A connector names an external command that runs on your machine
+          as itself — this app will only ever accept drafts from it, never a write. There is no
+          marketplace and nothing updates itself.
         </p>
       </header>
 

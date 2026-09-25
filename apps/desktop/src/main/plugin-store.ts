@@ -1,20 +1,25 @@
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { z } from "zod";
 
 import {
+  isoDateTimeSchema,
   pluginManifestSchema,
   type InstalledPlugin,
   type PluginCatalog,
   type PluginManifest,
 } from "@open-merchant/shared";
 
-export type { PluginCatalog };
-
-interface PersistedState {
-  plugins: Record<string, { enabled: boolean; enabledAt: string | null }>;
-}
-
-const EMPTY_STATE: PersistedState = { plugins: {} };
+/**
+ * The on-disk shape of one `plugin-state.json` entry. It is validated on read
+ * so a hand-edited or partly-corrupted file can never hand the renderer a value
+ * the shared contract would reject.
+ */
+const pluginStateEntrySchema = z.object({
+  enabled: z.boolean(),
+  enabledAt: isoDateTimeSchema.nullable(),
+});
+type PersistedState = { plugins: Record<string, z.infer<typeof pluginStateEntrySchema>> };
 
 /**
  * Discovers capability-declared plugins in app data. A plugin is data, never
@@ -37,7 +42,15 @@ export class PluginStore {
     const broken: PluginCatalog["broken"] = [];
     const candidates: { directoryName: string; manifest: PluginManifest }[] = [];
 
-    for (const directoryName of await this.pluginDirectories()) {
+    for (const { name: directoryName, isLink } of await this.pluginDirectories()) {
+      if (isLink) {
+        broken.push({
+          directoryName,
+          reason: "This folder is a symbolic link. Plugins are not followed through links.",
+        });
+        continue;
+      }
+
       let raw: string;
       try {
         raw = await readFile(join(this.directory, directoryName, "manifest.json"), "utf8");
@@ -133,30 +146,37 @@ export class PluginStore {
     return `command: ${manifest.command}\nargs: ${manifest.args.join(" ")}\n`;
   }
 
-  private async pluginDirectories(): Promise<string[]> {
+  private async pluginDirectories(): Promise<{ name: string; isLink: boolean }[]> {
     try {
       const entries = await readdir(this.directory, { withFileTypes: true });
       return entries
-        .filter((entry) => entry.isDirectory())
-        .map((entry) => entry.name)
-        .sort();
+        .filter((entry) => entry.isDirectory() || entry.isSymbolicLink())
+        .map((entry) => ({ name: entry.name, isLink: entry.isSymbolicLink() }))
+        .sort((a, b) => a.name.localeCompare(b.name));
     } catch {
       return [];
     }
   }
 
   private async readState(): Promise<PersistedState> {
+    let parsed: unknown;
     try {
-      const parsed: unknown = JSON.parse(await readFile(this.statePath, "utf8"));
-      if (typeof parsed === "object" && parsed !== null) {
-        const plugins = (parsed as PersistedState).plugins;
-        if (typeof plugins === "object" && plugins !== null) return { plugins };
-      }
+      parsed = JSON.parse(await readFile(this.statePath, "utf8"));
     } catch {
-      // A missing or hand-edited state file must never block startup: every
-      // plugin simply reads as disabled.
+      return { plugins: {} };
     }
-    return { ...EMPTY_STATE, plugins: {} };
+    const outer = z.object({ plugins: z.record(z.unknown()) }).safeParse(parsed);
+    if (!outer.success) return { plugins: {} };
+
+    // Each entry is validated on its own. One hand-edited entry must not
+    // silently disable a plugin the seller deliberately turned on, and a bad
+    // entry must never reach the renderer as a value the contract cannot parse.
+    const plugins: PersistedState["plugins"] = {};
+    for (const [pluginId, value] of Object.entries(outer.data.plugins)) {
+      const entry = pluginStateEntrySchema.safeParse(value);
+      if (entry.success) plugins[pluginId] = entry.data;
+    }
+    return { plugins };
   }
 
   private async writeState(state: PersistedState): Promise<void> {

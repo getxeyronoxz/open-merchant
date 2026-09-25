@@ -113,6 +113,16 @@ sandboxing. Stating otherwise would repeat the Phase 2 print claim — promising
   `listMarketSnapshots` behaviour.
 - A plugin whose directory basename ≠ `manifest.id` is refused (prevents a
   manifest claiming an id that shadows another folder).
+- A **symlinked or junctioned** plugin folder is refused with a stated reason.
+  Following it would let a link point anywhere on the machine, and a silently
+  skipped folder would contradict the "nothing is skipped silently" promise the
+  Plugins screen makes to the seller.
+- Two folders claiming the same `id` refuse **both** — neither wins, so a
+  shadowed plugin never vanishes without a trace.
+- A hand-edited or partly-corrupted `plugin-state.json` never blocks startup and
+  never reaches the renderer as a value the contract rejects. Each entry is
+  validated on its own, so one bad entry does not disable plugins the seller
+  deliberately enabled.
 - A manifest with no `author` is refused. `author` is `z.string().trim().min(1)`
   in the schema; §6 adds the test that proves it.
 
@@ -145,8 +155,14 @@ export class PluginStore {
 - `readSource()` returns the human-inspectable payload for the "source is one
   click away" rule: the `markdown` for a report-section, formatted JSON for a
   csv-importer `mapping`, and `command` + `args` for a connector.
-- `setEnabled()` writes `plugin-state.json` and returns the updated record. The
-  caller (IPC layer) journals `pluginEnabled` / `pluginDisabled`.
+- `setEnabled()` writes `plugin-state.json` and returns the updated record.
+  **Amended 2026-09-25 during implementation:** the enable/disable is *not*
+  journaled to `runs.jsonl`. That journal lives inside each project folder, and
+  a plugin toggle is an app-level event — appending it there would make project
+  A's archive assert something untrue about project A. `plugin-state.json`, with
+  its `enabledAt`, is the on-record trail. The `pluginEnabled` / `pluginDisabled`
+  values in `runOperationSchema` are left in place, unused, for a future
+  app-level operations log if one is ever wanted.
 
 State file shape, mirroring `recent-projects.json`'s plain-JSON convention:
 
@@ -242,12 +258,13 @@ Deferred deliberately, with reasons:
 ## 8. Definition of done
 
 1. A third-party `report-section` plugin is discovered, its source is viewable,
-   it is enabled with a journaled `pluginEnabled` run, and its markdown appears
-   in the generated report.
+   it is enabled (state persisted to `plugin-state.json` with an `enabledAt`),
+   and its markdown appears in the generated report.
 2. A third-party `csv-importer` plugin supplies a column-mapping preset the user
    can select instead of mapping by hand.
-3. A `connector` plugin is discovered and enabled; fetching through it produces
-   inbox drafts (the item-3 follow-on wires the button).
+3. A `connector` plugin is discovered and enabled, and its declared command is
+   viewable before enabling. *Fetching through it to produce inbox drafts is the
+   item-3 follow-on and is not delivered here.*
 4. A manifest missing `author` is refused, with the reason shown.
 5. `pnpm -r test && pnpm lint && pnpm typecheck` is green.
 

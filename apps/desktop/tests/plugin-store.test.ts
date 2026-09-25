@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -203,5 +203,81 @@ describe("PluginStore.readSource", () => {
 
   it("throws for an unknown plugin id", async () => {
     await expect(new PluginStore(dir).readSource("nope")).rejects.toThrow(/nope/);
+  });
+});
+
+describe("PluginStore state-file robustness", () => {
+  it("treats a state file whose enabled flag is not a boolean as everything disabled", async () => {
+    await writePlugin("report-risks", VALID_SECTION);
+    await writeFile(
+      join(dir, "plugin-state.json"),
+      JSON.stringify({ plugins: { "report-risks": { enabled: "yes", enabledAt: null } } }),
+      "utf8",
+    );
+
+    const catalog = await new PluginStore(dir).list();
+
+    expect(only(catalog.plugins).enabled).toBe(false);
+    expect(only(catalog.plugins).enabledAt).toBeNull();
+  });
+
+  it("treats a state file with a malformed timestamp as everything disabled", async () => {
+    await writePlugin("report-risks", VALID_SECTION);
+    await writeFile(
+      join(dir, "plugin-state.json"),
+      JSON.stringify({ plugins: { "report-risks": { enabled: true, enabledAt: "yesterday" } } }),
+      "utf8",
+    );
+
+    const catalog = await new PluginStore(dir).list();
+
+    expect(only(catalog.plugins).enabled).toBe(false);
+  });
+
+  it("keeps good entries and drops only the malformed ones", async () => {
+    await writePlugin("report-risks", VALID_SECTION);
+    await writePlugin("price-connector", VALID_CONNECTOR);
+    await writeFile(
+      join(dir, "plugin-state.json"),
+      JSON.stringify({
+        plugins: {
+          "report-risks": { enabled: "yes", enabledAt: null },
+          "price-connector": { enabled: true, enabledAt: "2026-09-25T00:00:00.000Z" },
+        },
+      }),
+      "utf8",
+    );
+
+    const catalog = await new PluginStore(dir).list();
+    const byId = new Map(catalog.plugins.map((plugin) => [plugin.manifest.id, plugin]));
+
+    expect(byId.get("report-risks")?.enabled).toBe(false);
+    expect(byId.get("price-connector")?.enabled).toBe(true);
+  });
+
+  it("treats a state file that is valid JSON of the wrong shape as everything disabled", async () => {
+    await writePlugin("report-risks", VALID_SECTION);
+    await writeFile(join(dir, "plugin-state.json"), JSON.stringify(["not", "an", "object"]), "utf8");
+
+    const catalog = await new PluginStore(dir).list();
+
+    expect(only(catalog.plugins).enabled).toBe(false);
+  });
+});
+
+describe("PluginStore discovery of unusual directories", () => {
+  it("refuses a symlinked plugin folder instead of silently skipping it", async () => {
+    const real = join(dir, "elsewhere", "report-risks");
+    await mkdir(real, { recursive: true });
+    await writeFile(join(real, "manifest.json"), JSON.stringify(VALID_SECTION), "utf8");
+    await mkdir(join(dir, "plugins"), { recursive: true });
+    await symlink(join(dir, "elsewhere", "report-risks"), join(dir, "plugins", "linked"), "junction");
+
+    const catalog = await new PluginStore(dir).list();
+
+    expect(catalog.plugins).toEqual([]);
+    const broken = only(catalog.broken);
+    expect(broken.directoryName).toBe("linked");
+    expect(broken.reason).toMatch(/symbolic link|symlink/i);
   });
 });
