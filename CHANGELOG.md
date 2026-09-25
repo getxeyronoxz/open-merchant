@@ -12,7 +12,7 @@ All notable changes to Open Merchant are documented in this file.
 
 ### Changed
 - Haptic UI pass across the app: all four button variants lift on hover and sink on press (polish now owned by the `@open-merchant/ui` design system), and every clickable ledger surface — nav rail, recent-project cards, walkthrough steps, provider tiles, history rows, artifact rows, diff tabs — answers the pointer with consistent press feedback.
-- Demo recorder v2 (`record.cjs`): captures motion frames during typing, scrolling, hovering, and panel transitions (select-all before typing so pre-filled money fields pass `pattern` validation, and waiting for the assumptions-saved badge before Calculate); `gif.mjs` holds motion frames 90ms and keyframes longer, so the regenerated `docs/media/demo-loop.gif` reads like a screen recording.
+- Demo recorder v2 (`record.cjs`): captures motion frames during typing, scrolling, hovering, and panel transitions (select-all before typing so pre-filled money fields pass `pattern` validation, and waiting for the assumptions-saved badge before Calculate); `gif.mjs` holds motion frames 90ms and keyframes longer. The published `docs/media/demo-loop.gif` is intentionally unchanged until the owner requests the next capture.
 - ROADMAP Phase 3 rewritten as the connected-workbench plan (MCP server mode, triage inbox, MCP connector client, standing reviews, plugin surface, currency change, interchange spec), gated on the draft-gate principle, with the competitive research note in `docs/research/phase-3-connected-workbench.md`.
 - Docs & repo hygiene: architecture verification map gains the real-app Electron E2E row; owner-only authorship and dependency-alert triage policy documented; local agent scratch output (`.agent/`) ignored.
 
