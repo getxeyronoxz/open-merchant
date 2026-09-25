@@ -47,6 +47,8 @@ export const runOperationSchema = z.enum([
   "agentDraftProduced",
   "artifactSaved",
   "snapshotCaptured",
+  /** Read-only MCP host opened an artifact; journaled by @open-merchant/mcp. */
+  "mcpArtifactRead",
 ]);
 
 export const runStatusSchema = z.enum(["succeeded", "failed"]);

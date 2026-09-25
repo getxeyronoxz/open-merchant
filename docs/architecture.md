@@ -26,6 +26,8 @@ React 19 renderer (apps/desktop/src/renderer)
 | `packages/ui` | Design tokens ("The Merchant's Ledger") and primitives: Button (hover-lift / press-sink), Field, Card, Badge, LedgerRow, table, feedback states |
 | `apps/desktop/main` | Window lifecycle, native dialogs, safeStorage-sealed AI key store, per-call `WorkspaceStore` opens, PDF rendering via a hidden `printToPDF` window, portfolio aggregation over the recents store |
 | `apps/desktop/preload` | Exposes exactly one `invoke(channel, payload)` method; rejects channels outside the contract |
+| `packages/mcp` | Read-only MCP server (`@open-merchant/mcp`, stdio only): exposes one project folder's artifacts as MCP resources, validates every read against the shared schemas, journals each read as an `mcpArtifactRead` run, and registers no tools — writes are refused by construction |
+
 
 ## Canonical workspace (format v2)
 
@@ -69,6 +71,11 @@ The post-decision layer is computed, never stored twice: market snapshots are im
 | --- | --- |
 | Renderer behavior | Focused Vitest, then `pnpm -r test`, `pnpm typecheck`, `pnpm lint`, `pnpm build` |
 | Core/workspace rules | `pnpm --filter @open-merchant/core test` (includes golden parity + real-example import) |
+
+## MCP lane (read-only, stdio)
+
+`packages/mcp` runs outside the app process: any MCP host (Claude Desktop, an IDE agent, a script) spawns `open-merchant-mcp <project-folder>` over stdio — no network socket exists in the package. It reads only the known workspace layout through guarded directory and artifact resolvers in `@open-merchant/core`, validates exact bytes against `@open-merchant/shared`, and appends one guarded `mcpArtifactRead` record per successful read. It registers resources and zero tools: a host attempting any write fails loudly at the protocol level, so external reads stay observable and the canonical write path never loosens.
+
 | Agents | `pnpm --filter @open-merchant/ai test` (scripted-provider structured output tests) |
 | Installer | `pnpm --filter @open-merchant/desktop dist`, launch packaged app once per platform |
 | Electron window & IPC | `pnpm --filter @open-merchant/desktop test:e2e` — drives the real app (real preload, real IPC, real disk); CI runs it under xvfb with a 60s hook timeout |
