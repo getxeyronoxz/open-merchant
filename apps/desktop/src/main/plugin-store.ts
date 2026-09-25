@@ -1,4 +1,4 @@
-import { readFile, readdir } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { pluginManifestSchema, type InstalledPlugin, type PluginManifest } from "@open-merchant/shared";
@@ -107,6 +107,35 @@ export class PluginStore {
     return { plugins, broken };
   }
 
+  async setEnabled(pluginId: string, enabled: boolean): Promise<InstalledPlugin> {
+    const catalog = await this.list();
+    const plugin = catalog.plugins.find((entry) => entry.manifest.id === pluginId);
+    if (!plugin) throw new Error(`Unknown plugin "${pluginId}".`);
+
+    const enabledAt = enabled ? new Date().toISOString() : null;
+    const state = await this.readState();
+    state.plugins[pluginId] = { enabled, enabledAt };
+    await this.writeState(state);
+
+    return { ...plugin, enabled, enabledAt };
+  }
+
+  /**
+   * The human-inspectable payload behind "source is one click away": literal
+   * markdown, the mapping as formatted JSON, or the command a connector would
+   * run. A connector's command is shown, never launched, from this method.
+   */
+  async readSource(pluginId: string): Promise<string> {
+    const catalog = await this.list();
+    const plugin = catalog.plugins.find((entry) => entry.manifest.id === pluginId);
+    if (!plugin) throw new Error(`Unknown plugin "${pluginId}".`);
+
+    const manifest = plugin.manifest;
+    if (manifest.kind === "report-section") return manifest.markdown;
+    if (manifest.kind === "csv-importer") return JSON.stringify(manifest.mapping, null, 2);
+    return `command: ${manifest.command}\nargs: ${manifest.args.join(" ")}\n`;
+  }
+
   private async pluginDirectories(): Promise<string[]> {
     try {
       const entries = await readdir(this.directory, { withFileTypes: true });
@@ -131,6 +160,11 @@ export class PluginStore {
       // plugin simply reads as disabled.
     }
     return { ...EMPTY_STATE, plugins: {} };
+  }
+
+  private async writeState(state: PersistedState): Promise<void> {
+    await mkdir(this.userDataDirectory, { recursive: true });
+    await writeFile(this.statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
   }
 }
 

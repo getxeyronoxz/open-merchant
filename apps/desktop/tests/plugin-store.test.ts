@@ -117,3 +117,91 @@ describe("PluginStore.list", () => {
     expect(catalog).toEqual({ plugins: [], broken: [] });
   });
 });
+
+describe("PluginStore.setEnabled", () => {
+  it("persists enabled state across store instances", async () => {
+    await writePlugin("report-risks", VALID_SECTION);
+
+    await new PluginStore(dir).setEnabled("report-risks", true);
+    const catalog = await new PluginStore(dir).list();
+
+    expect(only(catalog.plugins).enabled).toBe(true);
+    expect(only(catalog.plugins).enabledAt).not.toBeNull();
+  });
+
+  it("disables a previously enabled plugin and clears the timestamp", async () => {
+    await writePlugin("report-risks", VALID_SECTION);
+    const store = new PluginStore(dir);
+    await store.setEnabled("report-risks", true);
+
+    const updated = await store.setEnabled("report-risks", false);
+
+    expect(updated.enabled).toBe(false);
+    expect(updated.enabledAt).toBeNull();
+  });
+
+  it("leaves other plugins' state untouched", async () => {
+    await writePlugin("report-risks", VALID_SECTION);
+    await writePlugin("price-connector", VALID_CONNECTOR);
+    const store = new PluginStore(dir);
+
+    await store.setEnabled("report-risks", true);
+    const catalog = await store.list();
+
+    expect(only(catalog.plugins.filter((plugin) => plugin.manifest.id === "price-connector")).enabled).toBe(
+      false,
+    );
+  });
+
+  it("throws for an unknown plugin id", async () => {
+    await expect(new PluginStore(dir).setEnabled("nope", true)).rejects.toThrow(/nope/);
+  });
+
+  it("treats a corrupt state file as everything disabled", async () => {
+    await writePlugin("report-risks", VALID_SECTION);
+    await writeFile(join(dir, "plugin-state.json"), "{ not json", "utf8");
+
+    const catalog = await new PluginStore(dir).list();
+
+    expect(only(catalog.plugins).enabled).toBe(false);
+  });
+});
+
+describe("PluginStore.readSource", () => {
+  it("returns the markdown for a report-section plugin", async () => {
+    await writePlugin("report-risks", VALID_SECTION);
+
+    expect(await new PluginStore(dir).readSource("report-risks")).toContain("Confirm supplier MOQ.");
+  });
+
+  it("returns the mapping as JSON for a csv-importer plugin", async () => {
+    await writePlugin("supplier-x", {
+      id: "supplier-x",
+      name: "Supplier X dialect",
+      version: "1.0.0",
+      author: "A Seller",
+      minAppVersion: "1.0.0",
+      capabilities: { reads: ["csv"], writes: [], network: false },
+      kind: "csv-importer",
+      description: "Maps Supplier X's export.",
+      mapping: { name: "Product", price: "Unit Price" },
+    });
+
+    const source = await new PluginStore(dir).readSource("supplier-x");
+
+    expect(JSON.parse(source)).toEqual({ name: "Product", price: "Unit Price" });
+  });
+
+  it("returns the command and args for a connector plugin", async () => {
+    await writePlugin("price-connector", VALID_CONNECTOR);
+
+    const source = await new PluginStore(dir).readSource("price-connector");
+
+    expect(source).toContain("command: node");
+    expect(source).toContain("args: server.js");
+  });
+
+  it("throws for an unknown plugin id", async () => {
+    await expect(new PluginStore(dir).readSource("nope")).rejects.toThrow(/nope/);
+  });
+});
