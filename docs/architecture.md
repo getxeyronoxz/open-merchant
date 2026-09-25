@@ -23,8 +23,8 @@ React 19 renderer (apps/desktop/src/renderer)
 | `packages/core` | Exact-decimal money and economics, statistics, validation, report rendering, atomic file store, known-layout path guards, run/provenance journals, V0→V2 import. Phase 2 adds market snapshots (immutable captures + derived history/diffs), the margin monitor, the decision journal, CSV in/out, portable `.omarchive` archives, and print-to-PDF rendering. No Electron imports — headless-capable and fully unit-tested |
 | `packages/ai` | `LlmProvider` seam (Anthropic, OpenAI, Gemini, and local OpenAI-compatible endpoints such as Ollama/LM Studio behind a BYO-key/base-URL registry, deterministic mock) plus six specialist agents producing zod-validated drafts |
 | `packages/sdk` | Typed `DesktopClient`; responses re-validated before reaching the UI; failures become coded `AppError`s |
-| `packages/mcp` | Read-only MCP server (`@open-merchant/mcp`, stdio only): exposes one project folder's artifacts as MCP resources, validates every read against the shared schemas, journals each read as an `mcpArtifactRead` run, and registers no tools — writes are refused by construction |
 | `packages/ui` | Design tokens ("The Merchant's Ledger") and primitives: Button (hover-lift / press-sink), Field, Card, Badge, LedgerRow, table, feedback states |
+| `packages/mcp` | Read-only MCP server (`@open-merchant/mcp`, stdio only): exposes one project folder's artifacts as MCP resources, validates every read against the shared schemas, journals each read as an `mcpArtifactRead` run, and registers no tools — writes are refused by construction |
 | `apps/desktop/main` | Window lifecycle, native dialogs, safeStorage-sealed AI key store, per-call `WorkspaceStore` opens, PDF rendering via a hidden `printToPDF` window, portfolio aggregation over the recents store |
 | `apps/desktop/preload` | Exposes exactly one `invoke(channel, payload)` method; rejects channels outside the contract |
 
