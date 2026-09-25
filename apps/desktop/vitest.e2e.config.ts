@@ -9,7 +9,8 @@ export default defineConfig({
     include: ["tests/e2e/**/*.test.ts"],
     environment: "node",
     testTimeout: 120_000,
-    // Cold CI runners can take well over 10s to launch Electron under xvfb.
+    // Cold CI runners can take well over the 10s default to launch Electron
+    // under xvfb; a real run failed on the hook timeout while tests passed.
     hookTimeout: 60_000,
   },
 });
