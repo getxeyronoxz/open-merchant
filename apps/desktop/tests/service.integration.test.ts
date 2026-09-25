@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -7,6 +7,7 @@ import { ArtifactPaths, WorkspaceStore, calculateScenarios } from "@open-merchan
 import type { Competitor, CostAssumptions, EvidenceSource, ReportSections } from "@open-merchant/shared";
 import { AppError } from "@open-merchant/shared";
 
+import { PluginStore } from "../src/main/plugin-store";
 import { MerchantService } from "../src/main/service";
 
 /**
@@ -284,5 +285,74 @@ describe("MerchantService AI guards", () => {
 
     const scenarios = calculateScenarios(assumptionsLoaded);
     expect(scenarios[1]?.grossMarginPercent).toBe("39.32");
+  });
+});
+
+describe("MerchantService report sections with plugins", () => {
+  async function seedProject(service: MerchantService): Promise<string> {
+    const created = await service.createProject({
+      name: "Keyboards India",
+      objective: "Find a viable import.",
+      currency: "INR",
+      parentDirectory: await tempDir(),
+    });
+    await service.saveAssumptions(created.root, assumptions());
+    await service.saveReportSections(created.root, sections());
+    return created.root;
+  }
+
+  async function writeSectionPlugin(userData: string, enabled: boolean): Promise<void> {
+    const pluginDir = join(userData, "plugins", "risk-checklist");
+    await mkdir(pluginDir, { recursive: true });
+    await writeFile(
+      join(pluginDir, "manifest.json"),
+      `${JSON.stringify({
+        id: "risk-checklist",
+        name: "Risk checklist",
+        version: "1.0.0",
+        author: "A Seller",
+        minAppVersion: "1.0.0",
+        capabilities: { reads: [], writes: [], network: false },
+        kind: "report-section",
+        description: "A short checklist.",
+        section: "risks",
+        markdown: "## Plugin risks\nConfirm supplier MOQ before committing.",
+      })}\n`,
+      "utf8",
+    );
+    if (enabled) await new PluginStore(userData).setEnabled("risk-checklist", true);
+  }
+
+  it("adds an enabled report-section plugin's markdown to the report", async () => {
+    const userData = await tempDir();
+    await writeSectionPlugin(userData, true);
+    const service = new MerchantService("9.9.9-test", undefined, new PluginStore(userData));
+
+    const root = await seedProject(service);
+    const markdown = await service.generateReport(root);
+
+    expect(markdown).toContain("Confirm supplier MOQ before committing.");
+    // The sections the seller generated are still there alongside the plugin's.
+    expect(markdown).toContain("Import duties may erode margins.");
+  });
+
+  it("leaves a disabled report-section plugin out of the report", async () => {
+    const userData = await tempDir();
+    await writeSectionPlugin(userData, false);
+    const service = new MerchantService("9.9.9-test", undefined, new PluginStore(userData));
+
+    const root = await seedProject(service);
+    const markdown = await service.generateReport(root);
+
+    expect(markdown).not.toContain("Confirm supplier MOQ before committing.");
+  });
+
+  it("generates normally when the service has no plugin store at all", async () => {
+    const service = makeService();
+
+    const root = await seedProject(service);
+    const markdown = await service.generateReport(root);
+
+    expect(markdown).toContain("# Keyboards India");
   });
 });

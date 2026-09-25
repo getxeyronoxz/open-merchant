@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import type {
-  Competitor,
-  CostAssumptions,
-  EvidenceSource,
-  GenerationOrigin,
-  ProviderId,
-  ReportSections,
+import {
+  csvImporterPresets,
+  type Competitor,
+  type CostAssumptions,
+  type EvidenceSource,
+  type GenerationOrigin,
+  type ProviderId,
+  type ReportSections,
 } from "@open-merchant/shared";
 
 import { client } from "../../client";
@@ -177,6 +178,12 @@ export function useSetPluginEnabled() {
       client.setPluginEnabled(pluginId, enabled),
     onSuccess: () => invalidate(["plugins"]),
   });
+}
+
+/** Enabled csv-importer plugins, offered as column-mapping presets. */
+export function useCsvImporterPresets() {
+  const catalog = usePluginCatalog();
+  return csvImporterPresets(catalog.data?.plugins ?? []);
 }
 
 function useInvalidator() {

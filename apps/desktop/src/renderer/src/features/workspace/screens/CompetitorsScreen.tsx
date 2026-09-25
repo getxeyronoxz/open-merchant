@@ -1,11 +1,13 @@
 import { useState } from "react";
 
 import type { AiOrigin, Competitor, CompetitorDraft, MarketSnapshot } from "@open-merchant/shared";
+import { applyCsvImporterPreset } from "@open-merchant/shared";
 import { EmptyState, ErrorState, Field, LedgerRow } from "@open-merchant/ui";
 
 import { useProject } from "../../../state/project";
 import {
   useCaptureMarketSnapshot,
+  useCsvImporterPresets,
   useCompetitorStatistics,
   useCompetitors,
   useDraftCompetitors,
@@ -340,6 +342,7 @@ function SpreadsheetBridgeCard({ root, currency }: { root: string; currency: str
   const [csvText, setCsvText] = useState<string | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
+  const presets = useCsvImporterPresets();
   const [importResult, setImportResult] = useState<{
     imported: number;
     skipped: number;
@@ -466,6 +469,34 @@ function SpreadsheetBridgeCard({ root, currency }: { root: string; currency: str
       {csvText !== null && headers.length > 0 ? (
         <>
           <p className="om-eyebrow">Column mapping</p>
+          {presets.length > 0 ? (
+            <div className="om-field">
+              <label className="om-field__label" htmlFor="csv-preset">
+                Start from a saved dialect
+              </label>
+              <select
+                className="om-input"
+                id="csv-preset"
+                onChange={(event) => {
+                  const preset = presets.find((entry) => entry.id === event.target.value);
+                  if (!preset) return;
+                  setMapping(applyCsvImporterPreset(preset.mapping, headers));
+                }}
+                value=""
+              >
+                <option value="">Choose a dialect…</option>
+                {presets.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.name}
+                  </option>
+                ))}
+              </select>
+              <p className="om-field__hint">
+                A dialect only fills in the columns this file actually has — every mapping stays
+                yours to change.
+              </p>
+            </div>
+          ) : null}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "var(--om-space-3)" }}>
             {mappingSelect("Product", "product", true)}
             {mappingSelect("Brand", "brand", false)}
