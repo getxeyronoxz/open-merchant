@@ -1,8 +1,13 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PluginManifest } from "@open-merchant/shared";
 
 import { fetchFromConnector, type McpToolClient } from "../src/main/connector-client";
+import { PluginStore } from "../src/main/plugin-store";
+import { writeConnectorPlugin } from "./fixtures/connector-plugin";
 
 const NOW = "2026-09-25T12:00:00.000Z";
 
@@ -93,5 +98,37 @@ describe("fetchFromConnector", () => {
     const { client, close } = fakeClient({ structuredContent: { evidence: [{ id: "bad" }] } });
     await expect(fetchFromConnector(manifest, "C:/plugins/sample", {}, () => client)).rejects.toThrow();
     expect(close).toHaveBeenCalledOnce();
+  });
+});
+
+describe("the fixture connector manifest", () => {
+  it("is discovered as a valid, non-broken plugin", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "om-connector-"));
+    try {
+      const id = await writeConnectorPlugin(dir);
+
+      const catalog = await new PluginStore(dir).list();
+
+      expect(catalog.broken).toEqual([]);
+      expect(catalog.plugins).toHaveLength(1);
+      expect(catalog.plugins[0]?.manifest.id).toBe(id);
+      expect(catalog.plugins[0]?.manifest.kind).toBe("connector");
+      expect(catalog.plugins[0]?.enabled).toBe(false);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("can be written already enabled", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "om-connector-"));
+    try {
+      await writeConnectorPlugin(dir, { enabled: true });
+
+      const catalog = await new PluginStore(dir).list();
+
+      expect(catalog.plugins[0]?.enabled).toBe(true);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });
