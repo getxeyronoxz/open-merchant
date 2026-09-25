@@ -64,11 +64,6 @@ Packaged builds check the project's own GitHub Releases feed (`latest.yml`, publ
 
 The post-decision layer is computed, never stored twice: market snapshots are immutable files under `market/snapshots/`; the margin monitor derives drift flags from the saved scenarios plus the latest snapshot's median price; the decision journal derives dated entries from the run journal and staleness from evidence `observedAt` timestamps. CSV import/export, `.omarchive` single-file backups (deflated, versioned, path-guarded envelope), and report PDF export all run through the same validated IPC contract — nothing leaves the machine.
 
-## MCP lane (read-only, stdio)
-
-`packages/mcp` runs outside the app process: any MCP host (Claude Desktop, an IDE agent, a script) spawns `open-merchant-mcp <project-folder>` over stdio — no network socket exists in the package. It reads only the known workspace layout through guarded directory and artifact resolvers in `@open-merchant/core`, validates exact bytes against `@open-merchant/shared`, and appends one guarded `mcpArtifactRead` record per successful read. It registers resources and zero tools: a host attempting any write fails loudly at the protocol level, so external reads stay observable and the canonical write path never loosens.
-
-
 ## Verification map
 
 | Change area | Minimum verification |
@@ -78,3 +73,8 @@ The post-decision layer is computed, never stored twice: market snapshots are im
 | Agents | `pnpm --filter @open-merchant/ai test` (scripted-provider structured output tests) |
 | Installer | `pnpm --filter @open-merchant/desktop dist`, launch packaged app once per platform |
 | Electron window & IPC | `pnpm --filter @open-merchant/desktop test:e2e` — drives the real app (real preload, real IPC, real disk); CI runs it under xvfb with a 60s hook timeout |
+
+
+## MCP lane (read-only, stdio)
+
+`packages/mcp` runs outside the app process: any MCP host (Claude Desktop, an IDE agent, a script) spawns `open-merchant-mcp <project-folder>` over stdio — no network socket exists in the package. It reads only the known workspace layout through guarded directory and artifact resolvers in `@open-merchant/core`, validates exact bytes against `@open-merchant/shared`, and appends one guarded `mcpArtifactRead` record per successful read. It registers resources and zero tools: a host attempting any write fails loudly at the protocol level, so external reads stay observable and the canonical write path never loosens.
