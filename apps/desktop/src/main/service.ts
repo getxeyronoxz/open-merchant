@@ -7,6 +7,7 @@ import {
   ValidationError,
   WorkspaceError,
   WorkspaceStore,
+  appendPluginSections,
   calculateScenarios,
   competitorStatistics,
   createArchive,
@@ -44,6 +45,7 @@ import {
   type EconomicsScenario,
   type EvidenceSource,
   type GenerationOrigin,
+  type InstalledPlugin,
   type ListingPriceHistory,
   type Manifest,
   type MarginMonitorResult,
@@ -58,6 +60,7 @@ import {
 import { AppError } from "@open-merchant/shared";
 
 import type { AiConfigStore } from "./ai-config";
+import type { PluginStore } from "./plugin-store";
 import type { HistoryKind } from "@open-merchant/core";
 
 /** Maps agent-layer failures to coded app errors. */
@@ -123,10 +126,25 @@ function toAppError(error: unknown): AppError {
 export class MerchantService {
   private readonly appVersion: string;
   private readonly aiConfig: AiConfigStore | null;
+  private readonly plugins: PluginStore | null;
 
-  constructor(appVersion: string, aiConfig?: AiConfigStore) {
+  constructor(appVersion: string, aiConfig?: AiConfigStore, plugins?: PluginStore) {
     this.appVersion = appVersion;
     this.aiConfig = aiConfig ?? null;
+    this.plugins = plugins ?? null;
+  }
+
+  /**
+   * Enabled report-section plugins, or an empty list when no plugin store is
+   * wired. A plugin can only ever add static boilerplate: it never reads the
+   * project and never writes to it.
+   */
+  private async enabledReportSectionPlugins(): Promise<InstalledPlugin[]> {
+    if (!this.plugins) return [];
+    const catalog = await this.plugins.list();
+    return catalog.plugins.filter(
+      (plugin) => plugin.enabled && plugin.manifest.kind === "report-section",
+    );
   }
 
   async openStore(root: string): Promise<WorkspaceStore> {
@@ -581,7 +599,10 @@ export class MerchantService {
 
       const markdown = renderOpportunityReport({
         manifest: store.manifest,
-        sections: await store.loadReportSections(),
+        sections: appendPluginSections(
+          await store.loadReportSections(),
+          await this.enabledReportSectionPlugins(),
+        ),
         evidence: await store.loadEvidence(),
         competitorStatistics: competitorStatistics(await store.loadCompetitors()),
         scenarios,

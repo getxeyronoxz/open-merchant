@@ -4,7 +4,7 @@ import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import { writeFile } from "node:fs/promises";
 
 import { RecentsStore } from "./recents";
-import { PluginStore } from "./plugin-store";
+import type { PluginStore } from "./plugin-store";
 import type { AiConfigStore } from "./ai-config";
 import { runAgent } from "./service";
 import type { MerchantService } from "./service";
@@ -29,9 +29,9 @@ function channel<C extends IpcChannel>(handle: (request: IpcRequest<C>) => Promi
 export function registerIpcHandlers(
   service: MerchantService,
   aiConfig: AiConfigStore,
+  plugins: PluginStore,
 ): void {
   const recents = new RecentsStore(app.getPath("userData"));
-  const plugins = new PluginStore(app.getPath("userData"));
 
   const handlers: Record<IpcChannel, AnyHandler> = {
     "app/info": channel<"app/info">(async () => ({

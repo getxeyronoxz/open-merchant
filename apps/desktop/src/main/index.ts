@@ -5,6 +5,7 @@ import { autoUpdater } from "electron-updater";
 import { updateStatusSchema } from "@open-merchant/shared";
 
 import { AiConfigStore } from "./ai-config";
+import { PluginStore } from "./plugin-store";
 import { MerchantService } from "./service";
 import { registerIpcHandlers } from "./ipc";
 
@@ -155,7 +156,12 @@ app.whenReady().then(() => {
   if (customUserData) app.setPath("userData", customUserData);
 
   const aiConfig = new AiConfigStore(app.getPath("userData"), safeStorage);
-  registerIpcHandlers(new MerchantService(app.getVersion(), aiConfig), aiConfig);
+  const plugins = new PluginStore(app.getPath("userData"));
+  registerIpcHandlers(
+    new MerchantService(app.getVersion(), aiConfig, plugins),
+    aiConfig,
+    plugins,
+  );
   buildApplicationMenu();
   initAutoUpdate();
   createMainWindow();

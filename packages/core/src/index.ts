@@ -12,6 +12,7 @@ export * from "./decision-journal";
 export * from "./csv";
 export * from "./archive";
 export * from "./print";
+export * from "./plugin-sections";
 export * from "./validation";
 export * from "./report";
 export * from "./workspace";
