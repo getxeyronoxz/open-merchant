@@ -16,7 +16,7 @@ Windows, macOS, and Linux. Built on Electron with a TypeScript monorepo.
 
 ## A look inside
 
-![The full loop — create a project, add evidence and competitors, calculate exact unit economics, and generate the opportunity report — in about twenty seconds.](docs/media/demo-loop.gif)
+![The full loop — create a project, add evidence and competitors, calculate exact unit economics, generate the opportunity report, then land on the Draft Desk where every AI draft waits for human acceptance — in about twenty-five seconds.](docs/media/demo-loop.gif)
 
 | | |
 |---|---|
@@ -46,6 +46,13 @@ Ground rules:
 - **What changed since last time?** The Artifacts tab diffs your latest generated report against the previous generation side by side, and the provenance journal is searchable by agent, provider, and model — no raw JSONL reading required.
 - **No autonomous browsing.** Assistants read only what you paste into them.
 - Commerce math is never done by an AI or by floating point — see below.
+
+## Getting around
+
+- The toolbar always shows **where you are**: project, section, and the project folder on disk.
+- **Draft Desk:** all six assistants now have one visible review lane. Actionable evidence, competitor, and report-section drafts can be edited, accepted, or discarded; plans, economics reviews, and report audits remain review-only. Agent, provider, model, and prompt hash are shown before acceptance.
+- **Alt+1…8** jumps straight to the six workspace sections, Draft Desk, and AI settings — the rail shows the numbers, and shortcuts are ignored while you type.
+- The **walkthrough guide** keeps the six steps (objective → evidence → competitors → economics → report → files) one click away with progress badges, and reopening a project resumes at its first incomplete step.
 
 ## Install & auto-updates
 
@@ -107,6 +114,10 @@ pnpm lint       # eslint
 pnpm typecheck  # strict TS across the monorepo
 ```
 
+The demo GIF in this README is produced by `apps/desktop/record.cjs` — a scripted run over a real build (no AI keys, no network) — and assembled into `docs/media/demo-loop.gif` by `apps/desktop/gif.mjs`.
+
+The run finishes on the **Draft Desk**. Because a capture run has no AI keys, the review queue is honestly empty there: what the frame demonstrates is the gate itself — the Assistant lane and its standing *Human acceptance required* badge — not a fabricated AI result.
+
 ### Repository layout
 
 ```text
@@ -151,6 +162,16 @@ the direction of the product.
 - Assistants cannot browse: you supply page content by pasting it.
 - One writer per project at a time; do not edit a project elsewhere while Open Merchant has unsaved changes.
 - The checked-in example project contains clearly-marked demo data, not live commercial claims.
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=getxeyronoxz%2Fopen-merchant&type=timeline&logscale=&releases=&legend=bottom-right">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=getxeyronoxz/open-merchant&type=timeline&theme=dark&logscale&legend=bottom-right" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=getxeyronoxz/open-merchant&type=timeline&logscale&legend=bottom-right" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=getxeyronoxz/open-merchant&type=timeline&logscale&legend=bottom-right" />
+ </picture>
+</a>
 
 ## License
 

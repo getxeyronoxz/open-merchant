@@ -1,8 +1,14 @@
 /**
- * README demo recorder — drives the REAL Electron app through the full
- * evidence → report loop, capturing a frame at every meaningful state.
+ * README demo recorder v2 — drives the REAL Electron app through the full
+ * evidence → report loop with MOTION, not just keyframes: a capture loop
+ * records frames while typing, scrolling, hovering, and panel transitions
+ * run, so the assembled GIF reads like a screen recording.
+ *
  * No AI keys, no network, no telemetry. Frames are assembled into
  * docs/media/demo-loop.gif by gif.mjs.
+ *
+ * Frame naming:  NN-k-<name>.png  = keyframe (long hold in the GIF)
+ *                NN-m-<name>.png  = motion frame (short hold, plays fast)
  *
  * Usage:  pnpm --filter @open-merchant/desktop build && node record.cjs
  */
@@ -12,16 +18,77 @@ const { join } = require("node:path");
 const { _electron } = require("playwright-core");
 
 const FRAMES_DIR = process.env.OM_FRAMES_DIR || join(__dirname, ".om-frames");
-const FRAME_W = Number(process.env.OM_FRAME_W || 1280);
-const FRAME_H = Number(process.env.OM_FRAME_H || 800);
+// Capture large, downscale in gif.mjs — box-filtered 1600→960 keeps text crisp.
+const FRAME_W = Number(process.env.OM_FRAME_W || 1600);
+const FRAME_H = Number(process.env.OM_FRAME_H || 1000);
+// Cadence of the motion capture loop (ms between motion frames).
+const MOTION_MS = Number(process.env.OM_MOTION_MS || 110);
 
 let frameIndex = 0;
-async function shot(page, name, settleMs = 900) {
-  await page.waitForTimeout(settleMs);
-  const id = String(frameIndex).padStart(2, "0");
-  await page.screenshot({ path: join(FRAMES_DIR, `${id}-${name}.png`) });
-  console.log(`frame ${id}-${name}`);
+let page = null;
+
+async function capture(kind, name) {
+  const id = String(frameIndex).padStart(3, "0");
+  await page.screenshot({ path: join(FRAMES_DIR, `${id}-${kind}-${name}.png`) });
   frameIndex += 1;
+}
+
+/** Keyframe — a state the viewer should stop and read. */
+async function shot(name, settleMs = 900) {
+  await page.waitForTimeout(settleMs);
+  await capture("k", name);
+  console.log(`key   ${frameIndex - 1}-${name}`);
+}
+
+/**
+ * Run `action` while capturing motion frames until it settles.
+ * Every transition, keystroke burst, and scroll goes through here.
+ */
+async function recordDuring(name, action, { tailMs = 250 } = {}) {
+  let recording = true;
+  const loop = (async () => {
+    while (recording) {
+      await capture("m", name);
+      await page.waitForTimeout(MOTION_MS);
+    }
+  })();
+  try {
+    await action();
+  } finally {
+    recording = false;
+    await loop.catch(() => {});
+    if (tailMs > 0) await page.waitForTimeout(tailMs);
+  }
+}
+
+/** Type like a person — visible keystrokes at a readable pace. */
+async function typeInto(locator, text, name) {
+  await locator.click();
+  await recordDuring(name, async () => {
+    // Pre-filled fields (cost assumptions) must be replaced, not appended to —
+    // typing over a selection is also what a human would do on camera.
+    await locator.press("Control+a");
+    await locator.pressSequentially(text, { delay: 55 });
+  });
+}
+
+/** Hover a target first so the glow/lift state is captured, then click. */
+async function hoverClick(locator, name) {
+  await recordDuring(name, async () => {
+    await locator.hover();
+    await page.waitForTimeout(350);
+    await locator.click();
+  });
+}
+
+/** Smooth-scroll a panel: many small wheel steps, all captured. */
+async function smoothScroll(name, { steps = 14, dy = 70, pause = 90 } = {}) {
+  await recordDuring(name, async () => {
+    for (let i = 0; i < steps; i += 1) {
+      await page.mouse.wheel(0, dy);
+      await page.waitForTimeout(pause);
+    }
+  });
 }
 
 (async () => {
@@ -38,87 +105,107 @@ async function shot(page, name, settleMs = 900) {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [parent], bookmarks: [] });
   }, projectsParent);
 
-  const page = await electronApp.firstWindow();
+  page = await electronApp.firstWindow();
   await page.setViewportSize({ width: FRAME_W, height: FRAME_H });
   await page.waitForLoadState("domcontentloaded");
 
   try {
     // Home: first-run welcome card, then the create form.
     await page.locator(".home__welcome").waitFor({ state: "visible" });
-    await shot(page, "home-welcome");
-    await page.getByRole("button", { name: "Got it" }).click();
+    await shot("home-welcome", 1400);
+    await hoverClick(page.getByRole("button", { name: "Got it" }), "welcome-dismiss");
     await page.locator(".home__welcome").waitFor({ state: "hidden" });
-    await page.getByRole("button", { name: "New workspace" }).click();
-    await page.getByPlaceholder("Mechanical keyboards India").fill("Nova65 — India entry");
-    await page
-      .locator(".home__form textarea")
-      .fill("Decide whether to enter the Indian enthusiast keyboard market with the Nova65.");
-    await shot(page, "home-create");
+    await hoverClick(page.getByRole("button", { name: "New workspace" }), "home-new");
+    await typeInto(
+      page.getByPlaceholder("Mechanical keyboards India"),
+      "Nova65 — India entry",
+      "type-name",
+    );
+    await typeInto(
+      page.locator(".home__form textarea"),
+      "Decide whether to enter the Indian enthusiast keyboard market with the Nova65.",
+      "type-objective",
+    );
+    await shot("home-create", 600);
 
     // Objective: land in the workspace.
-    await page.locator(".home__form button[type='submit']").click();
+    await hoverClick(page.locator(".home__form button[type='submit']"), "home-submit");
     await page.locator(".shell__nav").first().waitFor({ state: "visible" });
-    await shot(page, "objective", 1200);
+    await shot("objective", 1300);
 
     // --- Evidence: add a real source ---
     await page.getByRole("button", { name: "Add first source" }).waitFor({ state: "visible" });
-    await shot(page, "evidence-empty");
-    await page.getByRole("button", { name: "Add first source" }).click();
-    await page.getByPlaceholder("https://…").fill("https://example.com/nova65");
-    await page.getByPlaceholder("Marketplace category page").fill("Nova65 listing");
-    await page.getByRole("button", { name: "Save source" }).click();
+    await shot("evidence-empty", 700);
+    await hoverClick(page.getByRole("button", { name: "Add first source" }), "evidence-add");
+    await typeInto(page.getByPlaceholder("https://…"), "https://example.com/nova65", "type-url");
+    await typeInto(
+      page.getByPlaceholder("Marketplace category page"),
+      "Nova65 listing",
+      "type-title",
+    );
+    await hoverClick(page.getByRole("button", { name: "Save source" }), "evidence-save");
     await page.getByRole("button", { name: "Add source" }).waitFor({ state: "visible" });
-    await shot(page, "evidence-saved");
+    await shot("evidence-saved", 900);
 
     // --- Competitors: two priced listings, then the statistics ledger ---
-    await page.getByRole("button", { name: "Continue to Competitors →" }).click();
-    await page.getByPlaceholder("65% hot-swappable keyboard").fill("Board A — 65% hot-swap");
-    await page.getByPlaceholder("Nova").fill("Keychron");
-    await page.locator("input.om-money").first().fill("499.00");
-    await shot(page, "competitor-form");
-    await page.getByRole("button", { name: "Add listing" }).click();
-    await page
-      .getByRole("cell", { name: "Board A" })
-      .first()
-      .waitFor({ state: "visible" });
-    await page.getByPlaceholder("65% hot-swappable keyboard").fill("Board B — 75% gasket");
-    await page.getByPlaceholder("Nova").fill("NuPhy");
-    await page.locator("input.om-money").first().fill("599.50");
-    await page.getByRole("button", { name: "Add listing" }).click();
+    await hoverClick(page.getByRole("button", { name: "Continue to Competitors →" }), "nav-competitors");
+    await typeInto(page.getByPlaceholder("65% hot-swappable keyboard"), "Board A — 65% hot-swap", "type-comp-a");
+    await typeInto(page.getByPlaceholder("Nova"), "Keychron", "type-brand-a");
+    await typeInto(page.locator("input.om-money").first(), "499.00", "type-price-a");
+    await shot("competitor-form", 500);
+    await hoverClick(page.getByRole("button", { name: "Add listing" }), "comp-add-a");
+    await page.getByRole("cell", { name: "Board A" }).first().waitFor({ state: "visible" });
+    await typeInto(page.getByPlaceholder("65% hot-swappable keyboard"), "Board B — 75% gasket", "type-comp-b");
+    await typeInto(page.getByPlaceholder("Nova"), "NuPhy", "type-brand-b");
+    await typeInto(page.locator("input.om-money").first(), "599.50", "type-price-b");
+    await hoverClick(page.getByRole("button", { name: "Add listing" }), "comp-add-b");
     await page.getByText("549.25").first().waitFor({ state: "visible" });
-    await shot(page, "competitors-stats", 1100);
+    await shot("competitors-stats", 1200);
 
     // --- Economics: assumptions, then deterministic scenarios ---
-    await page.getByRole("button", { name: "Continue to Economics →" }).click();
+    await hoverClick(page.getByRole("button", { name: "Continue to Economics →" }), "nav-economics");
     const money = page.locator("input.om-money");
-    await money.nth(0).fill("500.00");
-    await money.nth(1).fill("75.50");
-    await money.nth(2).fill("20.00");
-    await money.nth(3).fill("12.50");
-    await money.nth(4).fill("2.35");
-    await money.nth(5).fill("899.99");
-    await money.nth(6).fill("1099.99");
-    await money.nth(7).fill("1499.99");
-    await shot(page, "economics-form");
-    await page.getByRole("button", { name: "Save assumptions" }).click();
-    await page.getByRole("button", { name: "Calculate scenarios" }).click();
-    await page.locator(".scenario").first().waitFor({ state: "visible", timeout: 30_000 });
-    await shot(page, "economics-results", 1200);
-
-    // --- Report: generate, then scroll the paper document ---
-    await page.getByRole("button", { name: "Continue to Report →" }).click();
-    await page.getByRole("button", { name: "Generate report" }).click();
-    await page.locator(".report-preview").first().waitFor({ state: "visible", timeout: 30_000 });
-    await shot(page, "report-top", 1200);
-    for (let i = 1; i <= 6; i += 1) {
-      await page.mouse.wheel(0, 170);
-      await shot(page, `report-scroll-${i}`, 150);
+    const values = ["500.00", "75.50", "20.00", "12.50", "2.35", "899.99", "1099.99", "1499.99"];
+    for (let i = 0; i < values.length; i += 1) {
+      await typeInto(money.nth(i), values[i], `type-econ-${i}`);
     }
+    await shot("economics-form", 600);
+    await hoverClick(page.getByRole("button", { name: "Save assumptions" }), "econ-save");
+    await page.getByText("Saved — ready to calculate").waitFor({ state: "visible", timeout: 15_000 });
+    await hoverClick(page.getByRole("button", { name: "Calculate scenarios" }), "econ-calc");
+    await page.locator(".scenario").first().waitFor({ state: "visible", timeout: 30_000 });
+    await shot("economics-results", 1300);
+
+    // --- Report: generate, then scroll the paper document smoothly ---
+    await hoverClick(page.getByRole("button", { name: "Continue to Report →" }), "nav-report");
+    await hoverClick(page.getByRole("button", { name: "Generate report" }), "report-generate");
+    await page.locator(".report-preview").first().waitFor({ state: "visible", timeout: 30_000 });
+    await shot("report-top", 1300);
+    await smoothScroll("report-scroll", { steps: 16, dy: 65, pause: 85 });
+    await shot("report-bottom", 700);
 
     // --- Milestone + artifacts/history with the diff viewer ---
-    await page.getByRole("button", { name: "Inspect Project Artifacts →" }).click();
+    await hoverClick(page.getByRole("button", { name: "Inspect Project Artifacts →" }), "nav-artifacts");
     await page.locator(".artifacts__list").waitFor({ state: "visible" });
-    await shot(page, "artifacts", 1100);
+    await shot("artifacts", 1200);
+
+    // --- Phase 3: the Draft Desk draft gate ---
+    // A capture run has no AI keys, so the review queue is honestly empty. The
+    // frame shows the gate itself: the Assistant lane, the empty queue, and the
+    // standing "Human acceptance required" badge.
+    await hoverClick(page.getByRole("button", { name: "Draft Desk" }), "nav-draft-desk");
+    await page.getByRole("heading", { name: "Draft Desk" }).waitFor({ state: "visible" });
+    await page.getByText("No drafts waiting").waitFor({ state: "visible" });
+    await shot("draft-desk", 1400);
+    // Only scroll when the panel actually overflows, so the captured frame set
+    // stays deterministic across window sizes.
+    const deskOverflows = await page
+      .locator(".draft-desk")
+      .evaluate((el) => el.scrollHeight > el.clientHeight + 4);
+    if (deskOverflows) {
+      await smoothScroll("draft-desk-scroll", { steps: 8, dy: 60, pause: 90 });
+      await shot("draft-desk-scrolled", 700);
+    }
   } finally {
     await electronApp.close();
     await rm(userDataDir, { recursive: true, force: true }).catch(() => {});

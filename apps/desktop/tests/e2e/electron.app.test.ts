@@ -112,6 +112,13 @@ describe("Open Merchant E2E deep workflow", () => {
 
     const projectRoot = join(projectsParent, "deep-flow");
 
+    // Draft Desk is a visible review lane, not a hidden autonomous inbox.
+    await page.getByRole("button", { name: "Draft Desk" }).click();
+    await page.getByRole("heading", { name: "Draft Desk" }).waitFor({ state: "visible" });
+    await expect(await page.getByText("No drafts waiting").innerText()).toBe("No drafts waiting");
+    await expect(await page.getByText("No autonomous inbox.").innerText()).toContain("No autonomous inbox");
+    await page.getByRole("button", { name: "Evidence", exact: true }).click();
+
     // --- evidence: resume targeting landed the workspace here directly ---
     await page.getByRole("button", { name: "Add first source" }).waitFor({ state: "visible" });
     await page.getByRole("button", { name: "Add first source" }).click();
@@ -203,6 +210,7 @@ describe("Open Merchant E2E persistence", () => {
     await page.getByPlaceholder("https://…").fill("https://example.com/keep");
     await page.getByPlaceholder("Marketplace category page").fill("Kept source");
     await page.getByRole("button", { name: "Save source" }).click();
+    await page.getByText("Kept source").waitFor({ state: "visible" });
 
     // Close the app entirely before relaunching against the same user data.
     await electronApp.close();

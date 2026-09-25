@@ -23,9 +23,11 @@ React 19 renderer (apps/desktop/src/renderer)
 | `packages/core` | Exact-decimal money and economics, statistics, validation, report rendering, atomic file store, known-layout path guards, run/provenance journals, V0→V2 import. Phase 2 adds market snapshots (immutable captures + derived history/diffs), the margin monitor, the decision journal, CSV in/out, portable `.omarchive` archives, and print-to-PDF rendering. No Electron imports — headless-capable and fully unit-tested |
 | `packages/ai` | `LlmProvider` seam (Anthropic, OpenAI, Gemini, and local OpenAI-compatible endpoints such as Ollama/LM Studio behind a BYO-key/base-URL registry, deterministic mock) plus six specialist agents producing zod-validated drafts |
 | `packages/sdk` | Typed `DesktopClient`; responses re-validated before reaching the UI; failures become coded `AppError`s |
-| `packages/ui` | Design tokens ("The Merchant's Ledger") and primitives: Button, Field, ErrorState, EmptyState, LedgerRow |
+| `packages/ui` | Design tokens ("The Merchant's Ledger") and primitives: Button (hover-lift / press-sink), Field, Card, Badge, LedgerRow, table, feedback states |
 | `apps/desktop/main` | Window lifecycle, native dialogs, safeStorage-sealed AI key store, per-call `WorkspaceStore` opens, PDF rendering via a hidden `printToPDF` window, portfolio aggregation over the recents store |
 | `apps/desktop/preload` | Exposes exactly one `invoke(channel, payload)` method; rejects channels outside the contract |
+| `packages/mcp` | Read-only MCP server (`@open-merchant/mcp`, stdio only): exposes one project folder's artifacts as MCP resources, validates every read against the shared schemas, journals each read as an `mcpArtifactRead` run, and registers no tools — writes are refused by construction |
+
 
 ## Canonical workspace (format v2)
 
@@ -53,7 +55,7 @@ project/
 
 ## AI model
 
-Agents draft; humans accept. Assistant output is validated JSON tied to shared schemas, surfaced in the UI marked as an AI draft, and becomes data only through a normal save channel. Saves carrying an `agent` origin journal a run and provenance records including agent id, provider, model id, prompt hash, and artifact SHA-256. Cloud-provider API keys are encrypted via Electron `safeStorage` into app-private user data; they are never returned over IPC nor written into projects. Local endpoints (Ollama, LM Studio) configure a base URL only — no key, and outbound traffic stays on the user's machine.
+Agents draft; humans accept. The Draft Desk is the visible review lane: it shows the agent, provider, model, and prompt hash before any action, keeps review-only outputs (research plan, economics review, report audit) out of the write path, and allows actionable evidence, competitor, and report-section drafts to be edited, accepted, or discarded. Accepted output crosses the same zod-validated IPC save channels as manual edits and becomes data only through that normal save channel. Saves carrying an `agent` origin journal a run and provenance records including agent id, provider, model id, prompt hash, and artifact SHA-256. Cloud-provider API keys are encrypted via Electron `safeStorage` into app-private user data; they are never returned over IPC nor written into projects. Local endpoints (Ollama, LM Studio) configure a base URL only — no key, and outbound traffic stays on the user's machine.
 
 ## Updates and releases
 
@@ -69,5 +71,11 @@ The post-decision layer is computed, never stored twice: market snapshots are im
 | --- | --- |
 | Renderer behavior | Focused Vitest, then `pnpm -r test`, `pnpm typecheck`, `pnpm lint`, `pnpm build` |
 | Core/workspace rules | `pnpm --filter @open-merchant/core test` (includes golden parity + real-example import) |
+
+## MCP lane (read-only, stdio)
+
+`packages/mcp` runs outside the app process: any MCP host (Claude Desktop, an IDE agent, a script) spawns `open-merchant-mcp <project-folder>` over stdio — no network socket exists in the package. It reads only the known workspace layout through guarded directory and artifact resolvers in `@open-merchant/core`, validates exact bytes against `@open-merchant/shared`, and appends one guarded `mcpArtifactRead` record per successful read. It registers resources and zero tools: a host attempting any write fails loudly at the protocol level, so external reads stay observable and the canonical write path never loosens.
+
 | Agents | `pnpm --filter @open-merchant/ai test` (scripted-provider structured output tests) |
 | Installer | `pnpm --filter @open-merchant/desktop dist`, launch packaged app once per platform |
+| Electron window & IPC | `pnpm --filter @open-merchant/desktop test:e2e` — drives the real app (real preload, real IPC, real disk); CI runs it under xvfb with a 60s hook timeout |

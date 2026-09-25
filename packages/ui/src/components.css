@@ -16,10 +16,12 @@
   letter-spacing: 0.01em;
   cursor: pointer;
   white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
   transition:
     background-color var(--om-motion-fast),
     border-color var(--om-motion-fast),
     color var(--om-motion-fast),
+    box-shadow var(--om-motion-fast),
     transform var(--om-motion-fast);
 }
 
@@ -41,9 +43,12 @@
 }
 .om-button--primary:hover:not(:disabled) {
   background: var(--om-accent-strong);
+  transform: translateY(-1px);
+  box-shadow: var(--om-shadow-raised);
 }
 .om-button--primary:active:not(:disabled) {
   transform: translateY(1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 .om-button--secondary {
@@ -54,6 +59,7 @@
 }
 .om-button--secondary:hover:not(:disabled) {
   border-color: var(--om-accent);
+  transform: translateY(-1px);
 }
 
 .om-button--ghost {
@@ -64,10 +70,12 @@
   color: var(--om-text-primary);
   background: var(--om-surface-inset);
   border-color: var(--om-border-strong);
+  transform: translateY(-1px);
 }
 
 .om-button--secondary:active:not(:disabled),
-.om-button--ghost:active:not(:disabled) {
+.om-button--ghost:active:not(:disabled),
+.om-button--danger:active:not(:disabled) {
   transform: translateY(1px);
 }
 
@@ -78,6 +86,7 @@
 }
 .om-button--danger:hover:not(:disabled) {
   background: var(--om-danger-soft);
+  transform: translateY(-1px);
 }
 
 /* ---------- Fields ---------- */
