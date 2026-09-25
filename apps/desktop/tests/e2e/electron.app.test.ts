@@ -210,6 +210,7 @@ describe("Open Merchant E2E persistence", () => {
     await page.getByPlaceholder("https://…").fill("https://example.com/keep");
     await page.getByPlaceholder("Marketplace category page").fill("Kept source");
     await page.getByRole("button", { name: "Save source" }).click();
+    await page.getByText("Kept source").waitFor({ state: "visible" });
 
     // Close the app entirely before relaunching against the same user data.
     await electronApp.close();
