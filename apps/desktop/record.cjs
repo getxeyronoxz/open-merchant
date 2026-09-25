@@ -188,6 +188,24 @@ async function smoothScroll(name, { steps = 14, dy = 70, pause = 90 } = {}) {
     await hoverClick(page.getByRole("button", { name: "Inspect Project Artifacts →" }), "nav-artifacts");
     await page.locator(".artifacts__list").waitFor({ state: "visible" });
     await shot("artifacts", 1200);
+
+    // --- Phase 3: the Draft Desk draft gate ---
+    // A capture run has no AI keys, so the review queue is honestly empty. The
+    // frame shows the gate itself: the Assistant lane, the empty queue, and the
+    // standing "Human acceptance required" badge.
+    await hoverClick(page.getByRole("button", { name: "Draft Desk" }), "nav-draft-desk");
+    await page.getByRole("heading", { name: "Draft Desk" }).waitFor({ state: "visible" });
+    await page.getByText("No drafts waiting").waitFor({ state: "visible" });
+    await shot("draft-desk", 1400);
+    // Only scroll when the panel actually overflows, so the captured frame set
+    // stays deterministic across window sizes.
+    const deskOverflows = await page
+      .locator(".draft-desk")
+      .evaluate((el) => el.scrollHeight > el.clientHeight + 4);
+    if (deskOverflows) {
+      await smoothScroll("draft-desk-scroll", { steps: 8, dy: 60, pause: 90 });
+      await shot("draft-desk-scrolled", 700);
+    }
   } finally {
     await electronApp.close();
     await rm(userDataDir, { recursive: true, force: true }).catch(() => {});

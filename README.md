@@ -16,7 +16,7 @@ Windows, macOS, and Linux. Built on Electron with a TypeScript monorepo.
 
 ## A look inside
 
-![The full loop — create a project, add evidence and competitors, calculate exact unit economics, and generate the opportunity report — in about twenty seconds.](docs/media/demo-loop.gif)
+![The full loop — create a project, add evidence and competitors, calculate exact unit economics, generate the opportunity report, then land on the Draft Desk where every AI draft waits for human acceptance — in about twenty-five seconds.](docs/media/demo-loop.gif)
 
 | | |
 |---|---|
@@ -115,6 +115,8 @@ pnpm typecheck  # strict TS across the monorepo
 ```
 
 The demo GIF in this README is produced by `apps/desktop/record.cjs` — a scripted run over a real build (no AI keys, no network) — and assembled into `docs/media/demo-loop.gif` by `apps/desktop/gif.mjs`.
+
+The run finishes on the **Draft Desk**. Because a capture run has no AI keys, the review queue is honestly empty there: what the frame demonstrates is the gate itself — the Assistant lane and its standing *Human acceptance required* badge — not a fabricated AI result.
 
 ### Repository layout
 

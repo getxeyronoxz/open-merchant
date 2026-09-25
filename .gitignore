@@ -31,10 +31,8 @@ graphify-out/
 # demo recorder frames
 .om-frames/
 
-# Local Claude Code settings (per-machine)
-# Local Claude Code settings (per-machine)
-.claude/settings.local.json
-
 # Local agent scratch output (logs, run artifacts — never commit)
 .agent/
+
+# Local Claude Code settings (per-machine)
 .claude/settings.local.json

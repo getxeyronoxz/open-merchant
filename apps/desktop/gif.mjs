@@ -22,6 +22,8 @@ const delayFor = (name) => {
   if (name.includes("-m-")) return 90; // motion plays ~11fps — smooth, readable
   if (name.includes("report-")) return 1400;
   if (name.includes("results") || name.includes("stats")) return 1500;
+  // The draft gate is the closing frame — give the viewer time to read the rule.
+  if (name.includes("draft-desk")) return 1600;
   if (name.includes("home-") || name.includes("objective")) return 1200;
   return 1000;
 };
