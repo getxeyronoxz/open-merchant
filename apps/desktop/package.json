@@ -20,6 +20,7 @@
     "name": "Xeyronox"
   },
   "dependencies": {
+    "@modelcontextprotocol/client": "2.0.0",
     "@open-merchant/ai": "workspace:*",
     "@open-merchant/core": "workspace:*",
     "@open-merchant/sdk": "workspace:*",

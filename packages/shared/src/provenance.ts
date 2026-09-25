@@ -2,13 +2,7 @@ import { z } from "zod";
 
 import { isoDateTimeSchema } from "./artifacts";
 
-/**
- * Provenance and run history. Every generated artifact is linked to the run
- * that produced it; AI-produced drafts additionally record which agent,
- * provider, and model generated them so any output can be audited back to
- * its origin. Records are append-only.
- */
-
+/** Provenance and run history. Every generated artifact links to its run. */
 export const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/, "Expected a lowercase SHA-256 hex digest");
 
 export const artifactFingerprintSchema = z.object({
@@ -26,9 +20,18 @@ export const aiOriginSchema = z.object({
 
 export const userOriginSchema = z.object({ kind: z.literal("user") });
 
+export const connectorOriginSchema = z.object({
+  kind: z.literal("connector"),
+  connectorId: z.string().min(1),
+  pluginId: z.string().min(1),
+  fetchedAt: isoDateTimeSchema,
+  rawResponseHash: sha256Schema,
+});
+
 export const generationOriginSchema = z.discriminatedUnion("kind", [
   userOriginSchema,
   aiOriginSchema,
+  connectorOriginSchema,
 ]);
 
 export const provenanceRecordSchema = z.object({
@@ -47,8 +50,14 @@ export const runOperationSchema = z.enum([
   "agentDraftProduced",
   "artifactSaved",
   "snapshotCaptured",
-  /** Read-only MCP host opened an artifact; journaled by @open-merchant/mcp. */
   "mcpArtifactRead",
+  "connectorFetched",
+  "draftDiscarded",
+  "reviewSnoozed",
+  "reviewDismissed",
+  "pluginEnabled",
+  "pluginDisabled",
+  "currencyChanged",
 ]);
 
 export const runStatusSchema = z.enum(["succeeded", "failed"]);
@@ -67,6 +76,7 @@ export const runRecordSchema = z.object({
 
 export type ArtifactFingerprint = z.infer<typeof artifactFingerprintSchema>;
 export type AiOrigin = z.infer<typeof aiOriginSchema>;
+export type ConnectorOrigin = z.infer<typeof connectorOriginSchema>;
 export type GenerationOrigin = z.infer<typeof generationOriginSchema>;
 export type ProvenanceRecord = z.infer<typeof provenanceRecordSchema>;
 export type RunOperation = z.infer<typeof runOperationSchema>;

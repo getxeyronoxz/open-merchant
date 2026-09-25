@@ -1,4 +1,5 @@
 export * from "./money";
+export * from "./phase3";
 export * from "./artifacts";
 export * from "./provenance";
 export * from "./errors";
