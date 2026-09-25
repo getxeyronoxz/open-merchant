@@ -223,4 +223,35 @@ describe("createMockDesktopClient", () => {
     const mock = createMockDesktopClient();
     await expect(mock.installUpdate()).resolves.toEqual({ quitting: false });
   });
+
+  it("lists a disabled sample report-section plugin by default", async () => {
+    const mock = createMockDesktopClient();
+
+    const catalog = await mock.listPlugins();
+
+    expect(catalog.broken).toEqual([]);
+    expect(catalog.plugins).toHaveLength(1);
+    expect(catalog.plugins[0]?.manifest.kind).toBe("report-section");
+    expect(catalog.plugins[0]?.enabled).toBe(false);
+  });
+
+  it("returns a plugin's source and toggles its enabled state", async () => {
+    const mock = createMockDesktopClient();
+    const catalog = await mock.listPlugins();
+    const pluginId = catalog.plugins[0]?.manifest.id ?? "";
+
+    const source = await mock.readPluginSource(pluginId);
+    expect(source.source).toContain("MOQ");
+
+    const enabled = await mock.setPluginEnabled(pluginId, true);
+    expect(enabled.plugin.enabled).toBe(true);
+
+    const reloaded = await mock.listPlugins();
+    expect(reloaded.plugins[0]?.enabled).toBe(true);
+  });
+
+  it("refuses to read the source of an unknown plugin", async () => {
+    const mock = createMockDesktopClient();
+    await expect(mock.readPluginSource("nope")).rejects.toThrow(/nope/);
+  });
 });

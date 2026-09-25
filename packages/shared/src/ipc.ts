@@ -25,6 +25,7 @@ import {
   researchPlanSchema,
 } from "./ai";
 import { aiOriginSchema, generationOriginSchema, provenanceRecordSchema, runRecordSchema } from "./provenance";
+import { installedPluginSchema, pluginCatalogSchema } from "./phase3";
 
 /**
  * The IPC contract between renderer and main process. This map is the single
@@ -357,6 +358,18 @@ export const ipc = {
   "ai/audit-report": {
     request: rootOnlyInputSchema,
     response: z.object({ audit: auditReportSchema, origin: aiOriginSchema }),
+  },
+  "plugins/list": {
+    request: z.object({}),
+    response: pluginCatalogSchema,
+  },
+  "plugins/source": {
+    request: z.object({ pluginId: z.string().min(1) }),
+    response: z.object({ source: z.string() }),
+  },
+  "plugins/set-enabled": {
+    request: z.object({ pluginId: z.string().min(1), enabled: z.boolean() }),
+    response: z.object({ plugin: installedPluginSchema }),
   },
 } as const;
 

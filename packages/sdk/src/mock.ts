@@ -5,6 +5,7 @@ import type {
   CostAssumptions,
   EconomicsScenario,
   EvidenceSource,
+  InstalledPlugin,
   ListingPriceHistory,
   MarginFlag,
   MarketSnapshot,
@@ -168,6 +169,28 @@ export function createMockDesktopClient(
   seed: Partial<{ projects: MockProjectState[]; version: string }> = {},
 ): DesktopClient & { projects: MockProjectState[] } {
   const projects = seed.projects ?? [];
+
+  // The mock ships one disabled report-section plugin so the renderer can be
+  // developed and screenshotted without a real plugins folder on disk.
+  const installedPlugins: InstalledPlugin[] = [
+    {
+      manifest: {
+        id: "risk-checklist",
+        name: "Risk checklist",
+        version: "1.0.0",
+        author: "Open Merchant",
+        minAppVersion: "1.0.0",
+        capabilities: { reads: [], writes: [], network: false },
+        kind: "report-section",
+        description: "A short pre-launch risk checklist.",
+        section: "risks",
+        markdown: "## Risk checklist\nConfirm supplier MOQ before committing.",
+      },
+      directory: "C:/mock/plugins/risk-checklist",
+      enabled: false,
+      enabledAt: null,
+    },
+  ];
   const now = () => new Date().toISOString();
   const historyByProject = new Map<string, Record<"scenarios" | "report", Map<string, string>>>();
   let snapshotCounter = 0;
@@ -489,6 +512,34 @@ export function createMockDesktopClient(
     },
     exportReportPdf: async () => {
       throw new AppError({ code: "not-found", message: "PDF export is available in the desktop app." });
+    },
+
+    listPlugins: async () => {
+      await Promise.resolve();
+      return { plugins: installedPlugins.map((plugin) => ({ ...plugin })), broken: [] };
+    },
+    readPluginSource: async (pluginId) => {
+      await Promise.resolve();
+      const plugin = installedPlugins.find((entry) => entry.manifest.id === pluginId);
+      if (!plugin) throw new AppError({ code: "not-found", message: `Unknown plugin "${pluginId}".` });
+      const manifest = plugin.manifest;
+      if (manifest.kind === "report-section") return { source: manifest.markdown };
+      if (manifest.kind === "csv-importer") return { source: JSON.stringify(manifest.mapping, null, 2) };
+      return { source: `command: ${manifest.command}\nargs: ${manifest.args.join(" ")}\n` };
+    },
+    setPluginEnabled: async (pluginId, enabled) => {
+      await Promise.resolve();
+      const current = installedPlugins.find((entry) => entry.manifest.id === pluginId);
+      if (!current) {
+        throw new AppError({ code: "not-found", message: `Unknown plugin "${pluginId}".` });
+      }
+      const updated: InstalledPlugin = {
+        ...current,
+        enabled,
+        enabledAt: enabled ? new Date(0).toISOString() : null,
+      };
+      installedPlugins.splice(installedPlugins.indexOf(current), 1, updated);
+      return { plugin: updated };
     },
 
     portfolioOverview: async () => {

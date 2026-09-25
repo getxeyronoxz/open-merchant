@@ -113,7 +113,15 @@ export const installedPluginSchema = z.object({
   enabled: z.boolean(),
   enabledAt: isoDateTimeSchema.nullable(),
 });
-export const pluginCatalogSchema = z.object({ plugins: z.array(installedPluginSchema) });
+export const brokenPluginSchema = z.object({
+  directoryName: z.string().min(1),
+  reason: z.string().min(1),
+});
+export const pluginCatalogSchema = z.object({
+  plugins: z.array(installedPluginSchema),
+  broken: z.array(brokenPluginSchema),
+});
+export type BrokenPlugin = z.infer<typeof brokenPluginSchema>;
 export type PluginCapabilities = z.infer<typeof pluginCapabilitySchema>;
 export type PluginManifest = z.infer<typeof pluginManifestSchema>;
 export type InstalledPlugin = z.infer<typeof installedPluginSchema>;

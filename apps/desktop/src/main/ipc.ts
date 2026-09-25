@@ -4,6 +4,7 @@ import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import { writeFile } from "node:fs/promises";
 
 import { RecentsStore } from "./recents";
+import { PluginStore } from "./plugin-store";
 import type { AiConfigStore } from "./ai-config";
 import { runAgent } from "./service";
 import type { MerchantService } from "./service";
@@ -30,6 +31,7 @@ export function registerIpcHandlers(
   aiConfig: AiConfigStore,
 ): void {
   const recents = new RecentsStore(app.getPath("userData"));
+  const plugins = new PluginStore(app.getPath("userData"));
 
   const handlers: Record<IpcChannel, AnyHandler> = {
     "app/info": channel<"app/info">(async () => ({
@@ -245,6 +247,14 @@ export function registerIpcHandlers(
     "ai/audit-report": channel<"ai/audit-report">(async ({ root }) =>
       service.auditGeneratedReport(root),
     ),
+
+    "plugins/list": channel<"plugins/list">(async () => plugins.list()),
+    "plugins/source": channel<"plugins/source">(async ({ pluginId }) => ({
+      source: await plugins.readSource(pluginId),
+    })),
+    "plugins/set-enabled": channel<"plugins/set-enabled">(async ({ pluginId, enabled }) => ({
+      plugin: await plugins.setEnabled(pluginId, enabled),
+    })),
   };
 
   ipcMain.handle("ipc", async (_event, channelName: string, payload: unknown) => {

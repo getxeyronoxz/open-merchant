@@ -97,6 +97,10 @@ export interface DesktopClient {
   restoreArchive(parentDirectory: string, archiveBase64: string): Promise<IpcResponse<"archive/restore">>;
   exportReportPdf(root: string): Promise<IpcResponse<"report/export-pdf">>;
 
+  listPlugins(): Promise<IpcResponse<"plugins/list">>;
+  readPluginSource(pluginId: string): Promise<IpcResponse<"plugins/source">>;
+  setPluginEnabled(pluginId: string, enabled: boolean): Promise<IpcResponse<"plugins/set-enabled">>;
+
   loadAiConfig(): Promise<IpcResponse<"ai/config/load">>;
   saveAiConfig(request: IpcRequest<"ai/config/save">): Promise<IpcResponse<"ai/config/save">>;
   testAi(providerId: IpcRequest<"ai/test">["providerId"]): Promise<IpcResponse<"ai/test">>;
@@ -163,6 +167,10 @@ export function createDesktopClient(raw: RawInvoke): DesktopClient {
     restoreArchive: (parentDirectory, archiveBase64) =>
       invoke(raw, "archive/restore", { parentDirectory, archiveBase64 }),
     exportReportPdf: (root) => invoke(raw, "report/export-pdf", { root }),
+
+    listPlugins: () => invoke(raw, "plugins/list", {}),
+    readPluginSource: (pluginId) => invoke(raw, "plugins/source", { pluginId }),
+    setPluginEnabled: (pluginId, enabled) => invoke(raw, "plugins/set-enabled", { pluginId, enabled }),
 
     loadAiConfig: () => invoke(raw, "ai/config/load", {}),
     saveAiConfig: (request) => invoke(raw, "ai/config/save", request),
