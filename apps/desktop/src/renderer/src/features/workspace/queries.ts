@@ -158,6 +158,27 @@ export function usePortfolioOverview() {
   });
 }
 
+export function usePluginCatalog() {
+  return useQuery({ queryKey: ["plugins"], queryFn: () => client.listPlugins() });
+}
+
+export function usePluginSource(pluginId: string | null) {
+  return useQuery({
+    queryKey: ["plugins", "source", pluginId],
+    queryFn: () => client.readPluginSource(pluginId as string),
+    enabled: pluginId !== null,
+  });
+}
+
+export function useSetPluginEnabled() {
+  const invalidate = useInvalidator();
+  return useMutation({
+    mutationFn: ({ pluginId, enabled }: { pluginId: string; enabled: boolean }) =>
+      client.setPluginEnabled(pluginId, enabled),
+    onSuccess: () => invalidate(["plugins"]),
+  });
+}
+
 function useInvalidator() {
   const queryClient = useQueryClient();
   return (...keys: string[][]) => {

@@ -122,6 +122,7 @@ export const pluginCatalogSchema = z.object({
   broken: z.array(brokenPluginSchema),
 });
 export type BrokenPlugin = z.infer<typeof brokenPluginSchema>;
+export type PluginCatalog = z.infer<typeof pluginCatalogSchema>;
 export type PluginCapabilities = z.infer<typeof pluginCapabilitySchema>;
 export type PluginManifest = z.infer<typeof pluginManifestSchema>;
 export type InstalledPlugin = z.infer<typeof installedPluginSchema>;

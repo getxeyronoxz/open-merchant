@@ -1,17 +1,14 @@
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { pluginManifestSchema, type InstalledPlugin, type PluginManifest } from "@open-merchant/shared";
+import {
+  pluginManifestSchema,
+  type InstalledPlugin,
+  type PluginCatalog,
+  type PluginManifest,
+} from "@open-merchant/shared";
 
-export interface BrokenPlugin {
-  readonly directoryName: string;
-  readonly reason: string;
-}
-
-export interface PluginCatalog {
-  readonly plugins: InstalledPlugin[];
-  readonly broken: BrokenPlugin[];
-}
+export type { PluginCatalog };
 
 interface PersistedState {
   plugins: Record<string, { enabled: boolean; enabledAt: string | null }>;
@@ -37,7 +34,7 @@ export class PluginStore {
 
   async list(): Promise<PluginCatalog> {
     const state = await this.readState();
-    const broken: BrokenPlugin[] = [];
+    const broken: PluginCatalog["broken"] = [];
     const candidates: { directoryName: string; manifest: PluginManifest }[] = [];
 
     for (const directoryName of await this.pluginDirectories()) {

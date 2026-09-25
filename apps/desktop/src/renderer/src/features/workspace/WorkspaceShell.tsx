@@ -12,6 +12,7 @@ import { ReportScreen } from "./screens/ReportScreen";
 import { ArtifactsScreen } from "./screens/ArtifactsScreen";
 import { DraftDeskScreen } from "./screens/DraftDeskScreen";
 import { AiSettingsScreen } from "./screens/AiSettingsScreen";
+import { PluginsScreen } from "./screens/PluginsScreen";
 
 /**
  * The stable six-section workspace plus the AI assistant. The rail doubles
@@ -30,6 +31,7 @@ const sections = [
 
 const assistantSections = [
   { name: "Drafts", label: "Draft Desk" },
+  { name: "Plugins", label: "Plugins" },
   { name: "AI", label: "AI settings" },
 ] as const;
 
@@ -84,7 +86,7 @@ function Shell({
     setSection(target);
   }, [section, setSection, workflow.progress]);
 
-  // Alt+1…7: jump between rail sections without reaching for the mouse; digits
+  // Alt+1…9: jump between rail sections without reaching for the mouse; digits
   // follow rail order with the assistant last. Ignored while typing.
   useEffect(() => {
     const shortcutSections: SectionName[] = [
@@ -152,8 +154,8 @@ function Shell({
 
           <p className="shell__rail-label">
             Workspace
-            <span className="shell__kbd-hint" title="Jump sections: Alt+1 … Alt+8">
-              Alt+1–8
+            <span className="shell__kbd-hint" title="Jump sections: Alt+1 … Alt+9">
+              Alt+1–9
             </span>
           </p>
           <nav aria-label="Workspace sections">
@@ -273,6 +275,9 @@ function Stage({
       return <ArtifactsScreen root={root} onNavigate={onNavigate} />;
     case "Drafts":
       return <DraftDeskScreen root={root} onNavigate={onNavigate} />;
+
+    case "Plugins":
+      return <PluginsScreen />;
 
     case "AI":
       return <AiSettingsScreen />;
