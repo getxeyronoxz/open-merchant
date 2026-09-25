@@ -13,6 +13,7 @@ import type {
 import { ErrorState, Field, LedgerRow } from "@open-merchant/ui";
 
 import { useProject } from "../../../state/project";
+import { nextDraftIndex } from "../draftQueue";
 import {
   useAuditReport,
   useCompetitors,
@@ -92,6 +93,34 @@ export function DraftDeskScreen({
     () => queue.find((item) => item.id === activeId) ?? queue[0] ?? null,
     [activeId, queue],
   );
+
+  // ArrowLeft / ArrowRight walk the review queue and wrap, so a full session can
+  // be triaged without reaching for the mouse. The guard matches the shell's
+  // Alt+digit handler: no modifier chords, and never while typing into a field.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      // Same guard as the shell's Alt+digit handler: never steal keys while the
+      // user is typing into the assistant panel's fields.
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
+      ) {
+        return;
+      }
+      if (queue.length === 0) return;
+      event.preventDefault();
+      const current = queue.findIndex((item) => item.id === active?.id);
+      const step = event.key === "ArrowRight" ? 1 : -1;
+      const index = nextDraftIndex(current, queue.length, step);
+      const next = index === -1 ? undefined : queue[index];
+      if (next) setActiveId(next.id);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [queue, active?.id]);
   const pending =
     plan.isPending ||
     evidenceDraft.isPending ||
@@ -306,10 +335,18 @@ export function DraftDeskScreen({
                   : `${queue.length} draft${queue.length === 1 ? "" : "s"} waiting`}
               </strong>
             </div>
-            <span className="om-badge om-badge--brass">Human acceptance required</span>
+            <span className="draft-desk__queue-actions">
+              {queue.length > 1 ? <span className="draft-desk__kbd">← → step</span> : null}
+              <span className="om-badge om-badge--brass">Human acceptance required</span>
+            </span>
           </div>
           {queue.length > 0 ? (
-            <div className="draft-desk__tabs" role="tablist" aria-label="Drafts waiting for review">
+            <div
+              aria-keyshortcuts="ArrowLeft ArrowRight"
+              className="draft-desk__tabs"
+              role="tablist"
+              aria-label="Drafts waiting for review"
+            >
               {queue.map((item) => (
                 <button
                   aria-selected={item.id === active?.id}

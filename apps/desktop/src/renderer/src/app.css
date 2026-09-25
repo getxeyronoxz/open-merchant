@@ -1068,6 +1068,19 @@ body {
   gap: var(--om-space-1);
 }
 
+.draft-desk__queue-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--om-space-2);
+}
+
+.draft-desk__kbd {
+  color: var(--om-text-muted, #a3ada5);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
 .draft-desk__queue-head strong,
 .draft-desk__review-head h2 {
   margin: 0;
