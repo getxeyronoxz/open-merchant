@@ -224,7 +224,10 @@ export function useApplyCurrencyChange(root: string) {
         ["margin-monitor", root],
         ["decision-journal", root],
         ["runs", root],
+        // Cross-project views: a restatement moves every project's margin, so
+        // the portfolio ordering and the attention queue are stale too.
         ["reviews", "standing"],
+        ["portfolio"],
       ),
   });
 }
