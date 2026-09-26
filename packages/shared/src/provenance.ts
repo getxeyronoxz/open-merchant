@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { isoDateTimeSchema } from "./artifacts";
+import { currencyCodeSchema } from "./money";
 
 /** Provenance and run history. Every generated artifact links to its run. */
 export const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/, "Expected a lowercase SHA-256 hex digest");
@@ -98,12 +99,72 @@ export type ReviewDisposition = z.infer<typeof reviewDispositionSchema>;
 const REVIEW_OPERATIONS = { reviewSnoozed: "snoozed", reviewDismissed: "dismissed" } as const;
 
 /**
- * A run may carry the disposition that caused it, and only then. The payload is
- * required exactly on the two review operations and forbidden everywhere else,
- * so the journal can never claim a snooze that did not happen or attach one to
- * an unrelated run. It is a typed field rather than a string smuggled into
- * `inputArtifacts`, which means "a real file was read" and would put a lie in
- * the project's record.
+ * A user-entered conversion rate. It is deliberately more precise than a money
+ * amount: rates are inputs, and converted values are rounded to two places only
+ * when written to their destination fields.
+ *
+ * Zero is not a rate. A rate of zero would restate every amount in a project
+ * as `0.00` with no way back, so the shape rejects it outright rather than
+ * leaving the domain to notice.
+ */
+export const conversionRateSchema = z
+  .string()
+  .regex(
+    /^(?:0\.(?:0*[1-9]\d{0,11})|[1-9]\d*(?:\.\d{1,12})?)$/u,
+    "Conversion rate must be a positive decimal with at most 12 places",
+  );
+
+/**
+ * Every money value that moved, keyed `<artifact path>#<json path>`. Held as
+ * flat string maps rather than a nested structure because the journal only ever
+ * reads them back to show what a change did — and because a nested value would
+ * lose the two-place canonical form the money engine guarantees.
+ */
+const valueMapSchema = z.record(z.string());
+
+export const currencyChangePreviewSchema = z
+  .object({
+    fromCurrency: currencyCodeSchema,
+    toCurrency: currencyCodeSchema,
+    rate: conversionRateSchema,
+    createdAt: isoDateTimeSchema,
+    affectedArtifacts: z.array(artifactFingerprintSchema).min(1),
+    beforeHash: sha256Schema,
+    afterHash: sha256Schema,
+    oldValues: valueMapSchema,
+    newValues: valueMapSchema,
+    changedCount: z.number().int().nonnegative(),
+  })
+  // A count that disagrees with the maps it summarises is a preview the UI
+  // would render as "12 values change" over two rows.
+  .refine((preview) => Object.keys(preview.newValues).length === preview.changedCount, {
+    path: ["changedCount"],
+    message: "changedCount must match the number of converted values",
+  });
+export type CurrencyChangePreview = z.infer<typeof currencyChangePreviewSchema>;
+
+export const currencyChangeRecordSchema = z.object({
+  runId: z.string().min(1),
+  fromCurrency: currencyCodeSchema,
+  toCurrency: currencyCodeSchema,
+  rate: conversionRateSchema,
+  changedAt: isoDateTimeSchema,
+  affectedArtifacts: z.array(artifactFingerprintSchema).min(1),
+  beforeHash: sha256Schema,
+  afterHash: sha256Schema,
+  oldValues: valueMapSchema,
+  newValues: valueMapSchema,
+});
+export const currencyChangeRecordsSchema = z.object({ changes: z.array(currencyChangeRecordSchema) });
+export type CurrencyChangeRecord = z.infer<typeof currencyChangeRecordSchema>;
+
+/**
+ * A run may carry the payload that caused it, and only then. Each payload is
+ * required exactly on the operations that produce it and forbidden everywhere
+ * else, so the journal can never claim a snooze or a currency change that did
+ * not happen, nor attach one to an unrelated run. Each is a typed field rather
+ * than a string smuggled into `inputArtifacts`, which means "a real file was
+ * read" and would put a lie in the project's record.
  */
 export const runRecordSchema = z
   .object({
@@ -117,6 +178,7 @@ export const runRecordSchema = z
     outputArtifacts: z.array(artifactFingerprintSchema),
     errorSummary: z.string().nullable(),
     review: reviewDispositionSchema.optional(),
+    currencyChange: currencyChangeRecordSchema.optional(),
   })
   .superRefine((record, ctx) => {
     const expected = REVIEW_OPERATIONS[record.operation as keyof typeof REVIEW_OPERATIONS];
@@ -128,21 +190,33 @@ export const runRecordSchema = z
           message: `A ${record.operation} run cannot carry a review disposition.`,
         });
       }
-      return;
-    }
-    if (record.review === undefined) {
+    } else if (record.review === undefined) {
       ctx.addIssue({
         code: "custom",
         path: ["review"],
         message: `A ${record.operation} run must carry the disposition it recorded.`,
       });
-      return;
-    }
-    if (record.review.action !== expected) {
+    } else if (record.review.action !== expected) {
       ctx.addIssue({
         code: "custom",
         path: ["review", "action"],
         message: `A ${record.operation} run cannot record a "${record.review.action}" disposition.`,
+      });
+    }
+
+    const carriesCurrencyChange = record.operation === "currencyChanged";
+    if (carriesCurrencyChange && record.currencyChange === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["currencyChange"],
+        message: "A currencyChanged run must carry the change it made.",
+      });
+    }
+    if (!carriesCurrencyChange && record.currencyChange !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["currencyChange"],
+        message: `A ${record.operation} run cannot carry a currency change.`,
       });
     }
   });

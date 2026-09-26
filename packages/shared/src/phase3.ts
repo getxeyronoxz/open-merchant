@@ -6,44 +6,26 @@ import {
   isoDateTimeSchema,
   reportSectionsSchema,
 } from "./artifacts";
-import { currencyCodeSchema } from "./money";
-import { artifactFingerprintSchema, generationOriginSchema, reviewKeyShape, sha256Schema } from "./provenance";
+import {
+  conversionRateSchema,
+  currencyChangePreviewSchema,
+  currencyChangeRecordSchema,
+  currencyChangeRecordsSchema,
+  generationOriginSchema,
+  reviewKeyShape,
+} from "./provenance";
 
-/**
- * A user-entered conversion rate. It is deliberately more precise than a
- * money amount: rates are inputs, and converted values are rounded to two
- * places only when written to their destination fields.
- */
-export const conversionRateSchema = z
-  .string()
-  .regex(/^\d+(?:\.\d{1,12})?$/u, "Conversion rate must be a positive decimal with at most 12 places");
-
-export const currencyChangePreviewSchema = z.object({
-  fromCurrency: currencyCodeSchema,
-  toCurrency: currencyCodeSchema,
-  rate: conversionRateSchema,
-  createdAt: isoDateTimeSchema,
-  affectedArtifacts: z.array(artifactFingerprintSchema).min(1),
-  beforeHash: sha256Schema,
-  afterHash: sha256Schema,
-  sample: z.object({ path: z.string().min(1), before: z.string(), after: z.string() }),
-});
-export type CurrencyChangePreview = z.infer<typeof currencyChangePreviewSchema>;
-
-export const currencyChangeRecordSchema = z.object({
-  runId: z.string().min(1),
-  fromCurrency: currencyCodeSchema,
-  toCurrency: currencyCodeSchema,
-  rate: conversionRateSchema,
-  changedAt: isoDateTimeSchema,
-  affectedArtifacts: z.array(artifactFingerprintSchema).min(1),
-  beforeHash: sha256Schema,
-  afterHash: sha256Schema,
-  oldValues: z.record(z.string()),
-  newValues: z.record(z.string()),
-});
-export const currencyChangeRecordsSchema = z.object({ changes: z.array(currencyChangeRecordSchema) });
-export type CurrencyChangeRecord = z.infer<typeof currencyChangeRecordSchema>;
+// A currency change is journaled in the project's run log, so its schemas live
+// beside the run record they are written into; `provenance` already owns the
+// primitives they need, and the reverse import would be a module-initialisation
+// cycle, because zod schemas are built at module evaluation.
+export {
+  conversionRateSchema,
+  currencyChangePreviewSchema,
+  currencyChangeRecordSchema,
+  currencyChangeRecordsSchema,
+};
+export type { CurrencyChangePreview, CurrencyChangeRecord } from "./provenance";
 
 /** Stable identifiers keep project-local Draft Desk records addressable. */
 export const draftIdSchema = z.string().regex(/^DRAFT-[A-Za-z0-9._-]+$/u, "Invalid draft id");
