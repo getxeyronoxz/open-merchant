@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type {
-  AiOrigin,
   AuditReport,
   Competitor,
   CompetitorDraft,
   EconomicsReview,
   EvidenceSource,
+  GenerationOrigin,
   ReportSections,
   ResearchPlan,
 } from "@open-merchant/shared";
 import { ErrorState, Field, LedgerRow } from "@open-merchant/ui";
 
 import { useProject } from "../../../state/project";
+import { DraftOriginPanel } from "./DraftOriginPanel";
 import { nextDraftIndex } from "../draftQueue";
 import {
   useAuditReport,
@@ -30,13 +31,18 @@ import {
 import type { SectionName } from "../useWorkflowProgress";
 
 type DraftKind = "plan" | "evidence" | "competitors" | "economics" | "sections" | "audit";
+/**
+ * A draft is something a human has not accepted yet. Its origin may be a model,
+ * a local connector, or the person typing — so it is a general GenerationOrigin,
+ * not an AI-only shape. Which of the three it is stays visible on the desk.
+ */
 type DraftRecord =
-  | { id: string; kind: "plan"; origin: AiOrigin; value: ResearchPlan }
-  | { id: string; kind: "evidence"; origin: AiOrigin; value: EvidenceSource }
-  | { id: string; kind: "competitors"; origin: AiOrigin; value: CompetitorDraft[] }
-  | { id: string; kind: "economics"; origin: AiOrigin; value: EconomicsReview }
-  | { id: string; kind: "sections"; origin: AiOrigin; value: ReportSections }
-  | { id: string; kind: "audit"; origin: AiOrigin; value: AuditReport };
+  | { id: string; kind: "plan"; origin: GenerationOrigin; value: ResearchPlan }
+  | { id: string; kind: "evidence"; origin: GenerationOrigin; value: EvidenceSource }
+  | { id: string; kind: "competitors"; origin: GenerationOrigin; value: CompetitorDraft[] }
+  | { id: string; kind: "economics"; origin: GenerationOrigin; value: EconomicsReview }
+  | { id: string; kind: "sections"; origin: GenerationOrigin; value: ReportSections }
+  | { id: string; kind: "audit"; origin: GenerationOrigin; value: AuditReport };
 
 const labels: Record<DraftKind, string> = {
   plan: "Research plan",
@@ -377,14 +383,7 @@ export function DraftDeskScreen({
                   Discard
                 </button>
               </header>
-              <div className="draft-desk__origin" aria-label="AI provenance">
-                <LedgerRow label="Agent" value={active.origin.agentId} />
-                <LedgerRow
-                  label="Provider / model"
-                  value={`${active.origin.providerId} · ${active.origin.modelId}`}
-                />
-                <LedgerRow label="Prompt hash" value={active.origin.promptHash} tone="muted" />
-              </div>
+              <DraftOriginPanel origin={active.origin} />
               <DraftContent
                 draft={active}
                 evidence={editedEvidence}
