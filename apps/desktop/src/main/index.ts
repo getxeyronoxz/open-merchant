@@ -1,4 +1,5 @@
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { BrowserWindow, Menu, app, dialog, safeStorage, shell } from "electron";
 import { autoUpdater } from "electron-updater";
 
@@ -8,6 +9,14 @@ import { AiConfigStore } from "./ai-config";
 import { PluginStore } from "./plugin-store";
 import { MerchantService } from "./service";
 import { registerIpcHandlers } from "./ipc";
+
+/**
+ * This package is `"type": "module"`, so electron-vite emits the main process
+ * as ESM and CommonJS globals like `__dirname` do not exist. Deriving it from
+ * the module URL is the supported equivalent; using `__dirname` here throws
+ * before the window is ever created.
+ */
+const mainDirectory = dirname(fileURLToPath(import.meta.url));
 
 function createMainWindow() {
   const win = new BrowserWindow({
@@ -38,7 +47,7 @@ function createMainWindow() {
       ? {}
       : { icon: join(app.getAppPath(), "build", "icon.png") }),
     webPreferences: {
-      preload: join(__dirname, "../preload/index.js"),
+      preload: join(mainDirectory, "../preload/index.js"),
       sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
@@ -56,7 +65,7 @@ function createMainWindow() {
   if (process.env.ELECTRON_RENDERER_URL) {
     void win.loadURL(process.env.ELECTRON_RENDERER_URL);
   } else {
-    void win.loadFile(join(__dirname, "../renderer/index.html"));
+    void win.loadFile(join(mainDirectory, "../renderer/index.html"));
   }
 }
 
