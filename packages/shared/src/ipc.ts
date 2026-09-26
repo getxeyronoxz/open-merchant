@@ -16,7 +16,7 @@ import {
   reportSectionsSchema,
   snapshotDiffSchema,
 } from "./artifacts";
-import { marketSnapshotIdSchema } from "./money";
+import { currencyCodeSchema, marketSnapshotIdSchema } from "./money";
 import {
   auditReportSchema,
   competitorDraftSchema,
@@ -26,6 +26,9 @@ import {
 } from "./ai";
 import {
   aiOriginSchema,
+  conversionRateSchema,
+  currencyChangePreviewSchema,
+  currencyChangeRecordSchema,
   generationOriginSchema,
   provenanceRecordSchema,
   reviewDispositionSchema,
@@ -409,6 +412,22 @@ export const ipc = {
   "reviews/dispose": {
     request: z.object({ root: z.string(), reviewKey: reviewKeyShape, action: z.enum(["snoozed", "dismissed"]) }),
     response: z.object({ disposition: reviewDispositionSchema }),
+  },
+  /**
+   * Restate a project in another currency, at a rate the seller types. There is
+   * no network call behind this channel: the rate is an input, never a lookup.
+   *
+   * Both channels take only the seller's intent. The main process derives the
+   * change from the artifacts on disk and the renderer never supplies a plan,
+   * so a stale or hand-built preview cannot decide what gets written.
+   */
+  "currency/preview": {
+    request: z.object({ root: z.string(), toCurrency: currencyCodeSchema, rate: conversionRateSchema }),
+    response: currencyChangePreviewSchema,
+  },
+  "currency/apply": {
+    request: z.object({ root: z.string(), toCurrency: currencyCodeSchema, rate: conversionRateSchema }),
+    response: z.object({ change: currencyChangeRecordSchema, changedCount: z.number().int().nonnegative() }),
   },
 } as const;
 

@@ -175,6 +175,12 @@ export function registerIpcHandlers(
     "reviews/dispose": channel<"reviews/dispose">(async ({ root, reviewKey, action }) => ({
       disposition: await service.disposeReview(root, reviewKey, action),
     })),
+    "currency/preview": channel<"currency/preview">(async ({ root, toCurrency, rate }) =>
+      service.currencyPreview(root, toCurrency, rate),
+    ),
+    "currency/apply": channel<"currency/apply">(async ({ root, toCurrency, rate }) =>
+      service.applyCurrencyChange(root, toCurrency, rate),
+    ),
 
     "csv/export": channel<"csv/export">(async ({ root, kind }) => service.exportCsv(root, kind)),
     "csv/parse": channel<"csv/parse">(async ({ csv }) => {

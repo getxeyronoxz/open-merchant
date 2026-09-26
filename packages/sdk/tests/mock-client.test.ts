@@ -294,3 +294,71 @@ describe("mock connector fetch", () => {
     }
   });
 });
+
+describe("createMockDesktopClient currency change", () => {
+  async function project() {
+    const mock = createMockDesktopClient();
+    const created = await mock.createProject({
+      parentDirectory: "C:/research",
+      name: "Keyboards",
+      objective: "Decide market entry",
+      currency: "INR",
+    });
+    return { mock, root: created.snapshot.root };
+  }
+
+  it("previews a change without moving the project", async () => {
+    const { mock, root } = await project();
+    await mock.saveCompetitors(root, [
+      {
+        id: "C-001",
+        product: "Keyboard",
+        brand: "Brand",
+        price: "549.25",
+        currency: "INR",
+        marketplace: "Example Bazaar",
+        url: "https://example.com",
+        sourceId: null,
+        notes: "",
+        observedAt: "2026-09-05T08:00:00.000Z",
+      },
+    ]);
+
+    const preview = await mock.currencyPreview(root, "EUR", "0.011");
+
+    expect(preview.fromCurrency).toBe("INR");
+    expect(preview.toCurrency).toBe("EUR");
+    expect(preview.rate).toBe("0.011");
+    // Nothing has moved yet, and the mock must not pretend otherwise.
+    expect((await mock.loadCompetitors(root)).competitors[0]?.currency).toBe("INR");
+    expect((await mock.openProject({ root })).snapshot.manifest.currency).toBe("INR");
+  });
+
+  it("moves the project to the new currency when applied", async () => {
+    const { mock, root } = await project();
+
+    const applied = await mock.applyCurrencyChange(root, "EUR", "0.011");
+
+    expect(applied.change.fromCurrency).toBe("INR");
+    expect(applied.change.toCurrency).toBe("EUR");
+    expect(applied.change.rate).toBe("0.011");
+    expect(applied.changedCount).toBe(0);
+    expect((await mock.openProject({ root })).snapshot.manifest.currency).toBe("EUR");
+  });
+
+  it("refuses a change into the currency the project is already in", async () => {
+    const { mock, root } = await project();
+
+    await expect(mock.applyCurrencyChange(root, "INR", "1")).rejects.toBeInstanceOf(AppError);
+    expect((await mock.openProject({ root })).snapshot.manifest.currency).toBe("INR");
+  });
+
+  it("refuses a rate that is not a positive decimal", async () => {
+    const { mock, root } = await project();
+
+    for (const rate of ["0", "0.00", "-1", "abc"]) {
+      await expect(mock.applyCurrencyChange(root, "EUR", rate)).rejects.toBeInstanceOf(AppError);
+    }
+    expect((await mock.openProject({ root })).snapshot.manifest.currency).toBe("INR");
+  });
+});

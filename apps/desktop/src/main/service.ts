@@ -19,10 +19,12 @@ import {
   projectFolderName,
   readArchive,
   renderOpportunityReport,
+  planCurrencyChange,
   SNOOZE_DAYS,
   standingReviews,
   type StandingReviewInput,
   worstFlagStatus,
+  writeCurrencyPlan,
   writeFileAtomically,
 } from "@open-merchant/core";
 import {
@@ -35,9 +37,16 @@ import {
   draftResearchPlan,
   reviewEconomics,
 } from "@open-merchant/ai";
+import { createHash } from "node:crypto";
+
 import {
+  competitorSchema,
+  costAssumptionsSchema,
+  currencyChangePreviewSchema,
+  economicsScenarioSchema,
   manifestSchema,
   type AiOrigin,
+  type ArtifactFingerprint,
   type AuditReport,
   type Competitor,
   type CompetitorDraft,
@@ -45,6 +54,8 @@ import {
   type ConnectorDraft,
   type ConnectorOrigin,
   type CostAssumptions,
+  type CurrencyChangePreview,
+  type CurrencyChangeRecord,
   type DecisionJournal,
   type EconomicsReview,
   type EconomicsScenario,
@@ -899,6 +910,146 @@ export class MerchantService {
       review: disposition,
     });
     return disposition;
+  }
+
+  /**
+   * Reads the project and derives what a currency change would do to it.
+   * Writes nothing: the seller has to see the diff and confirm it.
+   *
+   * The request carries only an intent — a currency and a rate. Nothing about
+   * the plan crosses this boundary, so a preview the renderer could have built
+   * or edited has no way to decide what gets written.
+   */
+  private async currencyChangePlan(root: string, toCurrency: string, rate: string) {
+    return this.run(async () => {
+      const store = await this.openStore(root);
+      const manifest = store.manifest;
+      // Absence is decided by asking what exists, never by swallowing a read
+      // error. A project that has never calculated has no scenarios file; a
+      // project whose assumptions cannot be read must be refused outright,
+      // because converting everything except the one artifact that failed to
+      // load is a silent partial change — the exact outcome this operation
+      // exists to avoid.
+      const present = new Set(
+        (await store.listArtifacts())
+          .filter((artifact) => artifact.exists)
+          .map((artifact) => artifact.path),
+      );
+      const optional = (relativePath: string): Promise<string | null> =>
+        present.has(relativePath) ? store.readArtifactText(relativePath) : Promise.resolve(null);
+      const [competitorsRaw, assumptionsRaw, scenariosRaw, snapshots] = await Promise.all([
+        optional(ArtifactPaths.competitors),
+        optional(ArtifactPaths.assumptions),
+        optional(ArtifactPaths.scenarios),
+        store.listMarketSnapshots(),
+      ]);
+      const parse = <T>(raw: string | null, schema: { parse: (value: unknown) => T }): T | null =>
+        raw === null ? null : schema.parse(JSON.parse(raw));
+
+      return planCurrencyChange({
+        fromCurrency: manifest.currency,
+        toCurrency,
+        rate,
+        changedAt: new Date().toISOString(),
+        manifest,
+        competitors: parse(competitorsRaw, competitorSchema.array()),
+        assumptions: parse(assumptionsRaw, costAssumptionsSchema),
+        scenarios: parse(scenariosRaw, economicsScenarioSchema.array()),
+        snapshots,
+      });
+    });
+  }
+
+  async currencyPreview(
+    root: string,
+    toCurrency: string,
+    rate: string,
+  ): Promise<CurrencyChangePreview> {
+    const plan = await this.currencyChangePlan(root, toCurrency, rate);
+    return currencyChangePreviewSchema.parse({
+      fromCurrency: plan.fromCurrency,
+      toCurrency: plan.toCurrency,
+      rate: plan.rate,
+      createdAt: plan.changedAt,
+      affectedArtifacts: plan.artifacts.map((artifact) => ({
+        path: artifact.path,
+        sha256: createHash("sha256").update(artifact.after).digest("hex"),
+      })),
+      beforeHash: plan.beforeHash,
+      afterHash: plan.afterHash,
+      oldValues: { ...plan.oldValues },
+      newValues: { ...plan.newValues },
+      changedCount: Object.keys(plan.newValues).length,
+    });
+  }
+
+  /**
+   * Restates the project in another currency, on the record.
+   *
+   * The plan is derived here rather than taken from the caller, so a seller who
+   * edited a competitor price between the preview and this call gets the
+   * current price converted and the journal records the value that was really
+   * on disk. The journal entry is appended only once the folder is known to
+   * hold what the record describes; a change that cannot land rolls itself back
+   * and is recorded as the failure it was.
+   */
+  async applyCurrencyChange(
+    root: string,
+    toCurrency: string,
+    rate: string,
+  ): Promise<{ change: CurrencyChangeRecord; changedCount: number }> {
+    const startedAt = new Date().toISOString();
+    const runId = `RUN-${randomUUID()}`;
+    const store = await this.openStore(root);
+    const plan = await this.currencyChangePlan(root, toCurrency, rate);
+    const change: CurrencyChangeRecord = {
+      runId,
+      fromCurrency: plan.fromCurrency,
+      toCurrency: plan.toCurrency,
+      rate: plan.rate,
+      changedAt: plan.changedAt,
+      affectedArtifacts: plan.artifacts.map((artifact) => ({
+        path: artifact.path,
+        sha256: createHash("sha256").update(artifact.after).digest("hex"),
+      })),
+      beforeHash: plan.beforeHash,
+      afterHash: plan.afterHash,
+      oldValues: { ...plan.oldValues },
+      newValues: { ...plan.newValues },
+    };
+    let written: ArtifactFingerprint[];
+    try {
+      written = await writeCurrencyPlan(root, plan);
+    } catch (error) {
+      // A change that could not land journals as the failure it was, with no
+      // payload: a run record cannot describe a conversion that did not happen.
+      // The plan has already put back what it took, so the folder is whole.
+      await store.journal.appendRun({
+        runId,
+        operation: "currencyChanged",
+        startedAt,
+        completedAt: new Date().toISOString(),
+        status: "failed",
+        appVersion: this.appVersion,
+        inputArtifacts: [],
+        outputArtifacts: [],
+        errorSummary: error instanceof Error ? error.message : String(error),
+      });
+      throw toAppError(error);
+    }
+    await store.journal.appendRun({
+      runId,
+      operation: "currencyChanged",
+      startedAt,
+      completedAt: new Date().toISOString(),
+      status: "succeeded",
+      appVersion: this.appVersion,
+      inputArtifacts: [],
+      outputArtifacts: written,
+      errorSummary: null,
+      currencyChange: change,
+    });
+    return { change, changedCount: Object.keys(change.newValues).length };
   }
 
   /** File-first pillar: CSV export of the requested table. */

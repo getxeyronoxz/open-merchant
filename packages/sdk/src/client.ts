@@ -96,6 +96,16 @@ export interface DesktopClient {
     reviewKey: string,
     action: "snoozed" | "dismissed",
   ): Promise<IpcResponse<"reviews/dispose">>;
+  currencyPreview(
+    root: string,
+    toCurrency: string,
+    rate: string,
+  ): Promise<IpcResponse<"currency/preview">>;
+  applyCurrencyChange(
+    root: string,
+    toCurrency: string,
+    rate: string,
+  ): Promise<IpcResponse<"currency/apply">>;
   exportCsv(root: string, kind: IpcRequest<"csv/export">["kind"]): Promise<IpcResponse<"csv/export">>;
   parseCsv(csv: string): Promise<IpcResponse<"csv/parse">>;
   importCompetitorsCsv(root: string, csv: string, mapping?: Record<string, string>): Promise<IpcResponse<"csv/import">>;
@@ -169,6 +179,10 @@ export function createDesktopClient(raw: RawInvoke): DesktopClient {
     standingReviews: () => invoke(raw, "reviews/standing", {}),
     disposeReview: (root, reviewKey, action) =>
       invoke(raw, "reviews/dispose", { root, reviewKey, action }),
+    currencyPreview: (root, toCurrency, rate) =>
+      invoke(raw, "currency/preview", { root, toCurrency, rate }),
+    applyCurrencyChange: (root, toCurrency, rate) =>
+      invoke(raw, "currency/apply", { root, toCurrency, rate }),
     exportCsv: (root, kind) => invoke(raw, "csv/export", { root, kind }),
     parseCsv: (csv) => invoke(raw, "csv/parse", { csv }),
     importCompetitorsCsv: (root, csv, mapping) =>

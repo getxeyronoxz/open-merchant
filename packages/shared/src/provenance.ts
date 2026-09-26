@@ -204,15 +204,18 @@ export const runRecordSchema = z
       });
     }
 
-    const carriesCurrencyChange = record.operation === "currencyChanged";
-    if (carriesCurrencyChange && record.currencyChange === undefined) {
+    // A run that failed has no change to describe: the payload is required on
+    // a currency change that landed, forbidden everywhere else. Requiring it on
+    // a failure would make the journal unable to record the attempt at all.
+    const landedCurrencyChange = record.operation === "currencyChanged" && record.status === "succeeded";
+    if (landedCurrencyChange && record.currencyChange === undefined) {
       ctx.addIssue({
         code: "custom",
         path: ["currencyChange"],
         message: "A currencyChanged run must carry the change it made.",
       });
     }
-    if (!carriesCurrencyChange && record.currencyChange !== undefined) {
+    if (!landedCurrencyChange && record.currencyChange !== undefined) {
       ctx.addIssue({
         code: "custom",
         path: ["currencyChange"],

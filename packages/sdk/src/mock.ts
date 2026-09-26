@@ -25,6 +25,29 @@ import type { DesktopClient } from "./client";
  * semantics as the real shell. AI drafts are deterministic placeholders.
  */
 
+/** Stand-in digests: the mock stores no bytes, so it hashes nothing real. */
+const MOCK_HASH = "0".repeat(64);
+let MOCK_RUNS = 0;
+
+/** The same two refusals the core makes, so a mock project fails like a real one. */
+function assertCurrencyChange(from: string, toCurrency: string, rate: string): void {
+  if (!/^[A-Z]{3}$/u.test(toCurrency)) {
+    throw new AppError({
+      code: "invalid-input",
+      message: "Currency must be exactly three uppercase ASCII letters",
+    });
+  }
+  if (toCurrency === from) {
+    throw new AppError({ code: "invalid-input", message: "That is already this project's currency" });
+  }
+  if (!/^(?:0\.(?:0*[1-9]\d{0,11})|[1-9]\d*(?:\.\d{1,12})?)$/u.test(rate)) {
+    throw new AppError({
+      code: "invalid-input",
+      message: "Enter the conversion rate as a positive decimal, for example 0.011",
+    });
+  }
+}
+
 /** Mirrors STALE_AFTER_DAYS and SNOOZE_DAYS in @open-merchant/core. */
 const MOCK_STALE_AFTER_DAYS = 30;
 const MOCK_SNOOZE_DAYS = 7;
@@ -724,6 +747,75 @@ export function createMockDesktopClient(
         disposition,
       ]);
       return { disposition };
+    },
+
+    currencyPreview: async (root, toCurrency, rate) => {
+      const project = requireProject(projects, root);
+      const from = project.snapshot.manifest.currency;
+      assertCurrencyChange(from, toCurrency, rate);
+      // The real derivation lives in @open-merchant/core, which this module
+      // cannot import: core is node-only and every runtime file here reaches
+      // the browser bundle. Inventing amounts with a float would put numbers on
+      // screen that no decimal engine produced, so the mock reports the
+      // artifacts a change would touch and says plainly that it converted
+      // nothing. That is also a real state - a project with no priced
+      // competitors changes its currency code and no amount at all.
+      return {
+        fromCurrency: from,
+        toCurrency,
+        rate,
+        createdAt: new Date().toISOString(),
+        affectedArtifacts: [
+          { path: ".openmerchant/manifest.json", sha256: MOCK_HASH },
+          ...(project.competitors.length > 0
+            ? [{ path: "market/competitors.json", sha256: MOCK_HASH }]
+            : []),
+          ...(project.assumptions === null
+            ? []
+            : [{ path: "economics/assumptions.json", sha256: MOCK_HASH }]),
+          ...(project.scenarios.length > 0
+            ? [{ path: "economics/scenarios.json", sha256: MOCK_HASH }]
+            : []),
+        ],
+        beforeHash: MOCK_HASH,
+        afterHash: MOCK_HASH,
+        oldValues: {},
+        newValues: {},
+        changedCount: 0,
+      };
+    },
+
+    applyCurrencyChange: async (root, toCurrency, rate) => {
+      const project = requireProject(projects, root);
+      const from = project.snapshot.manifest.currency;
+      assertCurrencyChange(from, toCurrency, rate);
+      const changedAt = new Date().toISOString();
+      const preview = await client.currencyPreview(root, toCurrency, rate);
+      project.snapshot = {
+        ...project.snapshot,
+        manifest: { ...project.snapshot.manifest, currency: toCurrency, updatedAt: changedAt },
+      };
+      if (project.competitors.length > 0) {
+        project.competitors = project.competitors.map((listing) => ({ ...listing, currency: toCurrency }));
+      }
+      if (project.assumptions !== null) {
+        project.assumptions = { ...project.assumptions, currency: toCurrency };
+      }
+      return {
+        change: {
+          runId: `RUN-mock-${MOCK_RUNS++}`,
+          fromCurrency: from,
+          toCurrency,
+          rate,
+          changedAt,
+          affectedArtifacts: preview.affectedArtifacts,
+          beforeHash: preview.beforeHash,
+          afterHash: preview.afterHash,
+          oldValues: preview.oldValues,
+          newValues: preview.newValues,
+        },
+        changedCount: preview.changedCount,
+      };
     },
 
     loadAssumptions: (root) => {

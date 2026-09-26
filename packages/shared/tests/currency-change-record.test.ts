@@ -56,6 +56,25 @@ describe("runRecordSchema.currencyChange", () => {
     expect(parsed.currencyChange?.toCurrency).toBe("EUR");
   });
 
+  it("accepts a currencyChanged run that failed, with no record to describe", () => {
+    // A change that could not land has nothing to describe, and the journal has
+    // to be able to say so. Requiring a payload on a failure would make the
+    // attempt unrecordable.
+    const result = runRecordSchema.safeParse(
+      run("currencyChanged", { status: "failed", errorSummary: "disk went away" }),
+    );
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a failed currencyChanged run that carries a record anyway", () => {
+    const result = runRecordSchema.safeParse(
+      run("currencyChanged", { status: "failed", errorSummary: "boom", currencyChange: record() }),
+    );
+
+    expect(result.success).toBe(false);
+  });
+
   it("rejects a currencyChanged run with no record of what it changed", () => {
     // A run that says it changed the currency and cannot say what it wrote is
     // the exact record this design refuses to produce.
@@ -79,6 +98,9 @@ describe("runRecordSchema.currencyChange", () => {
     expect(snoozed.success).toBe(false);
 
     expect(runRecordSchema.safeParse(run("reportGenerated")).success).toBe(true);
+    expect(
+      runRecordSchema.safeParse(run("currencyChanged", { status: "failed" })).success,
+    ).toBe(true);
   });
 });
 
