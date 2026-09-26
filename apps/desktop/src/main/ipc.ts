@@ -255,6 +255,9 @@ export function registerIpcHandlers(
     "plugins/set-enabled": channel<"plugins/set-enabled">(async ({ pluginId, enabled }) => ({
       plugin: await plugins.setEnabled(pluginId, enabled),
     })),
+    "connectors/fetch": channel<"connectors/fetch">(async ({ root, pluginId, query }) =>
+      service.fetchFromConnector(root, pluginId, query),
+    ),
   };
 
   ipcMain.handle("ipc", async (_event, channelName: string, payload: unknown) => {

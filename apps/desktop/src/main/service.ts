@@ -39,8 +39,10 @@ import {
   type Competitor,
   type CompetitorDraft,
   type CompetitorStatistics,
+  type ConnectorOrigin,
   type CostAssumptions,
   type DecisionJournal,
+  type DraftRecord,
   type EconomicsReview,
   type EconomicsScenario,
   type EvidenceSource,
@@ -61,6 +63,10 @@ import { AppError } from "@open-merchant/shared";
 
 import type { AiConfigStore } from "./ai-config";
 import type { PluginStore } from "./plugin-store";
+import {
+  fetchFromConnector as runConnector,
+  type ConnectorClientFactory,
+} from "./connector-client";
 import type { HistoryKind } from "@open-merchant/core";
 
 /** Maps agent-layer failures to coded app errors. */
@@ -664,6 +670,79 @@ export class MerchantService {
 
   listRuns(root: string): Promise<RunRecord[]> {
     return this.withStore(root, (store) => store.journal.listRuns());
+  }
+
+  /**
+   * Runs one enabled connector and returns its output as drafts.
+   *
+   * Nothing is written to the project. A connector is a third-party program
+   * running as the user; the one thing it may ever produce is a draft a human
+   * accepts on the Draft Desk. A fetch that fails writes nothing at all — not
+   * even a run record — so a broken process cannot leave a trace in a project
+   * it was only ever allowed to read.
+   */
+  async fetchFromConnector(
+    root: string,
+    pluginId: string,
+    query: string,
+    createClient?: ConnectorClientFactory,
+  ): Promise<{ drafts: DraftRecord[]; fetchedAt: string }> {
+    const store = await this.openStore(root);
+    return this.run(async () => {
+      const catalog = this.plugins ? await this.plugins.list() : { plugins: [], broken: [] };
+      const plugin = catalog.plugins.find((entry) => entry.manifest.id === pluginId);
+      if (!plugin || plugin.manifest.kind !== "connector") {
+        throw new AppError({ code: "not-found", message: `No connector named "${pluginId}" is installed.` });
+      }
+      if (!plugin.enabled) {
+        throw new AppError({ code: "not-found", message: `Connector "${pluginId}" is disabled.` });
+      }
+
+      const fetchedAt = new Date().toISOString();
+      const result = await runConnector(
+        plugin.manifest,
+        plugin.directory,
+        { query },
+        createClient,
+      );
+      const origin: ConnectorOrigin = {
+        kind: "connector",
+        connectorId: plugin.manifest.id,
+        pluginId,
+        fetchedAt,
+        rawResponseHash: result.rawResponseHash,
+      };
+      // Two fetches can land in the same millisecond, so the id carries a
+      // random suffix rather than treating the timestamp as unique.
+      const stem = `DRAFT-${pluginId}-${fetchedAt.replace(/\D/gu, "")}-${randomUUID().slice(0, 8)}`;
+      const drafts: DraftRecord[] = [];
+      const [firstEvidence] = result.result.evidence;
+      if (firstEvidence) {
+        drafts.push({ id: `${stem}-E`, kind: "evidence", origin, createdAt: fetchedAt, value: firstEvidence });
+      }
+      if (result.result.competitors.length > 0) {
+        drafts.push({
+          id: `${stem}-C`,
+          kind: "competitors",
+          origin,
+          createdAt: fetchedAt,
+          value: result.result.competitors,
+        });
+      }
+
+      await store.journal.appendRun({
+        runId: `RUN-${randomUUID()}`,
+        operation: "connectorFetched",
+        startedAt: fetchedAt,
+        completedAt: new Date().toISOString(),
+        status: "succeeded",
+        appVersion: this.appVersion,
+        inputArtifacts: [],
+        outputArtifacts: [],
+        errorSummary: null,
+      });
+      return { drafts, fetchedAt };
+    });
   }
 
   /** Captures an immutable market snapshot and journals it. */

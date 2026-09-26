@@ -100,6 +100,7 @@ export interface DesktopClient {
   listPlugins(): Promise<IpcResponse<"plugins/list">>;
   readPluginSource(pluginId: string): Promise<IpcResponse<"plugins/source">>;
   setPluginEnabled(pluginId: string, enabled: boolean): Promise<IpcResponse<"plugins/set-enabled">>;
+  fetchFromConnector(root: string, pluginId: string, query: string): Promise<IpcResponse<"connectors/fetch">>;
 
   loadAiConfig(): Promise<IpcResponse<"ai/config/load">>;
   saveAiConfig(request: IpcRequest<"ai/config/save">): Promise<IpcResponse<"ai/config/save">>;
@@ -171,6 +172,8 @@ export function createDesktopClient(raw: RawInvoke): DesktopClient {
     listPlugins: () => invoke(raw, "plugins/list", {}),
     readPluginSource: (pluginId) => invoke(raw, "plugins/source", { pluginId }),
     setPluginEnabled: (pluginId, enabled) => invoke(raw, "plugins/set-enabled", { pluginId, enabled }),
+    fetchFromConnector: (root, pluginId, query) =>
+      invoke(raw, "connectors/fetch", { root, pluginId, query }),
 
     loadAiConfig: () => invoke(raw, "ai/config/load", {}),
     saveAiConfig: (request) => invoke(raw, "ai/config/save", request),

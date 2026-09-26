@@ -78,6 +78,29 @@ const EMPTY_STATS: CompetitorStatistics = {
   median: null,
 };
 
+/**
+ * A stable 64-character hex stand-in for a connector's response digest.
+ *
+ * This is deliberately NOT a hash. The real client computes SHA-256 with
+ * node:crypto, and the renderer reaches this module in development, so a node
+ * builtin here would follow the bundle into the browser. The value only has to
+ * be deterministic and the right shape for the UI to render; a mock that
+ * claimed a real digest would be lying about provenance.
+ */
+function mockResponseHash(seed: string): string {
+  let out = "";
+  let h1 = 0x811c9dc5;
+  let h2 = 0x01000193;
+  for (let round = 0; out.length < 64; round += 1) {
+    for (const character of `${seed}:${round}`) {
+      h1 = Math.imul(h1 ^ character.charCodeAt(0), 0x01000193) >>> 0;
+      h2 = Math.imul(h2 + character.charCodeAt(0) + round, 0x85ebca6b) >>> 0;
+    }
+    out += h1.toString(16).padStart(8, "0") + h2.toString(16).padStart(8, "0");
+  }
+  return out.slice(0, 64);
+}
+
 /** Dev/test-only statistics over money strings; mirrors core's rounding shape. */
 function mockCompetitorStatistics(competitors: Competitor[]): CompetitorStatistics {
   const prices = competitors
@@ -512,6 +535,44 @@ export function createMockDesktopClient(
     },
     exportReportPdf: async () => {
       throw new AppError({ code: "not-found", message: "PDF export is available in the desktop app." });
+    },
+
+    fetchFromConnector: async (root, pluginId, query) => {
+      await Promise.resolve();
+      requireProject(projects, root);
+      const fetchedAt = new Date(0).toISOString();
+      const rawResponseHash = mockResponseHash(`${pluginId}:${query}`);
+      const origin = { kind: "connector" as const, connectorId: pluginId, pluginId, fetchedAt, rawResponseHash };
+      return {
+        fetchedAt,
+        drafts: [
+          {
+            id: `DRAFT-${pluginId}-mock-E`,
+            kind: "evidence" as const,
+            origin,
+            createdAt: fetchedAt,
+            value: {
+              id: "EV-MOCK",
+              url: "https://example.com/listing",
+              title: "A listing the connector found",
+              notes: "",
+              observations: [],
+              observedAt: fetchedAt,
+              createdAt: fetchedAt,
+              updatedAt: fetchedAt,
+            },
+          },
+          {
+            id: `DRAFT-${pluginId}-mock-C`,
+            kind: "competitors" as const,
+            origin,
+            createdAt: fetchedAt,
+            value: [
+              { product: "75% Keyboard", brand: "Acme", price: "1299.00", marketplace: "Example", url: "https://example.com/kb" },
+            ],
+          },
+        ],
+      };
     },
 
     listPlugins: async () => {

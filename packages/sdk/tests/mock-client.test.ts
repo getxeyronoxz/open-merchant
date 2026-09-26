@@ -255,3 +255,42 @@ describe("createMockDesktopClient", () => {
     await expect(mock.readPluginSource("nope")).rejects.toThrow(/nope/);
   });
 });
+
+describe("mock connector fetch", () => {
+  it("returns connector drafts and writes nothing to the project", async () => {
+    const mock = createMockDesktopClient();
+    const created = await mock.createProject({
+      name: "P",
+      objective: "O",
+      currency: "INR",
+      parentDirectory: "C:/research",
+    });
+    const root = created.snapshot.root;
+
+    const result = await mock.fetchFromConnector(root, "sample-market", "keyboard");
+
+    expect(result.drafts.length).toBeGreaterThan(0);
+    expect(result.drafts[0]?.origin.kind).toBe("connector");
+    expect((await mock.loadEvidence(root)).sources).toEqual([]);
+    expect((await mock.loadCompetitors(root)).competitors).toEqual([]);
+  });
+
+  it("stamps each draft origin with the connector id and a response hash", async () => {
+    const mock = createMockDesktopClient();
+    const created = await mock.createProject({
+      name: "P",
+      objective: "O",
+      currency: "INR",
+      parentDirectory: "C:/research",
+    });
+
+    const result = await mock.fetchFromConnector(created.snapshot.root, "sample-market", "keyboard");
+
+    for (const draft of result.drafts) {
+      expect(draft.origin).toMatchObject({ kind: "connector", connectorId: "sample-market" });
+      if (draft.origin.kind === "connector") {
+        expect(draft.origin.rawResponseHash).toMatch(/^[0-9a-f]{64}$/u);
+      }
+    }
+  });
+});

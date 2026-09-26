@@ -508,6 +508,7 @@ describe("IPC contract map", () => {
       "plugins/list",
       "plugins/source",
       "plugins/set-enabled",
+      "connectors/fetch",
     ] as const) {
       expect(channels).toContain(expected);
     }
