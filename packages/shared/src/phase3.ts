@@ -54,10 +54,22 @@ const draftBase = {
   createdAt: isoDateTimeSchema,
 };
 
+const evidenceDraftSchema = z.object({
+  ...draftBase,
+  kind: z.literal("evidence"),
+  value: evidenceSourceSchema,
+});
+
+const competitorsDraftSchema = z.object({
+  ...draftBase,
+  kind: z.literal("competitors"),
+  value: z.array(competitorDraftSchema).min(1),
+});
+
 export const draftRecordSchema = z.discriminatedUnion("kind", [
   z.object({ ...draftBase, kind: z.literal("plan"), value: researchPlanSchema }),
-  z.object({ ...draftBase, kind: z.literal("evidence"), value: evidenceSourceSchema }),
-  z.object({ ...draftBase, kind: z.literal("competitors"), value: z.array(competitorDraftSchema).min(1) }),
+  evidenceDraftSchema,
+  competitorsDraftSchema,
   z.object({ ...draftBase, kind: z.literal("economics"), value: economicsReviewSchema }),
   z.object({ ...draftBase, kind: z.literal("sections"), value: reportSectionsSchema }),
   z.object({ ...draftBase, kind: z.literal("audit"), value: auditReportSchema }),
@@ -65,6 +77,18 @@ export const draftRecordSchema = z.discriminatedUnion("kind", [
 ]);
 export type DraftRecord = z.infer<typeof draftRecordSchema>;
 export type DraftKind = DraftRecord["kind"];
+
+/**
+ * What a connector is allowed to produce: evidence and competitor drafts, and
+ * nothing else. A currency preview is a decision this app makes for the seller,
+ * not something a third-party program gets to suggest — so the response type
+ * says so, and the renderer never has to imagine a branch it cannot show.
+ */
+export const connectorDraftSchema = z.discriminatedUnion("kind", [
+  evidenceDraftSchema,
+  competitorsDraftSchema,
+]);
+export type ConnectorDraft = z.infer<typeof connectorDraftSchema>;
 
 /** A declarative local plugin. No third-party JavaScript is imported into Electron. */
 export const pluginCapabilitySchema = z.object({

@@ -1,19 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type {
-  AuditReport,
   Competitor,
   CompetitorDraft,
-  EconomicsReview,
   EvidenceSource,
-  GenerationOrigin,
   ReportSections,
-  ResearchPlan,
 } from "@open-merchant/shared";
 import { ErrorState, Field, LedgerRow } from "@open-merchant/ui";
 
 import { useProject } from "../../../state/project";
 import { DraftOriginPanel } from "./DraftOriginPanel";
+import { useDraftInbox } from "../DraftInboxProvider";
+import type { DraftRecord } from "../draftInbox";
 import { nextDraftIndex } from "../draftQueue";
 import {
   useAuditReport,
@@ -31,18 +29,6 @@ import {
 import type { SectionName } from "../useWorkflowProgress";
 
 type DraftKind = "plan" | "evidence" | "competitors" | "economics" | "sections" | "audit";
-/**
- * A draft is something a human has not accepted yet. Its origin may be a model,
- * a local connector, or the person typing — so it is a general GenerationOrigin,
- * not an AI-only shape. Which of the three it is stays visible on the desk.
- */
-type DraftRecord =
-  | { id: string; kind: "plan"; origin: GenerationOrigin; value: ResearchPlan }
-  | { id: string; kind: "evidence"; origin: GenerationOrigin; value: EvidenceSource }
-  | { id: string; kind: "competitors"; origin: GenerationOrigin; value: CompetitorDraft[] }
-  | { id: string; kind: "economics"; origin: GenerationOrigin; value: EconomicsReview }
-  | { id: string; kind: "sections"; origin: GenerationOrigin; value: ReportSections }
-  | { id: string; kind: "audit"; origin: GenerationOrigin; value: AuditReport };
 
 const labels: Record<DraftKind, string> = {
   plan: "Research plan",
@@ -59,10 +45,6 @@ function nextId(existing: readonly { id: string }[], prefix: "S" | "C"): string 
     return match ? Math.max(max, Number(match[1])) : max;
   }, 0);
   return `${prefix}-${String(highest + 1).padStart(3, "0")}`;
-}
-
-function queueId(): string {
-  return `DRAFT-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 }
 
 /** One visible home for the six assistants, with the human gate kept explicit. */
@@ -87,8 +69,8 @@ export function DraftDeskScreen({
   const sectionDraft = useDraftSections(root);
   const audit = useAuditReport(root);
 
-  const [queue, setQueue] = useState<DraftRecord[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const { drafts, activeId, setActiveId, enqueue, discard } = useDraftInbox();
+  const queue = drafts;
   const [sourceUrl, setSourceUrl] = useState("");
   const [pageText, setPageText] = useState("");
   const [listingText, setListingText] = useState("");
@@ -141,17 +123,6 @@ export function DraftDeskScreen({
     economics.error ??
     sectionDraft.error ??
     audit.error;
-
-  const enqueue = (record: Omit<DraftRecord, "id">) => {
-    const item = { ...record, id: queueId() } as DraftRecord;
-    setQueue((current) => [item, ...current]);
-    setActiveId(item.id);
-  };
-  const discard = (id = active?.id) => {
-    if (!id) return;
-    setQueue((current) => current.filter((item) => item.id !== id));
-    setActiveId((current) => (current === id ? null : current));
-  };
 
   useEffect(() => {
     if (active?.kind === "evidence") setEditedEvidence(structuredClone(active.value));

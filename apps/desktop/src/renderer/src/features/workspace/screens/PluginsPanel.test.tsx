@@ -43,10 +43,23 @@ const NETWORK_CONNECTOR: InstalledPlugin = {
 
 const noop = () => undefined;
 
+const fetchProps = {
+  query: "keyboard",
+  onQueryChange: noop,
+  onFetch: noop,
+  fetchingPluginId: null,
+} as const;
+
 describe("PluginsPanel", () => {
   it("invites the seller to install a plugin when none exist", () => {
     const html = renderToStaticMarkup(
-      <PluginsPanel catalog={{ plugins: [], broken: [] }} source={null} onSelect={noop} onToggle={noop} />,
+      <PluginsPanel
+        catalog={{ plugins: [], broken: [] }}
+        source={null}
+        onSelect={noop}
+        onToggle={noop}
+        {...fetchProps}
+      />,
     );
 
     expect(html).toContain("No plugins installed");
@@ -60,6 +73,7 @@ describe("PluginsPanel", () => {
         source={null}
         onSelect={noop}
         onToggle={noop}
+        {...fetchProps}
       />,
     );
 
@@ -77,6 +91,7 @@ describe("PluginsPanel", () => {
         source={null}
         onSelect={noop}
         onToggle={noop}
+        {...fetchProps}
       />,
     );
 
@@ -91,6 +106,7 @@ describe("PluginsPanel", () => {
         source={null}
         onSelect={noop}
         onToggle={noop}
+        {...fetchProps}
       />,
     );
 
@@ -104,6 +120,7 @@ describe("PluginsPanel", () => {
         source={null}
         onSelect={noop}
         onToggle={noop}
+        {...fetchProps}
       />,
     );
 
@@ -117,6 +134,7 @@ describe("PluginsPanel", () => {
         source={{ pluginId: "report-risks", text: "## Watch MOQ" }}
         onSelect={noop}
         onToggle={noop}
+        {...fetchProps}
       />,
     );
 
@@ -133,10 +151,101 @@ describe("PluginsPanel", () => {
         source={null}
         onSelect={noop}
         onToggle={noop}
+        {...fetchProps}
       />,
     );
 
     expect(html).toContain("mystery");
     expect(html).toContain("manifest.json is not valid JSON.");
+  });
+});
+
+describe("PluginsPanel connector fetch", () => {
+  it("offers Fetch on an enabled connector", () => {
+    const html = renderToStaticMarkup(
+      <PluginsPanel
+        catalog={{ plugins: [NETWORK_CONNECTOR], broken: [] }}
+        source={null}
+        onSelect={noop}
+        onToggle={noop}
+        {...fetchProps}
+      />,
+    );
+
+    expect(html).toContain("Fetch drafts");
+  });
+
+  it("does not offer Fetch on a connector the seller has not enabled", () => {
+    const html = renderToStaticMarkup(
+      <PluginsPanel
+        catalog={{ plugins: [{ ...NETWORK_CONNECTOR, enabled: false, enabledAt: null }], broken: [] }}
+        source={null}
+        onSelect={noop}
+        onToggle={noop}
+        {...fetchProps}
+      />,
+    );
+
+    expect(html).not.toContain("Fetch drafts");
+  });
+
+  it("never offers Fetch on a report-section plugin", () => {
+    const html = renderToStaticMarkup(
+      <PluginsPanel
+        catalog={{ plugins: [{ ...SECTION_PLUGIN, enabled: true, enabledAt: "2026-09-25T00:00:00.000Z" }], broken: [] }}
+        source={null}
+        onSelect={noop}
+        onToggle={noop}
+        {...fetchProps}
+      />,
+    );
+
+    expect(html).not.toContain("Fetch drafts");
+  });
+
+  it("says the fetch produces drafts, not a write to the project", () => {
+    const html = renderToStaticMarkup(
+      <PluginsPanel
+        catalog={{ plugins: [NETWORK_CONNECTOR], broken: [] }}
+        source={null}
+        onSelect={noop}
+        onToggle={noop}
+        {...fetchProps}
+      />,
+    );
+
+    expect(html).toContain("Draft Desk");
+    expect(html).toMatch(/nothing is written to the project/iu);
+  });
+
+  it("takes a query, and refuses to fetch an empty one", () => {
+    const html = renderToStaticMarkup(
+      <PluginsPanel
+        catalog={{ plugins: [NETWORK_CONNECTOR], broken: [] }}
+        source={null}
+        onSelect={noop}
+        onToggle={noop}
+        {...fetchProps}
+        query="   "
+      />,
+    );
+
+    expect(html).toContain("What should it look for?");
+    expect(html).toContain("disabled");
+  });
+
+  it("marks the connector being fetched so the seller can see it is running", () => {
+    const html = renderToStaticMarkup(
+      <PluginsPanel
+        catalog={{ plugins: [NETWORK_CONNECTOR], broken: [] }}
+        source={null}
+        onSelect={noop}
+        onToggle={noop}
+        {...fetchProps}
+        fetchingPluginId={NETWORK_CONNECTOR.manifest.id}
+      />,
+    );
+
+    expect(html).toContain("Fetching…");
   });
 });

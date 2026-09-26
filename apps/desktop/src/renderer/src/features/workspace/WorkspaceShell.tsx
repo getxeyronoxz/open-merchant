@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { useProject } from "../../state/project";
+import { DraftInboxProvider } from "./DraftInboxProvider";
 import { useAiConfig, useCompetitors, useEvidence } from "./queries";
 import { resolveResumeSection, useWorkflowProgress, type SectionName } from "./useWorkflowProgress";
 import { WorkflowGuide } from "./WorkflowGuide";
@@ -43,9 +44,11 @@ export function WorkspaceShell() {
   const root = project.root;
 
   return (
-    <Shell root={root} section={section} setSection={setSection} closeProject={closeProject}>
-      <Stage section={section} root={root} onNavigate={setSection} />
-    </Shell>
+    <DraftInboxProvider>
+      <Shell root={root} section={section} setSection={setSection} closeProject={closeProject}>
+        <Stage section={section} root={root} onNavigate={setSection} />
+      </Shell>
+    </DraftInboxProvider>
   );
 }
 
@@ -277,7 +280,7 @@ function Stage({
       return <DraftDeskScreen root={root} onNavigate={onNavigate} />;
 
     case "Plugins":
-      return <PluginsScreen />;
+      return <PluginsScreen root={root} />;
 
     case "AI":
       return <AiSettingsScreen />;

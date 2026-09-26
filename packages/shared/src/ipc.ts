@@ -25,7 +25,7 @@ import {
   researchPlanSchema,
 } from "./ai";
 import { aiOriginSchema, generationOriginSchema, provenanceRecordSchema, runRecordSchema } from "./provenance";
-import { draftRecordSchema, installedPluginSchema, pluginCatalogSchema } from "./phase3";
+import { connectorDraftSchema, installedPluginSchema, pluginCatalogSchema } from "./phase3";
 
 /**
  * The IPC contract between renderer and main process. This map is the single
@@ -373,7 +373,7 @@ export const ipc = {
   },
   "connectors/fetch": {
     request: z.object({ root: z.string(), pluginId: z.string().min(1), query: z.string().min(1) }),
-    response: z.object({ drafts: z.array(draftRecordSchema).min(1), fetchedAt: isoDateTimeSchema }),
+    response: z.object({ drafts: z.array(connectorDraftSchema).min(1), fetchedAt: isoDateTimeSchema }),
   },
 } as const;
 

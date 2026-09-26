@@ -1,5 +1,5 @@
 import type { PluginCatalog } from "@open-merchant/shared";
-import { EmptyState } from "@open-merchant/ui";
+import { EmptyState, Field } from "@open-merchant/ui";
 
 export interface PluginsPanelProps {
   readonly catalog: PluginCatalog;
@@ -7,6 +7,12 @@ export interface PluginsPanelProps {
   readonly source: { pluginId: string; text: string } | null;
   readonly onSelect: (pluginId: string) => void;
   readonly onToggle: (pluginId: string, enabled: boolean) => void;
+  /** Free text handed to the connector. There is no manifest-defined input form. */
+  readonly query: string;
+  readonly onQueryChange: (query: string) => void;
+  readonly onFetch: (pluginId: string) => void;
+  /** The connector currently running, or null when none is. */
+  readonly fetchingPluginId: string | null;
 }
 
 /**
@@ -15,7 +21,21 @@ export interface PluginsPanelProps {
  * the connector client owns. `network: true` is shown as a disclosure the
  * seller accepts, never as a restriction this screen claims to enforce.
  */
-export function PluginsPanel({ catalog, source, onSelect, onToggle }: PluginsPanelProps) {
+export function PluginsPanel({
+  catalog,
+  source,
+  onSelect,
+  onToggle,
+  query,
+  onQueryChange,
+  onFetch,
+  fetchingPluginId,
+}: PluginsPanelProps) {
+  const enabledConnectors = catalog.plugins.filter(
+    (plugin) => plugin.enabled && plugin.manifest.kind === "connector",
+  );
+  const canFetch = query.trim().length > 0 && fetchingPluginId === null;
+
   return (
     <>
       <section className="om-card" aria-label="Installed plugins">
@@ -36,6 +56,8 @@ export function PluginsPanel({ catalog, source, onSelect, onToggle }: PluginsPan
               const reachesNetwork =
                 manifest.kind === "connector" && manifest.capabilities.network;
               const isSelected = source?.pluginId === manifest.id;
+              const isFetching = fetchingPluginId === manifest.id;
+              const canRunThis = manifest.kind === "connector" && plugin.enabled;
               return (
                 <li className="om-list__row" key={manifest.id}>
                   <div>
@@ -59,6 +81,16 @@ export function PluginsPanel({ catalog, source, onSelect, onToggle }: PluginsPan
                     >
                       View source
                     </button>
+                    {canRunThis ? (
+                      <button
+                        className="om-button"
+                        disabled={!canFetch}
+                        onClick={() => onFetch(manifest.id)}
+                        type="button"
+                      >
+                        {isFetching ? "Fetching…" : "Fetch drafts"}
+                      </button>
+                    ) : null}
                     <button
                       className="om-button"
                       onClick={() => onToggle(manifest.id, !plugin.enabled)}
@@ -79,6 +111,24 @@ export function PluginsPanel({ catalog, source, onSelect, onToggle }: PluginsPan
           </pre>
         ) : null}
       </section>
+
+      {enabledConnectors.length > 0 ? (
+        <section className="om-card" aria-label="Fetch from a connector">
+          <p className="om-eyebrow">Fetch</p>
+          <Field
+            label="What should it look for?"
+            hint="The connector runs as a command on this machine, as you. What comes back lands on the Draft Desk as drafts you accept or discard one by one — nothing is written to the project until you do."
+          >
+            <input
+              className="om-input"
+              onChange={(event) => onQueryChange(event.target.value)}
+              placeholder="keyboard"
+              type="text"
+              value={query}
+            />
+          </Field>
+        </section>
+      ) : null}
 
       {catalog.broken.length > 0 ? (
         <section className="om-card" aria-label="Plugins that were refused">

@@ -2,19 +2,27 @@ import { useState } from "react";
 
 import { ErrorState } from "@open-merchant/ui";
 
-import { usePluginCatalog, usePluginSource, useSetPluginEnabled } from "../queries";
+import { useDraftInbox } from "../DraftInboxProvider";
+import { useConnectorFetch, usePluginCatalog, usePluginSource, useSetPluginEnabled } from "../queries";
 import { PluginsPanel } from "./PluginsPanel";
 
 /**
  * The plugin surface. Every plugin starts disabled and its declared source is
  * one click away, so nothing a stranger wrote is turned on before the seller has
  * seen what the manifest says it is.
+ *
+ * A connector can also be run from here. The result goes to the Draft Desk and
+ * nowhere else — accepting a draft is still a separate, deliberate act.
  */
-export function PluginsScreen() {
+export function PluginsScreen({ root }: { readonly root: string }) {
   const catalog = usePluginCatalog();
   const setEnabled = useSetPluginEnabled();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const source = usePluginSource(selectedId);
+  const [query, setQuery] = useState("");
+  const [fetchingPluginId, setFetchingPluginId] = useState<string | null>(null);
+  const fetchConnector = useConnectorFetch();
+  const { enqueueMany } = useDraftInbox();
 
   if (catalog.isLoading) {
     return <section className="screen" />;
@@ -25,6 +33,20 @@ export function PluginsScreen() {
   if (!catalog.data) {
     return <section className="screen" />;
   }
+
+  const runFetch = (pluginId: string) => {
+    const trimmed = query.trim();
+    if (trimmed.length === 0) return;
+    setFetchingPluginId(pluginId);
+    fetchConnector.mutate(
+      { root, pluginId, query: trimmed },
+      {
+        onSuccess: (result) => enqueueMany(result.drafts),
+        // Release the row whatever happened; a refusal is shown on the desk.
+        onSettled: () => setFetchingPluginId(null),
+      },
+    );
+  };
 
   return (
     <section className="screen">
@@ -39,6 +61,15 @@ export function PluginsScreen() {
         </p>
       </header>
 
+      {fetchConnector.isError ? (
+        <p className="om-field__hint" role="alert">
+          {fetchConnector.error instanceof Error
+            ? fetchConnector.error.message
+            : "The connector did not run."}{" "}
+          Nothing was written to the project.
+        </p>
+      ) : null}
+
       <PluginsPanel
         catalog={catalog.data}
         source={
@@ -46,6 +77,10 @@ export function PluginsScreen() {
         }
         onSelect={setSelectedId}
         onToggle={(pluginId, enabled) => setEnabled.mutate({ pluginId, enabled })}
+        query={query}
+        onQueryChange={setQuery}
+        onFetch={runFetch}
+        fetchingPluginId={fetchingPluginId}
       />
     </section>
   );

@@ -186,6 +186,26 @@ export function useCsvImporterPresets() {
   return csvImporterPresets(catalog.data?.plugins ?? []);
 }
 
+/**
+ * Runs one enabled connector and hands back its drafts.
+ *
+ * This never writes to the project — the main process returns drafts and
+ * journals the run, and the caller decides whether a human accepts anything.
+ */
+export function useConnectorFetch() {
+  return useMutation({
+    mutationFn: ({
+      root,
+      pluginId,
+      query,
+    }: {
+      root: string;
+      pluginId: string;
+      query: string;
+    }) => client.fetchFromConnector(root, pluginId, query),
+  });
+}
+
 function useInvalidator() {
   const queryClient = useQueryClient();
   return (...keys: string[][]) => {
