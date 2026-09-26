@@ -67,6 +67,29 @@ export function isSnapshotFileName(name: string): boolean {
   return SNAPSHOT_FILE_PATTERN.test(name);
 }
 
+/**
+ * Resolves a snapshot's project-relative path (`market/snapshots/SNAP-….json`)
+ * to an absolute one, under the same guards as `resolveSnapshotFile`.
+ *
+ * A caller holding a workspace-relative path — the currency change, which plans
+ * every artifact by its layout name — must not be able to reach anything
+ * outside the snapshots directory by putting a well-formed name in the wrong
+ * place.
+ */
+export async function resolveSnapshotPath(
+  workspaceRoot: string,
+  relativePath: string,
+): Promise<string> {
+  const name = relativePath.slice(MARKET_SNAPSHOTS_DIR.length + 1);
+  if (relativePath.slice(0, MARKET_SNAPSHOTS_DIR.length + 1) !== `${MARKET_SNAPSHOTS_DIR}/`) {
+    throw new ArtifactPathError(`Unsafe snapshot path: ${relativePath}`);
+  }
+  if (!isSnapshotFileName(name)) {
+    throw new ArtifactPathError(`Unknown artifact: ${relativePath}`);
+  }
+  return resolveSnapshotFile(workspaceRoot, name.replace(/\.json$/u, ""));
+}
+
 export type KnownArtifact = keyof typeof ArtifactPaths;
 
 export const KNOWN_ARTIFACT_PATHS: readonly string[] = Object.values(ArtifactPaths);
