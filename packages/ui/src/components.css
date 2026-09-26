@@ -448,3 +448,77 @@
   padding-left: var(--om-space-3);
   color: var(--om-paper-muted);
 }
+
+/* ---------- Lists (attention queues, review rows) ---------- */
+
+/*
+ * A row-per-item list for things that need a decision. Unlike .om-table this
+ * is not tabular data: the copy wraps, the actions sit at the end, and the row
+ * stays readable at phone width by stacking rather than scrolling sideways.
+ */
+.om-list {
+  list-style: none;
+  margin: var(--om-space-4) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.om-list__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--om-space-4);
+  padding: var(--om-space-3) 0;
+  border-top: 1px solid var(--om-border-subtle);
+}
+
+.om-list__row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.om-list__copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--om-space-1);
+}
+
+.om-list__title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--om-space-2);
+  flex-wrap: wrap;
+  font-size: var(--om-text-sm);
+  font-weight: 600;
+  color: var(--om-text-primary);
+}
+
+.om-list__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--om-space-2);
+  flex-shrink: 0;
+}
+
+/* Rows carry their own hover so a long queue reads as one list, not a table. */
+.om-list__row:hover {
+  background: var(--om-surface-inset);
+}
+
+.om-list__row:hover .om-list__actions .om-button--ghost {
+  border-color: var(--om-border-subtle);
+}
+
+@media (max-width: 640px) {
+  .om-list__row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .om-list__actions {
+    justify-content: flex-start;
+  }
+}

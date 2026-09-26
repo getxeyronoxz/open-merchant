@@ -159,6 +159,24 @@ export function usePortfolioOverview() {
   });
 }
 
+export function useStandingReviews() {
+  return useQuery({ queryKey: ["reviews", "standing"], queryFn: () => client.standingReviews() });
+}
+
+export function useDisposeReview() {
+  return useMutation({
+    mutationFn: ({
+      root,
+      reviewKey,
+      action,
+    }: {
+      root: string;
+      reviewKey: string;
+      action: "snoozed" | "dismissed";
+    }) => client.disposeReview(root, reviewKey, action),
+  });
+}
+
 export function usePluginCatalog() {
   return useQuery({ queryKey: ["plugins"], queryFn: () => client.listPlugins() });
 }

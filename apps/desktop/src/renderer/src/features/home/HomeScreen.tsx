@@ -5,7 +5,8 @@ import { EmptyState, ErrorState, LedgerRow } from "@open-merchant/ui";
 
 import { client } from "../../client";
 import { useProject } from "../../state/project";
-import { usePortfolioOverview } from "../workspace/queries";
+import { useDisposeReview, usePortfolioOverview, useStandingReviews } from "../workspace/queries";
+import { StandingReviewsCard } from "./StandingReviewsCard";
 
 /**
  * Home: create a project folder you own, reopen a recent one, or import a
@@ -16,6 +17,21 @@ export function HomeScreen() {
   const { openProject } = useProject();
   const queryClient = useQueryClient();
   const portfolioQuery = usePortfolioOverview();
+  const reviewsQuery = useStandingReviews();
+  const disposeReview = useDisposeReview();
+
+  // A snooze changes what the queue shows, so the queue is refetched rather
+  // than patched locally: the derived list is the truth, and the disposition
+  // that removed a row is not something the renderer should reimplement.
+  const dispose = (
+    review: { projectRoot: string; key: string },
+    action: "snoozed" | "dismissed",
+  ) => {
+    disposeReview.mutate(
+      { root: review.projectRoot, reviewKey: review.key, action },
+      { onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["reviews", "standing"] }) },
+    );
+  };
 
   const [parentDirectory, setParentDirectory] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -286,6 +302,16 @@ export function HomeScreen() {
           <ErrorState error={openRecent.error} onRetry={() => openRecent.reset()} />
         ) : null}
       </aside>
+
+      <StandingReviewsCard
+        reviews={reviewsQuery.data?.reviews ?? []}
+        isPending={reviewsQuery.isPending}
+        isError={reviewsQuery.isError}
+        error={reviewsQuery.error}
+        onRetry={() => void reviewsQuery.refetch()}
+        onDispose={(review, action) => dispose(review, action)}
+        pendingKey={disposeReview.isPending ? (disposeReview.variables?.reviewKey ?? null) : null}
+      />
 
       <PortfolioOverviewCard
         openRecent={(path) => openRecent.mutate(path)}
