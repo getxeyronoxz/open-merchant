@@ -39,10 +39,10 @@ import {
   type Competitor,
   type CompetitorDraft,
   type CompetitorStatistics,
+  type ConnectorDraft,
   type ConnectorOrigin,
   type CostAssumptions,
   type DecisionJournal,
-  type DraftRecord,
   type EconomicsReview,
   type EconomicsScenario,
   type EvidenceSource,
@@ -686,7 +686,7 @@ export class MerchantService {
     pluginId: string,
     query: string,
     createClient?: ConnectorClientFactory,
-  ): Promise<{ drafts: DraftRecord[]; fetchedAt: string }> {
+  ): Promise<{ drafts: ConnectorDraft[]; fetchedAt: string }> {
     const store = await this.openStore(root);
     return this.run(async () => {
       const catalog = this.plugins ? await this.plugins.list() : { plugins: [], broken: [] };
@@ -715,7 +715,7 @@ export class MerchantService {
       // Two fetches can land in the same millisecond, so the id carries a
       // random suffix rather than treating the timestamp as unique.
       const stem = `DRAFT-${pluginId}-${fetchedAt.replace(/\D/gu, "")}-${randomUUID().slice(0, 8)}`;
-      const drafts: DraftRecord[] = [];
+      const drafts: ConnectorDraft[] = [];
       const [firstEvidence] = result.result.evidence;
       if (firstEvidence) {
         drafts.push({ id: `${stem}-E`, kind: "evidence", origin, createdAt: fetchedAt, value: firstEvidence });
