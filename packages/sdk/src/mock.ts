@@ -815,6 +815,7 @@ export function createMockDesktopClient(
           newValues: preview.newValues,
         },
         changedCount: preview.changedCount,
+        snapshot: project.snapshot,
       };
     },
 

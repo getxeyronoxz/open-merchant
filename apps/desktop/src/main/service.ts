@@ -70,6 +70,7 @@ import {
   type ReviewDisposition,
   type StandingReview,
   type ProvenanceRecord,
+  type ProjectSnapshot,
   type ReportSections,
   type ResearchPlan,
   type RunRecord,
@@ -997,7 +998,7 @@ export class MerchantService {
     root: string,
     toCurrency: string,
     rate: string,
-  ): Promise<{ change: CurrencyChangeRecord; changedCount: number }> {
+  ): Promise<{ change: CurrencyChangeRecord; changedCount: number; snapshot: ProjectSnapshot }> {
     const startedAt = new Date().toISOString();
     const runId = `RUN-${randomUUID()}`;
     const store = await this.openStore(root);
@@ -1049,7 +1050,13 @@ export class MerchantService {
       errorSummary: null,
       currencyChange: change,
     });
-    return { change, changedCount: Object.keys(change.newValues).length };
+    return {
+      change,
+      changedCount: Object.keys(change.newValues).length,
+      // Re-read rather than patch: the manifest on disk is the canonical
+      // currency now, and the UI is told what the folder actually says.
+      snapshot: { root, manifest: (await this.openStore(root)).manifest },
+    };
   }
 
   /** File-first pillar: CSV export of the requested table. */

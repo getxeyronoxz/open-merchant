@@ -167,8 +167,7 @@ describe("applyCurrencyChange", () => {
       "market/competitors.json",
     );
     expect(manifest.currency).toBe("EUR");
-    expect(assumptions.currency).toBe("EUR");
-    expect(assumptions.acquisitionCost).toBe("5.50");
+    expect(assumptions.currency).toBe("EUR");    expect(assumptions.acquisitionCost).toBe("5.50");
     expect(assumptions.marketplaceFeeRate).toBe("12.00");
     expect(competitors[0]?.currency).toBe("EUR");
     expect(competitors[0]?.price).toBe("12.09");
@@ -189,6 +188,21 @@ describe("applyCurrencyChange", () => {
     expect(appended.currencyChange?.afterHash).toBe(result.change.afterHash);
     expect(appended.inputArtifacts).toEqual([]);
     expect(appended.outputArtifacts.length).toBeGreaterThan(0);
+  });
+
+  it("returns the manifest the change left behind", async () => {
+    // Every screen reads the currency from the manifest. If the response did
+    // not carry the new one, the app would go on pricing in the old currency
+    // until the window was reopened.
+    const root = await makeProject("Keyboards");
+
+    const result = await service().applyCurrencyChange(root, "EUR", "0.011");
+
+    expect(result.snapshot.root).toBe(root);
+    expect(result.snapshot.manifest.currency).toBe("EUR");
+    expect(result.snapshot.manifest).toEqual(
+      await readJson(root, ".openmerchant/manifest.json"),
+    );
   });
 
   it("journals the old and new values that are actually on disk", async () => {

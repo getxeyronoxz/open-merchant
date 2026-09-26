@@ -522,3 +522,88 @@
     justify-content: flex-start;
   }
 }
+
+/* ---------- Currency change (before → after) ---------- */
+
+/*
+ * A diff reads as pairs, not as two columns you have to track across a
+ * screen, so each row keeps its field name, its old value and its new value
+ * in one block, and only stacks on a phone. Money is monospaced because the
+ * point of the row is to see the digits line up.
+ */
+.om-diff {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--om-space-4);
+  border-top: 1px solid var(--om-border-subtle);
+}
+
+.om-diff__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: baseline;
+  gap: var(--om-space-2);
+  padding: var(--om-space-2) 0;
+  border-bottom: 1px solid var(--om-border-subtle);
+  font-size: var(--om-text-sm);
+}
+
+.om-diff__field {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--om-text-secondary);
+}
+
+.om-diff__before,
+.om-diff__after {
+  font-family: var(--om-font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The old value is struck rather than dimmed: it is still on screen on
+ * purpose, and a seller comparing two numbers should not have to remember
+ * which column is which. */
+.om-diff__before {
+  color: var(--om-text-muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--om-border-strong);
+}
+
+.om-diff__arrow {
+  color: var(--om-text-muted);
+}
+
+.om-diff__after {
+  color: var(--om-accent);
+  font-weight: 600;
+}
+
+.currency-change__inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--om-space-3);
+  margin-top: var(--om-space-4);
+}
+
+.currency-change__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--om-space-2);
+  margin-top: var(--om-space-4);
+}
+
+@media (max-width: 560px) {
+  .om-diff__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--om-space-1);
+  }
+
+  .om-diff__arrow {
+    display: none;
+  }
+
+  .om-diff__after {
+    grid-column: 2;
+  }
+}

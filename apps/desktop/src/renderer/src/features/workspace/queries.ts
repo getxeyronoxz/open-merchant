@@ -177,6 +177,58 @@ export function useDisposeReview() {
   });
 }
 
+// --- currency change (phase 3) -------------------------------------------------
+
+/**
+ * A preview writes nothing: it is a pure read that returns the exact before and
+ * after values, so it is a mutation here only because it takes arguments.
+ */
+export function useCurrencyPreview() {
+  return useMutation({
+    mutationFn: ({
+      root,
+      toCurrency,
+      rate,
+    }: {
+      root: string;
+      toCurrency: string;
+      rate: string;
+    }) => client.currencyPreview(root, toCurrency, rate),
+  });
+}
+
+/**
+ * Restating a project in another currency moves every artifact it owns, so
+ * every screen that reads one is stale afterwards. There is no partial
+ * refresh worth having: the whole project changed.
+ */
+export function useApplyCurrencyChange(root: string) {
+  const invalidate = useInvalidator();
+  return useMutation({
+    mutationFn: ({ toCurrency, rate }: { toCurrency: string; rate: string }) =>
+      client.applyCurrencyChange(root, toCurrency, rate),
+    onSuccess: () =>
+      invalidate(
+        ["evidence", root],
+        ["competitors", root],
+        ["statistics", root],
+        ["assumptions", root],
+        ["scenarios", root],
+        ["sections", root],
+        ["report", root],
+        ["artifacts", root],
+        ["provenance", root],
+        ["snapshots", root],
+        ["snapshot-history", root],
+        ["snapshot-diff", root],
+        ["margin-monitor", root],
+        ["decision-journal", root],
+        ["runs", root],
+        ["reviews", "standing"],
+      ),
+  });
+}
+
 export function usePluginCatalog() {
   return useQuery({ queryKey: ["plugins"], queryFn: () => client.listPlugins() });
 }

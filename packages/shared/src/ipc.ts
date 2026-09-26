@@ -427,7 +427,14 @@ export const ipc = {
   },
   "currency/apply": {
     request: z.object({ root: z.string(), toCurrency: currencyCodeSchema, rate: conversionRateSchema }),
-    response: z.object({ change: currencyChangeRecordSchema, changedCount: z.number().int().nonnegative() }),
+    // The snapshot comes back because the change moves the project's own
+    // currency: every screen reading the manifest would otherwise keep showing
+    // the old one until the window was reopened.
+    response: z.object({
+      change: currencyChangeRecordSchema,
+      changedCount: z.number().int().nonnegative(),
+      snapshot: projectSnapshotSchema,
+    }),
   },
 } as const;
 
