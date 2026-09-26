@@ -11,7 +11,9 @@ import type {
   MarketSnapshot,
   ProjectSnapshot,
   ReportSections,
+  ReviewDisposition,
   SnapshotDiff,
+  StandingReview,
 } from "@open-merchant/shared";
 import { AppError, emptyReportSections } from "@open-merchant/shared";
 
@@ -22,6 +24,13 @@ import type { DesktopClient } from "./client";
  * Electron. State lives entirely in memory with the same coded-error
  * semantics as the real shell. AI drafts are deterministic placeholders.
  */
+
+/** Mirrors STALE_AFTER_DAYS and SNOOZE_DAYS in @open-merchant/core. */
+const MOCK_STALE_AFTER_DAYS = 30;
+const MOCK_SNOOZE_DAYS = 7;
+
+/** Snoozes and dismissals recorded in this session, keyed by project root. */
+const mockDispositions = new Map<string, ReviewDisposition[]>();
 
 export interface MockProjectState {
   snapshot: ProjectSnapshot;
@@ -639,6 +648,82 @@ export function createMockDesktopClient(
             severity[a.worstStatus] - severity[b.worstStatus] || a.name.localeCompare(b.name),
         ),
       };
+    },
+
+    /**
+     * A development stand-in for the real derivation, which lives in
+     * `@open-merchant/core` and cannot be imported here: core is node-only and
+     * this module is pulled into the browser bundle for renderer development.
+     * It covers stale evidence only, which is enough to exercise the queue and
+     * the snooze/dismiss controls against real UI states.
+     */
+    standingReviews: async () => {
+      await Promise.resolve();
+      const now = new Date();
+      const reviews: StandingReview[] = [];
+      for (const project of projects) {
+        const root = project.snapshot.root;
+        const disposed = mockDispositions.get(root) ?? [];
+        for (const source of project.evidence) {
+          const dueAt = new Date(
+            Date.parse(source.observedAt) + MOCK_STALE_AFTER_DAYS * 86_400_000,
+          ).toISOString();
+          if (dueAt > now.toISOString()) continue;
+          const key = `stale-evidence:${source.id}`;
+          const silenced = disposed.find(
+            (entry) =>
+              entry.reviewKey === key &&
+              entry.reviewDueAt === dueAt &&
+              (entry.action === "dismissed" ||
+                (entry.until !== null && Date.parse(entry.until) > now.getTime())),
+          );
+          if (silenced) continue;
+          const ageDays = Math.max(
+            0,
+            Math.floor((now.getTime() - Date.parse(source.observedAt)) / 86_400_000),
+          );
+          reviews.push({
+            key,
+            kind: "stale-evidence",
+            title: `Evidence is ${ageDays} days old`,
+            detail: `${source.title} was observed ${ageDays} days ago and has not been re-checked.`,
+            dueAt,
+            severity: "warning",
+            projectRoot: root,
+            projectName: project.snapshot.manifest.name,
+          });
+        }
+      }
+      return { reviews };
+    },
+
+    disposeReview: async (root, reviewKey, action) => {
+      requireProject(projects, root);
+      const found = (await client.standingReviews()).reviews.find(
+        (review) => review.key === reviewKey,
+      );
+      if (!found) {
+        throw new AppError({
+          code: "not-found",
+          message: "That review is no longer showing, so there is nothing to snooze.",
+        });
+      }
+      const recordedAt = new Date().toISOString();
+      const disposition: ReviewDisposition = {
+        reviewKey,
+        action,
+        reviewDueAt: found.dueAt,
+        until:
+          action === "snoozed"
+            ? new Date(Date.now() + MOCK_SNOOZE_DAYS * 86_400_000).toISOString()
+            : null,
+        recordedAt,
+      };
+      mockDispositions.set(root, [
+        ...(mockDispositions.get(root) ?? []).filter((entry) => entry.reviewKey !== reviewKey),
+        disposition,
+      ]);
+      return { disposition };
     },
 
     loadAssumptions: (root) => {

@@ -169,6 +169,12 @@ export function registerIpcHandlers(
     "portfolio/overview": channel<"portfolio/overview">(async () => ({
       projects: await service.portfolioOverview(await recents.list()),
     })),
+    "reviews/standing": channel<"reviews/standing">(async () => ({
+      reviews: await service.standingReviews(await recents.list()),
+    })),
+    "reviews/dispose": channel<"reviews/dispose">(async ({ root, reviewKey, action }) => ({
+      disposition: await service.disposeReview(root, reviewKey, action),
+    })),
 
     "csv/export": channel<"csv/export">(async ({ root, kind }) => service.exportCsv(root, kind)),
     "csv/parse": channel<"csv/parse">(async ({ csv }) => {

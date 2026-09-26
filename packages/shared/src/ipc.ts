@@ -24,8 +24,20 @@ import {
   providerIdSchema,
   researchPlanSchema,
 } from "./ai";
-import { aiOriginSchema, generationOriginSchema, provenanceRecordSchema, runRecordSchema } from "./provenance";
-import { connectorDraftSchema, installedPluginSchema, pluginCatalogSchema } from "./phase3";
+import {
+  aiOriginSchema,
+  generationOriginSchema,
+  provenanceRecordSchema,
+  reviewDispositionSchema,
+  reviewKeyShape,
+  runRecordSchema,
+} from "./provenance";
+import {
+  connectorDraftSchema,
+  installedPluginSchema,
+  pluginCatalogSchema,
+  standingReviewsSchema,
+} from "./phase3";
 
 /**
  * The IPC contract between renderer and main process. This map is the single
@@ -374,6 +386,29 @@ export const ipc = {
   "connectors/fetch": {
     request: z.object({ root: z.string(), pluginId: z.string().min(1), query: z.string().min(1) }),
     response: z.object({ drafts: z.array(connectorDraftSchema).min(1), fetchedAt: isoDateTimeSchema }),
+  },
+
+  // --- standing reviews (phase 3) -------------------------------------------
+
+  /**
+   * The attention queue across every project the app knows about. `now` is
+   * read in the main process, not sent: the renderer cannot be trusted to
+   * decide what "stale" means, and a review that disagreed with the clock that
+   * produced it would be worse than none.
+   */
+  "reviews/standing": {
+    request: z.object({}),
+    response: standingReviewsSchema,
+  },
+  /**
+   * Snooze or dismiss one review. The request names only the key; the main
+   * process looks the review up and records *its* due date as the occurrence
+   * being silenced, so the renderer cannot silence a different one by
+   * asserting a date.
+   */
+  "reviews/dispose": {
+    request: z.object({ root: z.string(), reviewKey: reviewKeyShape, action: z.enum(["snoozed", "dismissed"]) }),
+    response: z.object({ disposition: reviewDispositionSchema }),
   },
 } as const;
 

@@ -90,6 +90,12 @@ export interface DesktopClient {
   marginMonitor(root: string): Promise<IpcResponse<"monitor/margin">>;
   decisionJournal(root: string): Promise<IpcResponse<"journal/decision">>;
   portfolioOverview(): Promise<IpcResponse<"portfolio/overview">>;
+  standingReviews(): Promise<IpcResponse<"reviews/standing">>;
+  disposeReview(
+    root: string,
+    reviewKey: string,
+    action: "snoozed" | "dismissed",
+  ): Promise<IpcResponse<"reviews/dispose">>;
   exportCsv(root: string, kind: IpcRequest<"csv/export">["kind"]): Promise<IpcResponse<"csv/export">>;
   parseCsv(csv: string): Promise<IpcResponse<"csv/parse">>;
   importCompetitorsCsv(root: string, csv: string, mapping?: Record<string, string>): Promise<IpcResponse<"csv/import">>;
@@ -160,6 +166,9 @@ export function createDesktopClient(raw: RawInvoke): DesktopClient {
     marginMonitor: (root) => invoke(raw, "monitor/margin", { root }),
     decisionJournal: (root) => invoke(raw, "journal/decision", { root }),
     portfolioOverview: () => invoke(raw, "portfolio/overview", {}),
+    standingReviews: () => invoke(raw, "reviews/standing", {}),
+    disposeReview: (root, reviewKey, action) =>
+      invoke(raw, "reviews/dispose", { root, reviewKey, action }),
     exportCsv: (root, kind) => invoke(raw, "csv/export", { root, kind }),
     parseCsv: (csv) => invoke(raw, "csv/parse", { csv }),
     importCompetitorsCsv: (root, csv, mapping) =>

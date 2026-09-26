@@ -19,6 +19,9 @@ import {
   projectFolderName,
   readArchive,
   renderOpportunityReport,
+  SNOOZE_DAYS,
+  standingReviews,
+  type StandingReviewInput,
   worstFlagStatus,
   writeFileAtomically,
 } from "@open-merchant/core";
@@ -53,6 +56,8 @@ import {
   type MarginMonitorResult,
   type MarketSnapshot,
   type PortfolioEntry,
+  type ReviewDisposition,
+  type StandingReview,
   type ProvenanceRecord,
   type ReportSections,
   type ResearchPlan,
@@ -801,6 +806,99 @@ export class MerchantService {
     return this.withStore(root, async (store) =>
       decisionJournal(await store.journal.listRuns(), await store.loadEvidence(), new Date()),
     );
+  }
+
+  /**
+   * Reads one project into the shape the standing-review derivation wants.
+   *
+   * This is where a project that cannot be opened stops mattering: the caller
+   * catches the failure and omits it. A queue that refused to render because
+   * one folder in the portfolio is unreadable would be worse than a queue with
+   * a gap in it.
+   */
+  private async standingReviewInput(
+    root: string,
+  ): Promise<StandingReviewInput & { name: string }> {
+    const store = await this.openStore(root);
+    const snapshots = await store.listMarketSnapshots();
+    return {
+      root,
+      name: store.manifest.name,
+      runs: await store.journal.listRuns(),
+      evidence: await store.loadEvidence(),
+      assumptions: await store.loadAssumptions(),
+      scenarios: await store.loadScenarios(),
+      snapshots,
+    };
+  }
+
+  /**
+   * The attention queue across every project the app knows about — what needs
+   * attention this week, worst and oldest first. Purely local: the signals come
+   * from artifacts already on disk, and nothing here contacts a service.
+   */
+  async standingReviews(recents: readonly { name: string; path: string }[]): Promise<StandingReview[]> {
+    const now = new Date();
+    const inputs = await Promise.all(
+      recents.map(async (recent) => {
+        try {
+          return await this.standingReviewInput(recent.path);
+        } catch {
+          // An unreadable project is omitted rather than fatal, matching how
+          // the portfolio still lists a project it could not open.
+          return null;
+        }
+      }),
+    );
+    return standingReviews(inputs.filter((input): input is StandingReviewInput => input !== null), now);
+  }
+
+  /**
+   * Snoozes or dismisses one review, on the record.
+   *
+   * The review is looked up in a freshly derived queue and *its* due date is
+   * what gets recorded, so a caller cannot silence a different occurrence of
+   * the same condition by asserting a date of its own. A key that is not
+   * currently showing is refused: there is nothing to silence, and recording a
+   * disposition for it would only be a claim nobody can check.
+   */
+  async disposeReview(
+    root: string,
+    reviewKey: string,
+    action: "snoozed" | "dismissed",
+  ): Promise<ReviewDisposition> {
+    const now = new Date();
+    const input = await this.standingReviewInput(root);
+    const review = standingReviews([input], now).find((entry) => entry.key === reviewKey);
+    if (!review) {
+      throw new AppError({
+        code: "not-found",
+        message: "That review is no longer showing, so there is nothing to snooze.",
+      });
+    }
+    const until =
+      action === "snoozed" ? new Date(now.getTime() + SNOOZE_DAYS * 86_400_000).toISOString() : null;
+    const disposition: ReviewDisposition = {
+      reviewKey,
+      action,
+      reviewDueAt: review.dueAt,
+      until,
+      recordedAt: now.toISOString(),
+    };
+    const store = await this.openStore(root);
+    await store.journal.appendRun({
+      runId: `RUN-${randomUUID()}`,
+      operation: action === "snoozed" ? "reviewSnoozed" : "reviewDismissed",
+      startedAt: now.toISOString(),
+      completedAt: now.toISOString(),
+      status: "succeeded",
+      appVersion: this.appVersion,
+      inputArtifacts: [],
+      outputArtifacts: [],
+      errorSummary: null,
+      review: disposition,
+    });
+    return disposition;
   }
 
   /** File-first pillar: CSV export of the requested table. */
