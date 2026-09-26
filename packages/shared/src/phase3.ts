@@ -7,7 +7,7 @@ import {
   reportSectionsSchema,
 } from "./artifacts";
 import { currencyCodeSchema } from "./money";
-import { artifactFingerprintSchema, generationOriginSchema, sha256Schema } from "./provenance";
+import { artifactFingerprintSchema, generationOriginSchema, reviewKeyShape, sha256Schema } from "./provenance";
 
 /**
  * A user-entered conversion rate. It is deliberately more precise than a
@@ -151,18 +151,17 @@ export type PluginCapabilities = z.infer<typeof pluginCapabilitySchema>;
 export type PluginManifest = z.infer<typeof pluginManifestSchema>;
 export type InstalledPlugin = z.infer<typeof installedPluginSchema>;
 
-/** One locally persisted snooze/dismissal. It never contacts a service. */
-export const reviewDispositionSchema = z.object({
-  reviewKey: z.string().regex(/^[a-z0-9]+:[A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)?$/u),
-  action: z.enum(["snoozed", "dismissed"]),
-  until: isoDateTimeSchema.nullable(),
-  recordedAt: isoDateTimeSchema,
-});
-export const reviewDispositionsSchema = z.object({ dispositions: z.array(reviewDispositionSchema) });
-export type ReviewDisposition = z.infer<typeof reviewDispositionSchema>;
+/**
+ * Dispositions and the review key live in `./provenance`: a snooze is
+ * persisted as a run record, so its schema belongs beside the run operations
+ * it is written into rather than here. Re-exported for the one existing
+ * importer that reached for it from this module.
+ */
+export { reviewDispositionSchema, reviewDispositionsSchema, reviewKeyShape } from "./provenance";
+export type { ReviewDisposition } from "./provenance";
 
 export const standingReviewSchema = z.object({
-  key: reviewDispositionSchema.shape.reviewKey,
+  key: reviewKeyShape,
   kind: z.enum(["unchecked-decision", "stale-evidence", "margin-watch", "margin-breach"]),
   title: z.string().min(1),
   detail: z.string(),
