@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { CurrencyChangePreview } from "@open-merchant/shared";
 
-import { CurrencyChangePanel, previewMatches } from "./CurrencyChangePanel";
+import { CurrencyChangePanel, normaliseCurrencyInput, previewMatches } from "./CurrencyChangePanel";
 
 /**
  * The currency change is the only screen in the app that rewrites a whole
@@ -69,10 +69,28 @@ describe("previewMatches", () => {
     expect(previewMatches(null, "EUR", "0.011")).toBe(false);
   });
 
-  it("normalises the case a seller is likely to type", () => {
-    // A currency field is three letters; "eur" is the same currency, and
-    // refusing it would be a puzzle rather than a safety.
-    expect(previewMatches(preview(), "eur", "0.011")).toBe(true);
+  it("tolerates a pasted value that carries stray whitespace", () => {
+    // Pasting a rate out of a spreadsheet is ordinary, and a trailing space is
+    // not a different rate. Trimming here is what keeps the confirm button
+    // from refusing a conversion the seller can plainly see.
+    expect(previewMatches(preview(), "EUR", " 0.011 ")).toBe(true);
+  });
+});
+
+describe("normaliseCurrencyInput", () => {
+  it("uppercases as the seller types, so the field shows what will be sent", () => {
+    // Without this, "eur" would read as EUR, satisfy the match against the
+    // preview, enable Confirm — and then be rejected by the contract, which
+    // requires three uppercase letters.
+    expect(normaliseCurrencyInput("eur")).toBe("EUR");
+    expect(normaliseCurrencyInput("e")).toBe("E");
+    expect(normaliseCurrencyInput("InR")).toBe("INR");
+  });
+
+  it("leaves anything that is not a lowercase letter alone", () => {
+    expect(normaliseCurrencyInput("")).toBe("");
+    expect(normaliseCurrencyInput("€")).toBe("€");
+    expect(normaliseCurrencyInput("12")).toBe("12");
   });
 });
 

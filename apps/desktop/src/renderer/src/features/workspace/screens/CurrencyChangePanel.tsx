@@ -30,11 +30,22 @@ export interface CurrencyChangePanelProps {
 }
 
 /**
+ * Uppercases a currency code as it is typed, so the field shows exactly what
+ * will be sent. Without it a seller who types "eur" would see the confirm
+ * button enable and then be refused by the contract, which requires three
+ * uppercase letters — a rule that reads as the app arguing with the seller.
+ */
+export function normaliseCurrencyInput(value: string): string {
+  return value.toUpperCase();
+}
+
+/**
  * Whether the inputs on screen still describe the preview being offered.
  *
  * Confirming anything else would apply a conversion the seller was never
- * shown — the whole point of previewing first. Case is normalised because a
- * currency is three letters and "eur" is the same currency as "EUR".
+ * shown — the whole point of previewing first. Whitespace is trimmed because
+ * pasting a rate out of a spreadsheet is ordinary and a trailing space is not
+ * a different rate.
  */
 export function previewMatches(
   preview: CurrencyChangePreview | null,
@@ -42,7 +53,7 @@ export function previewMatches(
   rate: string,
 ): boolean {
   if (preview === null) return false;
-  return preview.toCurrency === toCurrency.trim().toUpperCase() && preview.rate === rate.trim();
+  return preview.toCurrency === toCurrency.trim() && preview.rate === rate.trim();
 }
 
 /** `market/competitors.json#C-001.price` → `C-001.price`, the field the seller recognises. */
@@ -77,20 +88,15 @@ export function CurrencyChangePanel({
 
       <div className="currency-change__inputs">
         <Field hint="Three letters, e.g. USD" label={`From ${currency}`}>
-          <input
-            className="om-input"
-            disabled
-            maxLength={3}
-            readOnly
-            value={currency}
-          />
+          {/* readOnly, not disabled: this value is fixed rather than
+              unavailable, and a disabled field is skipped by the keyboard. */}
+          <input className="om-input" readOnly value={currency} />
         </Field>
         <Field hint="1 unit of the old currency, in the new one" label="To currency">
           <input
-            className="om-input om-money"
-            inputMode="decimal"
+            className="om-input"
             maxLength={3}
-            onChange={(event) => onCurrencyChange(event.target.value)}
+            onChange={(event) => onCurrencyChange(normaliseCurrencyInput(event.target.value))}
             placeholder="EUR"
             value={toCurrency}
           />
