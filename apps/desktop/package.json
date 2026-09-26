@@ -1,6 +1,6 @@
 {
   "name": "@open-merchant/desktop",
-  "version": "1.0.0-alpha.4",
+  "version": "1.0.0-beta.1",
   "private": true,
   "license": "AGPL-3.0-only",
   "type": "module",

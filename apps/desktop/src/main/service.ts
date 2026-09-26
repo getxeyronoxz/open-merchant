@@ -704,6 +704,8 @@ export class MerchantService {
     query: string,
     createClient?: ConnectorClientFactory,
   ): Promise<{ drafts: ConnectorDraft[]; fetchedAt: string }> {
+    // The connector is told the version this app was actually packaged with,
+    // which is the same string every run record carries.
     const store = await this.openStore(root);
     return this.run(async () => {
       const catalog = this.plugins ? await this.plugins.list() : { plugins: [], broken: [] };
@@ -720,7 +722,7 @@ export class MerchantService {
         plugin.manifest,
         plugin.directory,
         { query },
-        createClient,
+        { appVersion: this.appVersion, createClient },
       );
       const origin: ConnectorOrigin = {
         kind: "connector",

@@ -30,6 +30,23 @@ export interface McpToolClient {
 
 export type ConnectorClientFactory = () => McpToolClient;
 
+export interface FetchFromConnectorOptions {
+  /**
+   * Reported to the connector as this client's version, in the initialize
+   * handshake. Required rather than defaulted: a literal here silently
+   * outlives every release, and a connector that gates on `minAppVersion`
+   * deserves the truth.
+   */
+  readonly appVersion: string;
+  /** Test seam. The real client is used when this is absent. */
+  readonly createClient?: ConnectorClientFactory;
+}
+
+/** The real client, built from the version the running app was packaged with. */
+export function defaultConnectorClient(version: string): McpToolClient {
+  return new Client({ name: "open-merchant", version });
+}
+
 function withTimeout<T>(work: Promise<T>, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(
@@ -46,13 +63,13 @@ export async function fetchFromConnector(
   manifest: Extract<PluginManifest, { kind: "connector" }>,
   directory: string,
   input: Record<string, unknown>,
-  createClient: ConnectorClientFactory = () => new Client({ name: "open-merchant", version: "1.0.0-alpha.4" }),
+  options: FetchFromConnectorOptions,
 ): Promise<ConnectorFetchResult> {
   if (!manifest.capabilities.writes.includes("drafts")) {
     throw new ConnectorError(`Connector ${manifest.id} does not declare permission to produce drafts.`);
   }
 
-  const client = createClient();
+  const client = (options.createClient ?? (() => defaultConnectorClient(options.appVersion)))();
   const transport = new StdioClientTransport({
     command: manifest.command,
     args: manifest.args,
