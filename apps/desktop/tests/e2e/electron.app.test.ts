@@ -196,6 +196,95 @@ describe("Open Merchant E2E deep workflow", () => {
   });
 });
 
+describe("Open Merchant E2E currency change", () => {
+  it("shows a restatement before applying it, then journals what it did", async () => {
+    await page.getByRole("button", { name: "New workspace" }).click();
+    await page.getByPlaceholder("Mechanical keyboards India").fill("Restated");
+    await page.locator(".home__form textarea").fill("Reprice this project in euros.");
+    await page.locator(".home__form button[type='submit']").click();
+    await page.locator(".shell__nav").first().waitFor({ state: "visible" });
+
+    const projectRoot = join(projectsParent, "restated");
+
+    // One priced listing and one set of assumptions, so the change has real
+    // amounts to move rather than only a currency code.
+    await page.locator(".shell__nav").getByRole("button", { name: "Competitors" }).click();
+    await page.getByPlaceholder("65% hot-swappable keyboard").fill("Board A");
+    await page.getByPlaceholder("Nova").fill("Brand");
+    await page.locator("input.om-money").first().fill("1099.00");
+    await page.getByRole("button", { name: "Add listing" }).click();
+    await page.getByRole("cell", { name: "Board A", exact: true }).waitFor({ state: "visible" });
+
+    await page.locator(".shell__nav").getByRole("button", { name: "Economics" }).click();
+    const moneyInputs = page.locator("input.om-money");
+    await moneyInputs.nth(0).fill("500.00"); // acquisition
+    await moneyInputs.nth(1).fill("75.50"); // shipping
+    await moneyInputs.nth(2).fill("20.00"); // other
+    await moneyInputs.nth(3).fill("12.50"); // marketplace fee rate — a percentage
+    await moneyInputs.nth(4).fill("2.35"); // payment fee rate — a percentage
+    await moneyInputs.nth(5).fill("899.99");
+    await moneyInputs.nth(6).fill("1099.99");
+    await moneyInputs.nth(7).fill("1499.99");
+    await page.getByRole("button", { name: "Save assumptions" }).click();
+
+    // --- the panel: nothing may be confirmed that has not been previewed ---
+    const panel = page.locator("section[aria-label='Change currency']");
+    await panel.waitFor({ state: "visible" });
+    await panel.getByPlaceholder("EUR").fill("EUR");
+    await panel.getByPlaceholder("0.011").fill("0.011");
+
+    const confirm = panel.getByRole("button", { name: "Confirm change" });
+    await expect.poll(() => confirm.isDisabled()).toBe(true);
+
+    await panel.getByRole("button", { name: "Preview change" }).click();
+    await panel.locator(".om-diff__row").first().waitFor({ state: "visible" });
+
+    // The diff shows real converted pairs, and the snapshot cost is disclosed.
+    expect(await panel.locator(".om-diff__row").first().innerText()).toContain("1099.00");
+    expect(await panel.locator(".om-diff").innerText()).toContain("12.09");
+    expect(await panel.innerText()).toContain("restated");
+    await expect.poll(() => confirm.isDisabled()).toBe(false);
+
+    // Editing the rate after previewing invalidates what was shown.
+    await panel.getByPlaceholder("0.011").fill("0.012");
+    await expect.poll(() => confirm.isDisabled()).toBe(true);
+    await panel.getByPlaceholder("0.011").fill("0.011");
+    await expect.poll(() => confirm.isDisabled()).toBe(false);
+
+    // Before confirming, the folder is untouched.
+    expect(JSON.parse(await readFile(join(projectRoot, ".openmerchant", "manifest.json"), "utf8")).currency).toBe("INR");
+
+    await confirm.click();
+    await panel.locator(".om-diff").first().waitFor({ state: "hidden", timeout: 30_000 });
+
+    // --- the folder on disk ---
+    const manifest = JSON.parse(await readFile(join(projectRoot, ".openmerchant", "manifest.json"), "utf8"));
+    expect(manifest.currency).toBe("EUR");
+
+    const competitors = JSON.parse(await readFile(join(projectRoot, "market", "competitors.json"), "utf8"));
+    expect(competitors[0].currency).toBe("EUR");
+    expect(competitors[0].price).toBe("12.09");
+
+    const assumptions = JSON.parse(await readFile(join(projectRoot, "economics", "assumptions.json"), "utf8"));
+    expect(assumptions.currency).toBe("EUR");
+    expect(assumptions.acquisitionCost).toBe("5.50");
+    // The failure this operation exists to prevent: a percentage times a rate.
+    expect(assumptions.marketplaceFeeRate).toBe("12.50");
+    expect(assumptions.paymentFeeRate).toBe("2.35");
+
+    // --- and the journal says what actually happened ---
+    const runs = (await readFile(join(projectRoot, ".openmerchant", "runs.jsonl"), "utf8"))
+      .split("\n")
+      .filter((line) => line.trim() !== "")
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    const change = runs.find((run) => run.operation === "currencyChanged");
+    expect(change?.status).toBe("succeeded");
+    const payload = change?.currencyChange as { rate: string; toCurrency: string };
+    expect(payload.rate).toBe("0.011");
+    expect(payload.toCurrency).toBe("EUR");
+  });
+});
+
 describe("Open Merchant E2E persistence", () => {
   it("reopens a recent project with state intact after a full restart", async () => {
     await page.getByRole("button", { name: "New workspace" }).click();
