@@ -8,7 +8,7 @@ It is built for solo ecommerce sellers, founders, and product researchers who wa
 
 ## What Open Merchant does
 
-Create a project folder, record a research objective and evidence, compare competitor listings, enter cost assumptions and selling-price scenarios, calculate deterministic unit economics, and generate an evidence-linked Markdown opportunity report — exportable to PDF. Market snapshots preserve every price you saw, the margin monitor and decision journal keep watching the decision, and the portfolio view lines up all your projects. Import competitors from spreadsheets (validated row by row), export anything as CSV, and back a project up as one portable archive. AI assistants can draft evidence entries, report sections, research plans, and integrity checks — but every draft is clearly marked and nothing is saved until you accept it.
+Create a project folder, record a research objective and evidence, compare competitor listings, enter cost assumptions and selling-price scenarios, calculate deterministic unit economics, and generate an evidence-linked Markdown opportunity report — exportable to PDF. Market snapshots preserve every price you saw, the margin monitor and decision journal keep watching the decision, and the portfolio view lines up all your projects. Need the whole project in a different currency? Enter a rate yourself and every amount is restated in exact decimals — after you have seen the before-and-after. Import competitors from spreadsheets (validated row by row), export anything as CSV, and back a project up as one portable archive. AI assistants can draft evidence entries, report sections, research plans, and integrity checks — but every draft is clearly marked and nothing is saved until you accept it.
 
 ## Platforms
 

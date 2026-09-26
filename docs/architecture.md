@@ -39,7 +39,7 @@ project/
     provenance.jsonl
   evidence/sources.jsonl
   market/competitors.json
-  market/snapshots/               # phase 2: immutable timestamped captures
+  market/snapshots/               # phase 2: timestamped captures, immutable except by a currency change
     SNAP-<utcstamp>-<hex>.json
   economics/assumptions.json      # includes the margin-monitor threshold
   economics/scenarios.json        # generated
@@ -65,17 +65,24 @@ Packaged builds check the project's own GitHub Releases feed (`latest.yml`, publ
 
 The post-decision layer is computed, never stored twice: market snapshots are immutable files under `market/snapshots/`; the margin monitor derives drift flags from the saved scenarios plus the latest snapshot's median price; the decision journal derives dated entries from the run journal and staleness from evidence `observedAt` timestamps. CSV import/export, `.omarchive` single-file backups (deflated, versioned, path-guarded envelope), and report PDF export all run through the same validated IPC contract — nothing leaves the machine.
 
+## Project currency change
+
+The only operation in the app that rewrites every artifact a project owns, and it is built as plan-then-write rather than as a save. `planCurrencyChange` in `packages/core` is pure: it reads the manifest, competitors, assumptions, scenarios, and market snapshots and returns a list of exact before/after byte pairs plus both combined hashes, having written nothing. The desktop main process derives that plan itself — the plan is never accepted over IPC — and `writeCurrencyPlan` performs it: each artifact through a path the layout module resolves, the manifest last, then a re-read of the resolved files to confirm the on-disk hash equals `plan.afterHash`. Any failure rewrites the captured `before` bytes in reverse order and rethrows, so a project is never left half-converted and never advertised as converted before it is.
+
+Two rules are the reason this is a domain operation rather than a UI loop. First, rates are not money: `new = round(old × rate)` is applied to amounts only, and fee rates, `marginThresholdPercent`, and `grossMarginPercent` are dimensionless and never multiplied. Second, a snapshot's statistics are re-derived from its already-rounded converted listings rather than multiplied, because those are different numbers — the difference is one cent on real data, and the core test pins that case.
+
+The change is journaled to `runs.jsonl` as a `currencyChanged` run carrying a typed `currencyChange` payload: both currencies, the rate, the old and new value maps keyed `<path>#<field>`, the affected artifacts, and the before/after hashes. The run schema requires that payload on a `succeeded` currency change and forbids it everywhere else, so a failed change journals the failure with no payload rather than a conversion that did not happen. The rate is the user's own input — nothing in this path contacts a network or an FX feed — and it is journaled precisely so a later reversal can use the exact rate rather than a fetched one.
+
 ## Verification map
 
 | Change area | Minimum verification |
 | --- | --- |
 | Renderer behavior | Focused Vitest, then `pnpm -r test`, `pnpm typecheck`, `pnpm lint`, `pnpm build` |
 | Core/workspace rules | `pnpm --filter @open-merchant/core test` (includes golden parity + real-example import) |
+| Agents | `pnpm --filter @open-merchant/ai test` (scripted-provider structured output tests) |
+| Installer | `pnpm --filter @open-merchant/desktop dist`, launch packaged app once per platform |
+| Electron window & IPC | `pnpm --filter @open-merchant/desktop test:e2e` — drives the real app (real preload, real IPC, real disk); CI runs it under xvfb with a 60s hook timeout |
 
 ## MCP lane (read-only, stdio)
 
 `packages/mcp` runs outside the app process: any MCP host (Claude Desktop, an IDE agent, a script) spawns `open-merchant-mcp <project-folder>` over stdio — no network socket exists in the package. It reads only the known workspace layout through guarded directory and artifact resolvers in `@open-merchant/core`, validates exact bytes against `@open-merchant/shared`, and appends one guarded `mcpArtifactRead` record per successful read. It registers resources and zero tools: a host attempting any write fails loudly at the protocol level, so external reads stay observable and the canonical write path never loosens.
-
-| Agents | `pnpm --filter @open-merchant/ai test` (scripted-provider structured output tests) |
-| Installer | `pnpm --filter @open-merchant/desktop dist`, launch packaged app once per platform |
-| Electron window & IPC | `pnpm --filter @open-merchant/desktop test:e2e` — drives the real app (real preload, real IPC, real disk); CI runs it under xvfb with a 60s hook timeout |
