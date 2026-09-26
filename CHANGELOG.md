@@ -9,6 +9,9 @@ All notable changes to Open Merchant are documented in this file.
 - Alt+1…9 section shortcuts jump between the six workspace sections, Draft Desk, Plugins, and AI settings without reaching for the mouse; the rail shows the numbers and nav buttons expose `aria-keyshortcuts` for accessibility hosts. Shortcuts are ignored while typing.
 - Draft Desk: one visible triage lane for the six existing assistants. Evidence, competitor, and report-section drafts are editable and require explicit Accept/Discard; research plans, economics reviews, and report audits are review-only. Provenance (agent, provider, model, prompt hash) is visible before any acceptance. The queue is now keyboard-triageable: ArrowLeft/ArrowRight step through waiting drafts and wrap, with a "← → step" hint and `aria-keyshortcuts` on the tablist; the keys are ignored while typing, matching the shell's Alt+digit guard.
 - README: a "Getting around" section (breadcrumb, shortcuts, walkthrough guide), a note on how the demo GIF is produced, and a Star History chart.
+- MCP connector client: an enabled connector can be run from the Plugins screen with a one-line query. The main process speaks the real MCP stdio protocol (`@modelcontextprotocol/client`), spawning the connector's declared command as the user with a scrubbed environment, a 2 MB response cap, and a 30 s timeout. A connector that does not declare `writes: ["drafts"]`, exposes a missing or duplicated tool, or returns nothing usable is refused before anything is written.
+- Connector results arrive as drafts on the Draft Desk, never as data. Each carries its connector id, plugin id, fetch time, and a SHA-256 hash of the raw response, shown in the provenance block in place of an agent/model/prompt-hash — a connector draft is never dressed up as an AI draft. The Draft Desk's queue is now shared across the workspace, so a fetch started on one screen can be reviewed on another.
+- The SDK's in-memory mock client implements the connector fetch, and a new guard test keeps every runtime source in `@open-merchant/sdk` free of `node:` imports — the renderer imports that barrel, so a node builtin there would follow the mock into a browser bundle.
 
 ### Changed
 - Haptic UI pass across the app: all four button variants lift on hover and sink on press (polish now owned by the `@open-merchant/ui` design system), and every clickable ledger surface — nav rail, recent-project cards, walkthrough steps, provider tiles, history rows, artifact rows, diff tabs — answers the pointer with consistent press feedback.
@@ -20,6 +23,7 @@ All notable changes to Open Merchant are documented in this file.
 - `extract-zip` patched against CVE-2026-19693 (GHSA-7pqw-9j4j-h8q3): pinned the upstream containment fix through `pnpm.patchedDependencies` so writes through a symlink at the entry's final path component are refused. Build-time-only dependency of the Electron install script; never shipped in installers.
 
 ### Fixed
+- The built desktop app could not open a window. `apps/desktop` is `"type": "module"`, so electron-vite emits the main process as ESM, where `__dirname` does not exist — `createMainWindow` threw `ReferenceError: __dirname is not defined` before any window was created, and the whole Electron end-to-end suite failed on every test. The main directory is now derived from the module URL. E2E is 4/4.
 - Electron end-to-end suite: vitest `hookTimeout` raised to 60s — cold CI runners exceeded the 10s default launching Electron under xvfb even though every test passed.
 
 ## [1.0.0-alpha.4] - 2026-09-17
