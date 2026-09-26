@@ -50,6 +50,23 @@ const fetchProps = {
   fetchingPluginId: null,
 } as const;
 
+function render(plugins: InstalledPlugin[], extra: Record<string, unknown> = {}): string {
+  return renderToStaticMarkup(
+    <PluginsPanel
+      catalog={{ plugins, broken: [] }}
+      source={null}
+      onSelect={noop}
+      onToggle={noop}
+      {...fetchProps}
+      {...extra}
+    />,
+  );
+}
+
+function buttonTags(html: string): string[] {
+  return html.match(/<button[^>]*>/gu) ?? [];
+}
+
 describe("PluginsPanel", () => {
   it("invites the seller to install a plugin when none exist", () => {
     const html = renderToStaticMarkup(
@@ -247,5 +264,30 @@ describe("PluginsPanel connector fetch", () => {
     );
 
     expect(html).toContain("Fetching…");
+  });
+});
+
+describe("PluginsPanel row actions", () => {
+  it("gives every action in a row a visible variant", () => {
+    // `.om-button` on its own carries no background and a transparent border,
+    // so a button with no `--` variant renders as bare text with padding around
+    // it. Three actions in a row, one of them invisible, reads as a broken row.
+    const buttons = buttonTags(render([NETWORK_CONNECTOR]));
+
+    expect(buttons.length).toBeGreaterThanOrEqual(3);
+    for (const tag of buttons) {
+      expect(tag).toMatch(/om-button--/u);
+    }
+  });
+
+  it("distinguishes granting a plugin a capability from taking it away", () => {
+    // Enabling is the affirmative act, and for a network connector it is a
+    // disclosure the seller accepts. Disabling is the destructive direction.
+    // The two directions of one toggle should not look like the same action.
+    const enabled = render([NETWORK_CONNECTOR]).match(/<button[^>]*>[\s\S]*?<\/button>/gu) ?? [];
+    const off = render([{ ...NETWORK_CONNECTOR, enabled: false, enabledAt: null }]);
+
+    expect(enabled.some((tag) => /Disable/.test(tag) && /om-button--danger/u.test(tag))).toBe(true);
+    expect(off).toMatch(/om-button--primary[^"]*"[^>]*>[\s\S]{0,80}?Enable/u);
   });
 });

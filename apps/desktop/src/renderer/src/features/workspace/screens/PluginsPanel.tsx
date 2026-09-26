@@ -83,7 +83,7 @@ export function PluginsPanel({
                     </button>
                     {canRunThis ? (
                       <button
-                        className="om-button"
+                        className="om-button om-button--secondary"
                         disabled={!canFetch}
                         onClick={() => onFetch(manifest.id)}
                         type="button"
@@ -92,7 +92,7 @@ export function PluginsPanel({
                       </button>
                     ) : null}
                     <button
-                      className="om-button"
+                      className={`om-button ${plugin.enabled ? "om-button--danger" : "om-button--primary"}`}
                       onClick={() => onToggle(manifest.id, !plugin.enabled)}
                       type="button"
                     >
