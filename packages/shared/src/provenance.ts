@@ -75,10 +75,20 @@ export const reviewKeyShape = z
   .string()
   .regex(/^[a-z][a-z0-9-]*:[A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)?$/u);
 
-/** One locally persisted snooze/dismissal. It never contacts a service. */
+/**
+ * One locally persisted snooze/dismissal. It never contacts a service.
+ *
+ * `reviewDueAt` records *which occurrence* was silenced, not just what kind of
+ * review it was. Without it a dismissal would be permanent: the seller silences
+ * stale evidence, refreshes it, and it goes stale again next year — and the
+ * old dismissal would still be hiding it. Matching on the occurrence means a
+ * disposition dies with the thing it silenced, so a genuinely new occurrence is
+ * new information and is surfaced.
+ */
 export const reviewDispositionSchema = z.object({
   reviewKey: reviewKeyShape,
   action: z.enum(["snoozed", "dismissed"]),
+  reviewDueAt: isoDateTimeSchema,
   until: isoDateTimeSchema.nullable(),
   recordedAt: isoDateTimeSchema,
 });

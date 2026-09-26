@@ -9,6 +9,7 @@ export * from "./statistics";
 export * from "./snapshots";
 export * from "./monitor";
 export * from "./decision-journal";
+export * from "./standing-reviews";
 export * from "./csv";
 export * from "./archive";
 export * from "./print";
