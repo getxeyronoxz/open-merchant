@@ -179,7 +179,7 @@ function Shell({
                       {count !== undefined && count > 0 ? (
                         <span className="om-badge">{count}</span>
                       ) : step?.isComplete ? (
-                        <span className="om-badge om-badge--accent" title="Completed">
+                        <span className="om-badge om-badge--accent" role="img" aria-label="Completed">
                           ✓
                         </span>
                       ) : null}

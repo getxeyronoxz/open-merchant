@@ -89,9 +89,23 @@ describe("StandingReviewsCard", () => {
 
   it("marks the buttons busy while that review is being dispositioned", () => {
     const html = render({ pending: { reviewKey: "stale-evidence:S-001", action: "snoozed" } });
+    const buttons = html.match(/<button[^>]*>/gu) ?? [];
 
     expect(html).toContain("Working…");
-    expect(html).toContain("disabled");
+    expect(buttons.every((tag) => tag.includes('aria-disabled="true"'))).toBe(true);
+  });
+
+  it("keeps the busy button focusable, so focus is not lost mid-task", () => {
+    // The button the seller just pressed is the one that goes busy. A real
+    // `disabled` attribute drops it out of the tab order, so focus falls to
+    // <body> and a keyboard user is thrown back to the top of the page.
+    const html = render({ pending: { reviewKey: "stale-evidence:S-001", action: "dismissed" } });
+    const buttons = html.match(/<button[^>]*>/gu) ?? [];
+
+    expect(buttons).toHaveLength(2);
+    for (const tag of buttons) {
+      expect(tag).not.toMatch(/\sdisabled(\s|=|>)/u);
+    }
   });
 
   it("marks the button the seller actually pressed, not the other one", () => {

@@ -35,6 +35,15 @@
   cursor: not-allowed;
 }
 
+/* `aria-disabled` rather than `disabled` on a button that is busy *because the
+   seller just pressed it*: `disabled` removes it from the tab order, so focus
+   falls to <body> and the keyboard user is dropped back at the top of the
+   page. Guarded in the click handler instead, and dressed the same. */
+.om-button[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: progress;
+}
+
 .om-button--primary {
   background: var(--om-accent);
   color: var(--om-accent-contrast);

@@ -81,6 +81,10 @@ export function StandingReviewsCard({
           const snoozing = pending?.reviewKey === review.key && pending.action === "snoozed";
           const dismissing = pending?.reviewKey === review.key && pending.action === "dismissed";
           const busy = snoozing || dismissing;
+          // Deliberately aria-disabled, not disabled: the button the seller
+          // just pressed is the one that goes busy, and a real `disabled`
+          // drops it out of the tab order, so focus falls to <body> and a
+          // keyboard user is thrown back to the top of the page mid-task.
           return (
             <li key={`${review.projectRoot}:${review.key}`} className="om-list__row">
               <div className="om-list__copy">
@@ -95,18 +99,24 @@ export function StandingReviewsCard({
               <div className="om-list__actions">
                 <button
                   aria-busy={snoozing}
+                  aria-disabled={busy}
                   className="om-button om-button--ghost"
-                  disabled={busy}
-                  onClick={() => onDispose(review, "snoozed")}
+                  onClick={() => {
+                    if (busy) return;
+                    onDispose(review, "snoozed");
+                  }}
                   type="button"
                 >
                   {snoozing ? "Working…" : "Snooze a week"}
                 </button>
                 <button
                   aria-busy={dismissing}
+                  aria-disabled={busy}
                   className="om-button om-button--ghost"
-                  disabled={busy}
-                  onClick={() => onDispose(review, "dismissed")}
+                  onClick={() => {
+                    if (busy) return;
+                    onDispose(review, "dismissed");
+                  }}
                   type="button"
                 >
                   {dismissing ? "Working…" : "Dismiss"}

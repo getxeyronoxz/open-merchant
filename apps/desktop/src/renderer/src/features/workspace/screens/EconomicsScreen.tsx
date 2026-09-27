@@ -16,6 +16,7 @@ import {
 } from "../queries";
 import type { SectionName } from "../useWorkflowProgress";
 import { CurrencyChangePanel } from "./CurrencyChangePanel";
+import { moneyLabel } from "../moneyLabel";
 
 /**
  * Unit economics: cost assumptions and low/base/high price scenarios.
@@ -103,7 +104,7 @@ function AssumptionsForm({ root, initial }: { root: string; initial: CostAssumpt
   useEffect(() => setDraft(initial), [initial]);
 
   const moneyField = (label: string, key: "acquisitionCost" | "shippingCost" | "otherCosts") => (
-    <Field label={`${label} (${currency})`}>
+    <Field label={moneyLabel(label, currency)}>
       <input
         className="om-input om-money"
         inputMode="decimal"
@@ -145,7 +146,7 @@ function AssumptionsForm({ root, initial }: { root: string; initial: CostAssumpt
 
       <p className="om-eyebrow">Selling prices</p>
       {(["low", "base", "high"] as const).map((key) => (
-        <Field key={key} label={`${key.charAt(0).toUpperCase()}${key.slice(1)} price (${currency})`}>
+        <Field key={key} label={moneyLabel(`${key.charAt(0).toUpperCase()}${key.slice(1)} price`, currency)}>
           <input
             className="om-input om-money"
             inputMode="decimal"

@@ -19,6 +19,7 @@ import {
 import { client } from "../../../client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { SectionName } from "../useWorkflowProgress";
+import { moneyLabel } from "../moneyLabel";
 
 function nextCompetitorId(existing: Competitor[]): string {
   const highest = existing.reduce((max, competitor) => {
@@ -191,7 +192,7 @@ export function CompetitorsScreen({
             addCompetitor();
           }}
         >
-          <Field label={`Product (${projectCurrency})`}>
+          <Field label={moneyLabel("Product", projectCurrency)}>
             <input
               className="om-input"
               onChange={(event) => setForm({ ...form, product: event.target.value })}
@@ -457,14 +458,15 @@ function SpreadsheetBridgeCard({ root, currency }: { root: string; currency: str
       </div>
       {exportError ? <ErrorState error={exportError} /> : null}
 
-      <div className="om-field" style={{ marginTop: "var(--om-space-3)" }}>
-        <span className="om-field__label">Import competitors from CSV</span>
-        <input
-          accept=".csv,text/csv"
-          className="om-input"
-          onChange={(event) => void onFileChosen(event.target.files?.[0])}
-          type="file"
-        />
+      <div style={{ marginTop: "var(--om-space-3)" }}>
+        <Field label="Import competitors from CSV">
+          <input
+            accept=".csv,text/csv"
+            className="om-input"
+            onChange={(event) => void onFileChosen(event.target.files?.[0])}
+            type="file"
+          />
+        </Field>
       </div>
       {csvText !== null && headers.length > 0 ? (
         <>

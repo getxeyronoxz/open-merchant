@@ -21,6 +21,12 @@ export interface PluginsPanelProps {
  * the connector client owns. `network: true` is shown as a disclosure the
  * seller accepts, never as a restriction this screen claims to enforce.
  */
+/**
+ * The single source panel every row's button controls. One region for all rows
+ * because only one plugin's source is ever shown at a time.
+ */
+const SOURCE_REGION_ID = "om-plugin-source";
+
 export function PluginsPanel({
   catalog,
   source,
@@ -74,7 +80,8 @@ export function PluginsPanel({
                   </div>
                   <div className="om-list__actions">
                     <button
-                      aria-pressed={isSelected}
+                      aria-controls={SOURCE_REGION_ID}
+                      aria-expanded={isSelected}
                       className="om-button om-button--ghost"
                       onClick={() => onSelect(manifest.id)}
                       type="button"
@@ -106,7 +113,7 @@ export function PluginsPanel({
         )}
 
         {source ? (
-          <pre className="om-code" aria-label={`Source of ${source.pluginId}`}>
+          <pre className="om-code" id={SOURCE_REGION_ID} aria-label={`Source of ${source.pluginId}`}>
             {source.text}
           </pre>
         ) : null}

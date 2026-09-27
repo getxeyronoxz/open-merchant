@@ -291,3 +291,36 @@ describe("PluginsPanel row actions", () => {
     expect(off).toMatch(/om-button--primary[^"]*"[^>]*>[\s\S]{0,80}?Enable/u);
   });
 });
+
+describe("PluginsPanel 'View source'", () => {
+  const source = { pluginId: "price-connector", text: "export const run = () => {};" };
+
+  it("reports the disclosure state instead of pretending to be a toggle", () => {
+    // aria-pressed on a button that can only ever go true is a promise the
+    // control cannot keep: clicking it again changed nothing at all. A
+    // show/hide disclosure is aria-expanded, and that can be false.
+    const closed = buttonTags(render([NETWORK_CONNECTOR], { source: null }));
+    const open = buttonTags(render([NETWORK_CONNECTOR], { source }));
+
+    expect(closed.some((tag) => tag.includes('aria-expanded="false"'))).toBe(true);
+    expect(open.some((tag) => tag.includes('aria-expanded="true"'))).toBe(true);
+    expect(closed.join(" ")).not.toContain("aria-pressed");
+  });
+
+  it("points the button at the source it reveals", () => {
+    const html = render([NETWORK_CONNECTOR], { source });
+    const controls = html.match(/aria-controls="([^"]+)"/u)?.[1];
+
+    expect(controls).toBeTruthy();
+    expect(html).toContain(`id="${controls}"`);
+  });
+
+  it("only marks the plugin whose source is showing as expanded", () => {
+    // With two plugins installed, exactly one is the one being shown.
+    const buttons = buttonTags(
+      render([NETWORK_CONNECTOR, SECTION_PLUGIN], { source }),
+    );
+
+    expect(buttons.filter((tag) => tag.includes('aria-expanded="true"'))).toHaveLength(1);
+  });
+});

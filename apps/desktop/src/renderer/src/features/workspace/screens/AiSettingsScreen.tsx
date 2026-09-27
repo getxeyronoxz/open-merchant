@@ -121,9 +121,8 @@ export function AiSettingsScreen() {
             if (next === undefined) return;
             event.preventDefault();
             selectProvider(next.id);
-            providerGridRef.current
-              ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')
-              [PROVIDERS.indexOf(next)]?.focus();
+            const tabs = providerGridRef.current?.querySelectorAll<HTMLButtonElement>('[role="radio"]');
+            tabs?.[PROVIDERS.indexOf(next)]?.focus();
           }}
           ref={providerGridRef}
           role="radiogroup"

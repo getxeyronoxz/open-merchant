@@ -217,7 +217,9 @@ export function HomeScreen() {
                         onClick={() => openRecent.mutate(recent.path)}
                         type="button"
                       >
-                        <span className="home__recent-avatar">{recent.name.slice(0, 1).toUpperCase()}</span>
+                        <span aria-hidden="true" className="home__recent-avatar">
+                          {recent.name.slice(0, 1).toUpperCase()}
+                        </span>
                         <span className="home__recent-copy">
                           <strong>{recent.name}</strong>
                           <span className="om-data">{recent.path}</span>

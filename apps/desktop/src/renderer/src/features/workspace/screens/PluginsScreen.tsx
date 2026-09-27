@@ -75,7 +75,12 @@ export function PluginsScreen({ root }: { readonly root: string }) {
         source={
           selectedId && source.data ? { pluginId: selectedId, text: source.data.source } : null
         }
-        onSelect={setSelectedId}
+        onSelect={(pluginId) =>
+          // A disclosure that could only ever open. Clicking the plugin whose
+          // source is already showing closes it again, which is what the
+          // button's expanded/collapsed state now claims.
+          setSelectedId((current) => (current === pluginId ? null : pluginId))
+        }
         onToggle={(pluginId, enabled) => setEnabled.mutate({ pluginId, enabled })}
         query={query}
         onQueryChange={setQuery}
