@@ -215,6 +215,14 @@ Produces an NSIS installer (Windows), DMG (macOS), or AppImage (Linux) under `ap
 See [ROADMAP.md](ROADMAP.md) for what has shipped, what is in progress, and
 the direction of the product.
 
+## Platform notes
+
+Windows, macOS, and Linux build from one matrix, and CI runs the full suite **and** the Electron
+end-to-end suite on all three. [`docs/platform-notes.md`](docs/platform-notes.md) records what
+genuinely differs — the MCP launcher per platform, the bundled Node runtime, the snap's per-release
+data directory and why it is the least-bad Linux package, connector behaviour under confinement,
+and macOS notarisation.
+
 ## Current limitations
 
 - No cloud sync, accounts, teams, or mobile clients.

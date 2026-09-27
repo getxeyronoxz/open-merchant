@@ -40,7 +40,11 @@ function bundledMcpCommand(): string {
   // this build" one.
   const override = process.env.OPEN_MERCHANT_MCP_COMMAND;
   if (override !== undefined && override !== "") return override;
-  const name = process.platform === "win32" ? "open-merchant-mcp.cmd" : "open-merchant-mcp.mjs";
+  // Windows cannot spawn a bare .mjs at all, so it gets the .cmd. macOS and
+  // Linux get the shell launcher rather than the bundle itself: it prefers the
+  // Node runtime that ships with the app, so a seller who never installed Node
+  // is not left with a command that cannot start.
+  const name = process.platform === "win32" ? "open-merchant-mcp.cmd" : "open-merchant-mcp";
   return join(process.resourcesPath, "mcp", name);
 }
 

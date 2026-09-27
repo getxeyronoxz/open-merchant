@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "pnpm --filter @open-merchant/mcp build && node stage-mcp.cjs && electron-vite build",
-    "dist": "electron-vite build && electron-builder --publish never",
+    "dist": "pnpm run build && electron-builder --publish never",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
     "test:unit": "vitest run",
