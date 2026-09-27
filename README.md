@@ -54,6 +54,59 @@ Ground rules:
 - **Alt+1…9** jumps straight to the six workspace sections, Draft Desk, Plugins, and AI settings — the rail shows the numbers, and shortcuts are ignored while you type.
 - The **walkthrough guide** keeps the six steps (objective → evidence → competitors → economics → report → files) one click away with progress badges, and reopening a project resumes at its first incomplete step.
 
+## Letting your AI read the record
+
+Open Merchant ships a **local, read-only MCP server** so an AI assistant can read a project's
+evidence, competitors, market snapshots, economics, and reports. It cannot write: the server
+registers no tools at all, so a write attempt is refused at the protocol level, and every read is
+recorded in that project's `runs.jsonl` as an `mcpArtifactRead` run.
+
+It runs over stdio, so there is no network socket and nothing leaves your machine.
+
+The server is bundled inside the app. **Plugins → "Let your AI read the record"** shows the exact
+command and a ready-to-paste config for the project you have open:
+
+```json
+{
+  "mcpServers": {
+    "open-merchant": {
+      "command": "<the path shown in the app>",
+      "args": ["<your project folder>"]
+    }
+  }
+}
+```
+
+On Windows that command needs no Node installation of your own — it runs through the Node runtime
+that ships with Open Merchant.
+
+## Plugins and connectors
+
+A **plugin** is a folder of data, not code this app loads. Put one under the app's `plugins`
+directory and it appears on the Plugins screen, disabled, with its declared source one click away.
+Nothing a stranger wrote is turned on before you have read what its manifest says it is.
+
+| Platform | Plugins directory |
+| --- | --- |
+| Windows | `%APPDATA%\@open-merchant\desktop\plugins` |
+| macOS | `~/Library/Application Support/@open-merchant/desktop/plugins` |
+| Linux | `~/.config/@open-merchant/desktop/plugins` |
+
+The path follows the app's package name, so it is not worth memorising: when
+the list is empty, the **Plugins screen shows the exact folder**.
+
+Every plugin declares what it wants in its `manifest.json` — `reads`, `writes`, `network`, and the
+minimum app version it was written for. A plugin needing a newer build than yours is refused and
+listed with the reason. Nothing is ever skipped silently.
+
+A **`connector`** is the one kind that runs something: an external process speaking MCP over stdio.
+It must declare `writes: ["drafts"]`, and what it returns arrives on the Draft Desk as *drafts* —
+never as project data, and never without you accepting it one by one.
+
+A runnable example is in [`examples/sample-connector`](examples/sample-connector): a dependency-free
+MCP server, no network calls, returning clearly-marked sample listings. Copy that folder into the
+plugins directory above to try the connector path end to end.
+
 ## Install & auto-updates
 
 Download the current installer for your platform from [GitHub Releases](https://github.com/getxeyronoxz/open-merchant/releases) — Windows installer (`.exe`), macOS disk image (`.dmg`), or Linux AppImage, snap, and flatpak. The app keeps itself current: on startup it passively checks this project's own Releases feed, downloads updates in the background (delta downloads where supported), and offers to restart — or simply applies the update on quit. Checks are read-only against GitHub; nothing about your projects or usage leaves your machine.
@@ -161,7 +214,7 @@ the direction of the product.
 - No cloud sync, accounts, teams, or mobile clients.
 - Assistants cannot browse: you supply page content by pasting it.
 - Unaccepted drafts are session-scoped: a draft waiting for review on the Draft Desk is lost when you quit. Accepting it is the only thing that persists. Nothing is ever lost from a project folder.
-- No plugins ship with the app, and there is no plugin installer — a plugin is a folder you place under this app's `plugins` directory yourself, and no sample connector is published yet, so the connector features have nothing to run out of the box.
+- No plugins are installed for you: a plugin is a folder you place in the app's `plugins` directory yourself, and there is no plugin installer or marketplace. A runnable sample connector ships in `examples/sample-connector` to copy from.
 - One writer per project at a time; do not edit a project elsewhere while Open Merchant has unsaved changes.
 - The checked-in example project contains clearly-marked demo data, not live commercial claims.
 

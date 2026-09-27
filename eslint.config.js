@@ -49,6 +49,9 @@ export default tseslint.config(
       // truth is packages/mcp. A megabyte of generated bundle is not source.
       "apps/desktop/resources/**",
       "**/node_modules/**",
+      // electron-builder output. Gitignored, but ESLint does not read
+      // .gitignore, and a packaged build is not source.
+      "**/release/**",
       "**/*.config.js",
       "**/*.cjs",
       "apps/desktop/gif.mjs",
@@ -57,6 +60,12 @@ export default tseslint.config(
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    // The sample connector is a plain Node script with no dependencies, which
+    // is the whole reason it is a runnable example. It is linted as source.
+    files: ["examples/**/*.mjs", "examples/**/*.js"],
+    languageOptions: { globals: { process: "readonly", console: "readonly" } },
+  },
   {
     plugins: { om: { rules: { "button-has-variant": buttonVariant } } },
     rules: {

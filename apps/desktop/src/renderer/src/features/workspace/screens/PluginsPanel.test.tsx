@@ -53,7 +53,7 @@ const fetchProps = {
 function render(plugins: InstalledPlugin[], extra: Record<string, unknown> = {}): string {
   return renderToStaticMarkup(
     <PluginsPanel
-      catalog={{ plugins, broken: [] }}
+      catalog={{ directory: "C:/app-data/plugins", plugins, broken: [] }}
       source={null}
       onSelect={noop}
       onToggle={noop}
@@ -71,7 +71,7 @@ describe("PluginsPanel", () => {
   it("invites the seller to install a plugin when none exist", () => {
     const html = renderToStaticMarkup(
       <PluginsPanel
-        catalog={{ plugins: [], broken: [] }}
+        catalog={{ directory: "C:/app-data/plugins", plugins: [], broken: [] }}
         source={null}
         onSelect={noop}
         onToggle={noop}
@@ -86,7 +86,7 @@ describe("PluginsPanel", () => {
   it("names each plugin with its id, version, author, and kind", () => {
     const html = renderToStaticMarkup(
       <PluginsPanel
-        catalog={{ plugins: [SECTION_PLUGIN], broken: [] }}
+        catalog={{ directory: "C:/app-data/plugins", plugins: [SECTION_PLUGIN], broken: [] }}
         source={null}
         onSelect={noop}
         onToggle={noop}
@@ -104,7 +104,7 @@ describe("PluginsPanel", () => {
   it("offers Enable for a disabled plugin and Disable for an enabled one", () => {
     const html = renderToStaticMarkup(
       <PluginsPanel
-        catalog={{ plugins: [SECTION_PLUGIN, NETWORK_CONNECTOR], broken: [] }}
+        catalog={{ directory: "C:/app-data/plugins", plugins: [SECTION_PLUGIN, NETWORK_CONNECTOR], broken: [] }}
         source={null}
         onSelect={noop}
         onToggle={noop}
@@ -119,7 +119,7 @@ describe("PluginsPanel", () => {
   it("discloses that a network connector may reach the internet", () => {
     const html = renderToStaticMarkup(
       <PluginsPanel
-        catalog={{ plugins: [NETWORK_CONNECTOR], broken: [] }}
+        catalog={{ directory: "C:/app-data/plugins", plugins: [NETWORK_CONNECTOR], broken: [] }}
         source={null}
         onSelect={noop}
         onToggle={noop}
@@ -133,7 +133,7 @@ describe("PluginsPanel", () => {
   it("does not claim a local plugin reaches the internet", () => {
     const html = renderToStaticMarkup(
       <PluginsPanel
-        catalog={{ plugins: [SECTION_PLUGIN], broken: [] }}
+        catalog={{ directory: "C:/app-data/plugins", plugins: [SECTION_PLUGIN], broken: [] }}
         source={null}
         onSelect={noop}
         onToggle={noop}
@@ -147,7 +147,7 @@ describe("PluginsPanel", () => {
   it("shows a plugin's source so it can be read before enabling", () => {
     const html = renderToStaticMarkup(
       <PluginsPanel
-        catalog={{ plugins: [SECTION_PLUGIN], broken: [] }}
+        catalog={{ directory: "C:/app-data/plugins", plugins: [SECTION_PLUGIN], broken: [] }}
         source={{ pluginId: "report-risks", text: "## Watch MOQ" }}
         onSelect={noop}
         onToggle={noop}
@@ -162,6 +162,7 @@ describe("PluginsPanel", () => {
     const html = renderToStaticMarkup(
       <PluginsPanel
         catalog={{
+          directory: "C:/app-data/plugins",
           plugins: [],
           broken: [{ directoryName: "mystery", reason: "manifest.json is not valid JSON." }],
         }}
@@ -181,7 +182,7 @@ describe("PluginsPanel connector fetch", () => {
   it("offers Fetch on an enabled connector", () => {
     const html = renderToStaticMarkup(
       <PluginsPanel
-        catalog={{ plugins: [NETWORK_CONNECTOR], broken: [] }}
+        catalog={{ directory: "C:/app-data/plugins", plugins: [NETWORK_CONNECTOR], broken: [] }}
         source={null}
         onSelect={noop}
         onToggle={noop}
@@ -195,7 +196,7 @@ describe("PluginsPanel connector fetch", () => {
   it("does not offer Fetch on a connector the seller has not enabled", () => {
     const html = renderToStaticMarkup(
       <PluginsPanel
-        catalog={{ plugins: [{ ...NETWORK_CONNECTOR, enabled: false, enabledAt: null }], broken: [] }}
+        catalog={{ directory: "C:/app-data/plugins", plugins: [{ ...NETWORK_CONNECTOR, enabled: false, enabledAt: null }], broken: [] }}
         source={null}
         onSelect={noop}
         onToggle={noop}
@@ -209,7 +210,7 @@ describe("PluginsPanel connector fetch", () => {
   it("never offers Fetch on a report-section plugin", () => {
     const html = renderToStaticMarkup(
       <PluginsPanel
-        catalog={{ plugins: [{ ...SECTION_PLUGIN, enabled: true, enabledAt: "2026-09-25T00:00:00.000Z" }], broken: [] }}
+        catalog={{ directory: "C:/app-data/plugins", plugins: [{ ...SECTION_PLUGIN, enabled: true, enabledAt: "2026-09-25T00:00:00.000Z" }], broken: [] }}
         source={null}
         onSelect={noop}
         onToggle={noop}
@@ -223,7 +224,7 @@ describe("PluginsPanel connector fetch", () => {
   it("says the fetch produces drafts, not a write to the project", () => {
     const html = renderToStaticMarkup(
       <PluginsPanel
-        catalog={{ plugins: [NETWORK_CONNECTOR], broken: [] }}
+        catalog={{ directory: "C:/app-data/plugins", plugins: [NETWORK_CONNECTOR], broken: [] }}
         source={null}
         onSelect={noop}
         onToggle={noop}
@@ -238,7 +239,7 @@ describe("PluginsPanel connector fetch", () => {
   it("takes a query, and refuses to fetch an empty one", () => {
     const html = renderToStaticMarkup(
       <PluginsPanel
-        catalog={{ plugins: [NETWORK_CONNECTOR], broken: [] }}
+        catalog={{ directory: "C:/app-data/plugins", plugins: [NETWORK_CONNECTOR], broken: [] }}
         source={null}
         onSelect={noop}
         onToggle={noop}
@@ -254,7 +255,7 @@ describe("PluginsPanel connector fetch", () => {
   it("marks the connector being fetched so the seller can see it is running", () => {
     const html = renderToStaticMarkup(
       <PluginsPanel
-        catalog={{ plugins: [NETWORK_CONNECTOR], broken: [] }}
+        catalog={{ directory: "C:/app-data/plugins", plugins: [NETWORK_CONNECTOR], broken: [] }}
         source={null}
         onSelect={noop}
         onToggle={noop}

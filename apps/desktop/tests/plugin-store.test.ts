@@ -114,7 +114,16 @@ describe("PluginStore.list", () => {
   it("returns an empty catalog when the plugins folder does not exist", async () => {
     const catalog = await new PluginStore(dir).list();
 
-    expect(catalog).toEqual({ plugins: [], broken: [] });
+    expect(catalog.plugins).toEqual([]);
+    expect(catalog.broken).toEqual([]);
+  });
+
+  it("still tells the caller where to put a plugin when there are none", async () => {
+    // The folder not existing is the normal state on a fresh install, and it
+    // is exactly when a seller needs to be told where the folder is.
+    const catalog = await new PluginStore(dir).list();
+
+    expect(catalog.directory).toBe(join(dir, "plugins"));
   });
 });
 

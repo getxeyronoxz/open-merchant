@@ -144,7 +144,7 @@ export class PluginStore {
       });
     }
 
-    return { plugins, broken };
+    return { plugins, broken, directory: this.directory };
   }
 
   async setEnabled(pluginId: string, enabled: boolean): Promise<InstalledPlugin> {

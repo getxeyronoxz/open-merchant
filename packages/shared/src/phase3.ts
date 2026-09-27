@@ -126,6 +126,14 @@ export const brokenPluginSchema = z.object({
 export const pluginCatalogSchema = z.object({
   plugins: z.array(installedPluginSchema),
   broken: z.array(brokenPluginSchema),
+  /**
+   * The resolved folder a plugin is installed into. It is app data, and its
+   * path follows the package name, so it is not something a seller can be
+   * expected to guess: the screen shows this rather than describing where to
+   * look, because being wrong about it means a plugin that appears to be
+   * ignored when it is simply somewhere else.
+   */
+  directory: z.string(),
 });
 export type BrokenPlugin = z.infer<typeof brokenPluginSchema>;
 export type PluginCatalog = z.infer<typeof pluginCatalogSchema>;

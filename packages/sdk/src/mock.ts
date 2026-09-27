@@ -617,7 +617,11 @@ export function createMockDesktopClient(
 
     listPlugins: async () => {
       await Promise.resolve();
-      return { plugins: installedPlugins.map((plugin) => ({ ...plugin })), broken: [] };
+      return {
+        plugins: installedPlugins.map((plugin) => ({ ...plugin })),
+        broken: [],
+        directory: "<app data>/plugins",
+      };
     },
     readPluginSource: async (pluginId) => {
       await Promise.resolve();

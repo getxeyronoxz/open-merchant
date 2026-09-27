@@ -37,6 +37,7 @@ export function PluginsPanel({
   onFetch,
   fetchingPluginId,
 }: PluginsPanelProps) {
+  const { directory } = catalog;
   const enabledConnectors = catalog.plugins.filter(
     (plugin) => plugin.enabled && plugin.manifest.kind === "connector",
   );
@@ -50,9 +51,15 @@ export function PluginsPanel({
         {catalog.plugins.length === 0 && catalog.broken.length === 0 ? (
           <EmptyState title="No plugins installed">
             <p className="om-field__hint">
-              Add a folder under this app&apos;s <code>plugins</code> directory, each holding a{" "}
-              <code>manifest.json</code>. Plugins start disabled, and you read their source before
-              turning one on.
+              Put a plugin folder in this directory, each holding a <code>manifest.json</code>.
+              Plugins start disabled, and you read their source before turning one on.
+            </p>
+            {/* The path is shown, not described. It follows the app's package
+                name and so is not something a seller can be expected to guess —
+                and a plugin dropped in the wrong place looks exactly like a
+                plugin that was ignored. */}
+            <p className="om-field__hint">
+              <code>{directory}</code>
             </p>
           </EmptyState>
         ) : (

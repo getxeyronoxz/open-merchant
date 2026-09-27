@@ -1,0 +1,17 @@
+{
+  "id": "sample-market",
+  "name": "Sample market connector",
+  "version": "1.0.0",
+  "author": "Open Merchant",
+  "minAppVersion": "1.0.0-beta.1",
+  "capabilities": {
+    "reads": ["market"],
+    "writes": ["drafts"],
+    "network": false
+  },
+  "kind": "connector",
+  "description": "A runnable example connector. Returns clearly-marked sample listings as drafts; it has no dependencies, makes no network calls, and writes nothing.",
+  "toolName": "fetch_prices",
+  "command": "node",
+  "args": ["server.mjs"]
+}
