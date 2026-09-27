@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Flathub submission metadata for Open Merchant.
+
+  Required by the Flathub submission process. Lives in this repository so it is
+  versioned and reviewable alongside the code, and copied into the submission
+  fork of flathub/flathub. See packaging/flatpak/README.md for the steps.
+-->
+<component type="desktop-application">
+  <id>com.xeyronox.openmerchant</id>
+
+  <name>Open Merchant</name>
+  <summary>Decide whether a product is worth pursuing, and keep the evidence</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>AGPL-3.0-only</project_license>
+
+  <developer id="com.xeyronox">
+    <name>Xeyronox</name>
+  </developer>
+
+  <description>
+    <p>
+      Open Merchant is a local-first desktop workbench for deciding whether a product opportunity
+      is commercially worth pursuing, and for keeping the evidence behind that decision.
+    </p>
+    <p>
+      Every decision gets its own folder on your own disk. Objective, evidence, competitor listings,
+      cost assumptions, and an evidence-linked opportunity report — instead of scattered tabs and a
+      spreadsheet you will not find again. Nothing is uploaded, nothing is locked in, and nothing
+      happens without you pressing the button.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Competitor listings, unit economics, and a report, in exact decimal arithmetic</li>
+      <li>Market snapshots: a timestamped price history you can check later</li>
+      <li>A margin monitor and a decision journal that keep watching after you close the app</li>
+      <li>A portfolio across every project, worst margin first</li>
+      <li>Restate a project in another currency at a rate you enter yourself</li>
+      <li>CSV import with row-by-row reasons for anything rejected, CSV export, single-file backups</li>
+      <li>Six optional assistants that draft, and write nothing until you accept it</li>
+      <li>A read-only MCP server so an assistant can read the record, never write it</li>
+    </ul>
+    <p>
+      The arithmetic is done in tested application code using arbitrary-precision decimals — never
+      by a language model, never by binary floating point. Language models may draft; they may not
+      calculate, and they may not write to your project without your acceptance.
+    </p>
+  </description>
+
+  <!--
+    oars-1.1: the app is not a browser, not a game, and not a single-purpose
+    content viewer. No further categories apply.
+  -->
+  <content_rating type="oars-1.1"/>
+
+  <launchable type="desktop-id">open-merchant.desktop</launchable>
+
+  <url type="homepage">https://github.com/getxeyronoxz/open-merchant</url>
+  <url type="bugtracker">https://github.com/getxeyronoxz/open-merchant/issues</url>
+  <url type="vcs-browser">https://github.com/getxeyronoxz/open-merchant</url>
+  <url type="translate">https://github.com/getxeyronoxz/open-merchant</url>
+
+  <icon type="stock" name="com.xeyronox.openmerchant"/>
+
+  <screenshots>
+    <screenshot type="default" width="1600" height="1000">data/screenshots/01-home.png</screenshot>
+    <screenshot type="default" width="1600" height="1000">data/screenshots/02-economics.png</screenshot>
+    <screenshot type="default" width="1600" height="1000">data/screenshots/03-report.png</screenshot>
+    <screenshot type="default" width="1600" height="1000">data/screenshots/04-draft-desk.png</screenshot>
+  </screenshots>
+
+  <releases>
+    <release version="1.0.0" date="2026-09-27">
+      <description>
+        <p>First stable release.</p>
+        <ul>
+          <li>Read-only MCP server, shipped inside the app and on npm</li>
+          <li>Plugin surface: capability-declared, loaded as data, never as code</li>
+          <li>MCP connector client, returning drafts rather than data</li>
+          <li>Standing reviews across every project</li>
+          <li>The Draft Desk: one visible gate for every assistant</li>
+          <li>Project currency restatement in exact decimals</li>
+        </ul>
+        <p>
+          1.0 promises one thing: that a version 2 project folder keeps opening. It is plain JSON
+          and JSONL, and you can read it without us.
+        </p>
+      </description>
+    </release>
+  </releases>
+
+  <recommendations>
+    <!--
+      The app shells out to nothing by default. A plugin may declare network
+      access and a connector is a separate process the user starts explicitly,
+      so no broad recommendation is claimed here.
+    -->
+  </recommendations>
+</component>
