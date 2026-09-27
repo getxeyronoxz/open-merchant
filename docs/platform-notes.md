@@ -58,6 +58,46 @@ exception** — see below.
 Your plugins go in a `plugins` folder inside that directory. The Plugins screen shows the exact
 path when the list is empty, because it follows the package name and is not worth memorising.
 
+## Installing on Linux
+
+Four formats ship, and they are not interchangeable:
+
+| Format | Needs FUSE? | Best for |
+| --- | --- | --- |
+| AppImage | **yes** (`libfuse.so.2`) | a single file, no install |
+| `deb` | no | Debian, Ubuntu, Mint, Pop!_OS |
+| `tar.gz` | no | anywhere — unpack and run |
+| snap | no | anything with snapd |
+| flatpak | no | anything with flatpak |
+
+**If the AppImage refuses to start** with a missing `libfuse.so.2`, that is FUSE, not a broken
+download. Arch dropped `fuse2` for `fuse3`; install `fuse2` from the AUR, or run the AppImage with
+`--appimage-extract-and-run`. The `deb` and `tar.gz` builds sidestep it entirely.
+
+## Flathub
+
+The flatpak is built and published to the project's GitHub Releases, which makes it installable with
+a direct download:
+
+```bash
+flatpak install --user <downloaded-flatpak-file>
+```
+
+**It is not on Flathub**, and that is the current state rather than an oversight. Putting an app on
+Flathub is a separate submission to a third party: it is reviewed, it is versioned independently of
+this repository, and it wants its own app id, screenshots, and a maintenance commitment. That is an
+owner decision about an ongoing relationship, not a build flag.
+
+What this project controls is that the flatpak is *buildable and installable* when it is:
+
+- The runtime is a supported one. It was pinned to `23.08`, an end-of-life runtime from 2023 —
+  Flathub keeps only supported runtimes in its main repository, so a flatpak built against one
+  cannot be installed on a current system. It is now `26.08`, verified against the Flathub runtime
+  list.
+- CI installs that runtime and its SDK explicitly rather than relying on flatpak-builder's
+  auto-download, so a mismatch fails the build with a clear message instead of producing an artifact
+  nobody can install.
+
 ## Known-shaky, not yet fixed
 
 **Snap and per-release data directories.** A strict-confinement snap is confined to

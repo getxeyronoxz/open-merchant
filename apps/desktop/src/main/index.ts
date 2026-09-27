@@ -270,31 +270,49 @@ function initAutoUpdate() {
 /** Six hours: often enough to notice a release in a session, rarely enough to be quiet. */
 const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
+/** How long a completed check is good for before a caller asking again re-checks. */
+const UPDATE_STATUS_FRESH_MS = 60 * 1000;
+
+let lastCheck: { at: number; status: UpdateStatus } | null = null;
+let inFlight: Promise<UpdateStatus> | null = null;
+
 /**
  * One update check, reported honestly whichever way it goes.
  *
- * Returns the state so a caller that asked can answer immediately, and pushes
- * the same state to any open window. "Up to date", "could not ask", and "a
- * newer version is downloading" are three different facts and are reported as
- * three different states.
+ * The menu, the timer, and the window on mount all ask through here, so a
+ * fresh result is shared rather than each one hitting the network. Returns the
+ * state so a caller that asked can answer immediately, and pushes the same
+ * state to any open window: "up to date", "could not ask", and "a newer
+ * version is downloading" are three different facts.
  */
-async function checkForUpdates(): Promise<UpdateStatus> {
+async function checkForUpdates(options: { force?: boolean } = {}): Promise<UpdateStatus> {
+  const fresh = lastCheck !== null && Date.now() - lastCheck.at < UPDATE_STATUS_FRESH_MS;
+  if (!options.force && fresh && lastCheck !== null) return lastCheck.status;
+  // A second caller arriving while the first is still running joins it rather
+  // than starting a competing check.
+  if (inFlight !== null) return inFlight;
+
   sendUpdateStatus("checking");
-  try {
-    const result = await autoUpdater.checkForUpdates();
-    const version = result?.updateInfo?.version;
-    if (version === undefined) {
-      const status = { state: "not-available" } as const;
-      sendUpdateStatus("not-available");
+  inFlight = (async (): Promise<UpdateStatus> => {
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      // A resolved check with no updateInfo is "nothing newer"; the
+      // update-not-available event is what usually reports it, and this covers
+      // the case where it has already fired before we got here.
+      const version = result?.updateInfo?.version;
+      const status: UpdateStatus =
+        version === undefined ? { state: "not-available" } : { state: "available", version };
+      if (version !== undefined) sendUpdateStatus("available", version);
+      lastCheck = { at: Date.now(), status };
       return status;
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      sendUpdateStatus("error", undefined, detail);
+      lastCheck = { at: Date.now(), status: { state: "error", detail } };
+      return lastCheck.status;
+    } finally {
+      inFlight = null;
     }
-    // A check that resolves without an update reports nothing on its own; the
-    // not-available event above is what tells us, and this covers the case
-    // where the emitter has already fired.
-    return { state: "available", ...(version === undefined ? {} : { version }) };
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    sendUpdateStatus("error", undefined, detail);
-    return { state: "error", detail };
-  }
+  })();
+  return inFlight;
 }
