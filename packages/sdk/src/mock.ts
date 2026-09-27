@@ -574,7 +574,7 @@ export function createMockDesktopClient(
       requireProject(projects, root);
       // The mock has no bundled server, and says so rather than inventing a
       // path. A dev-mode host reading "available: false" is the honest answer.
-      return { available: false, command: "", configExample: "" };
+      return { available: false, command: "", configs: [] };
     },
 
     fetchFromConnector: async (root, pluginId, query) => {

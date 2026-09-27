@@ -1,4 +1,11 @@
-import { type IpcChannel, type IpcRequest, type IpcResponse, AppError, ipc, mcpHostConfig } from "@open-merchant/shared";
+import {
+  type IpcChannel,
+  type IpcRequest,
+  type IpcResponse,
+  AppError,
+  ipc,
+  mcpHostConfigs,
+} from "@open-merchant/shared";
 import { parseCsv, renderReportHtml } from "@open-merchant/core";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import { access, writeFile } from "node:fs/promises";
@@ -27,6 +34,12 @@ type AnyHandler = (request: unknown) => Promise<unknown>;
  * shim, because a host cannot spawn a bare `.mjs` there.
  */
 function bundledMcpCommand(): string {
+  // An explicit override exists so a development checkout — which does not
+  // stage the server — can still point at one, and so the end-to-end suite can
+  // exercise the "server present" branch rather than only the honest "not in
+  // this build" one.
+  const override = process.env.OPEN_MERCHANT_MCP_COMMAND;
+  if (override !== undefined && override !== "") return override;
   const name = process.platform === "win32" ? "open-merchant-mcp.cmd" : "open-merchant-mcp.mjs";
   return join(process.resourcesPath, "mcp", name);
 }
@@ -290,9 +303,9 @@ export function registerIpcHandlers(
       // checkout has not built it, and says so rather than pointing a host at
       // a file that is not there.
       if (!(await exists(command))) {
-        return { available: false, command, configExample: "" };
+        return { available: false, command, configs: [] };
       }
-      return { available: true, command, configExample: mcpHostConfig(command, root) };
+      return { available: true, command, configs: mcpHostConfigs(command, root) };
     }),
 
     "plugins/list": channel<"plugins/list">(async () => plugins.list()),

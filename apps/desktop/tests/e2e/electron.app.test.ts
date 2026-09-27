@@ -1,6 +1,7 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { _electron, type ElectronApplication, type Page } from "playwright-core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -35,6 +36,32 @@ beforeEach(async () => {
   page = await electronApp.firstWindow();
   await page.waitForLoadState("domcontentloaded");
 });
+
+/**
+ * Points the app at a real MCP server file for one launch.
+ *
+ * A development checkout never stages the server, so without this the suite
+ * could only ever assert the "not present in this build" branch — and the
+ * branch that matters, the one a released build shows, would be untested.
+ */
+async function launchWithMcpServer(): Promise<void> {
+  const server = fileURLToPath(
+    new URL("../../../../packages/mcp/dist/cli.mjs", import.meta.url),
+  );
+  electronApp = await _electron.launch({
+    args: ["./out/main/index.js"],
+    env: {
+      ...process.env,
+      OPEN_MERCHANT_USER_DATA: userDataDir,
+      OPEN_MERCHANT_MCP_COMMAND: server,
+    },
+  });
+  await electronApp.evaluate(({ dialog }, parent) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [parent], bookmarks: [] });
+  }, projectsParent);
+  page = await electronApp.firstWindow();
+  await page.waitForLoadState("domcontentloaded");
+}
 
 afterEach(async () => {
   try {
@@ -282,6 +309,63 @@ describe("Open Merchant E2E currency change", () => {
     const payload = change?.currencyChange as { rate: string; toCurrency: string };
     expect(payload.rate).toBe("0.011");
     expect(payload.toCurrency).toBe("EUR");
+  });
+});
+
+describe("Open Merchant E2E MCP lane", () => {
+  it("hands over a config for the host the seller actually runs", async () => {
+    await electronApp.close();
+    await launchWithMcpServer();
+
+    await page.getByRole("button", { name: "New workspace" }).click();
+    await page.getByPlaceholder("Mechanical keyboards India").fill("Readable");
+    await page.locator(".home__form textarea").fill("Let an agent read this.");
+    await page.locator(".home__form button[type='submit']").click();
+    await page.locator(".shell__nav").first().waitFor({ state: "visible" });
+    await page.locator(".shell__nav").getByRole("button", { name: "Plugins" }).click();
+
+    const card = page.locator("section[aria-label='Read-only MCP lane']");
+    await card.waitFor({ state: "visible" });
+
+    // The two hosts disagree about the config key and the transport spelling,
+    // so the app offers a choice rather than one snippet that half of them
+    // silently will not read.
+    await card.getByRole("button", { name: "Claude Code or Claude Desktop" }).click();
+    const claude = await card.locator("pre").first().innerText();
+    expect(claude).toContain('"mcpServers"');
+    expect(claude).toContain('"type": "stdio"');
+
+    await card.getByRole("button", { name: "opencode" }).click();
+    const opencode = await card.locator("pre").first().innerText();
+    expect(opencode).toContain('"mcp"');
+    expect(opencode).toContain('"type": "local"');
+    expect(opencode).not.toContain("mcpServers");
+
+    // opencode wants the command as an array with the project as its argument,
+    // so the snippet it gets has to be the array form.
+    const parsed = JSON.parse(opencode) as {
+      mcp: Record<string, { command: string[] }>;
+    };
+    expect(parsed.mcp["open-merchant"]?.command).toHaveLength(2);
+
+    // The project folder is the argument, so the host opens the right project.
+    expect(parsed.mcp["open-merchant"]?.command?.[1]).toContain("readable");
+  });
+
+  it("says the server is absent rather than offering a path that is not there", async () => {
+    // The plain dev launch has no staged server, and must say so.
+    await page.getByRole("button", { name: "New workspace" }).click();
+    await page.getByPlaceholder("Mechanical keyboards India").fill("No server");
+    await page.locator(".home__form textarea").fill("No MCP here.");
+    await page.locator(".home__form button[type='submit']").click();
+    await page.locator(".shell__nav").first().waitFor({ state: "visible" });
+    await page.locator(".shell__nav").getByRole("button", { name: "Plugins" }).click();
+
+    const card = page.locator("section[aria-label='Read-only MCP lane']");
+    await card.waitFor({ state: "visible" });
+
+    expect(await card.innerText()).toContain("not present in this build");
+    expect(await card.locator("pre").count()).toBe(0);
   });
 });
 

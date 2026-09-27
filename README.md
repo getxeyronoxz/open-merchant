@@ -77,6 +77,12 @@ command and a ready-to-paste config for the project you have open:
 }
 ```
 
+Pick your host from the two buttons in the app and copy the snippet it shows. The two formats are
+genuinely different — opencode keys its map `mcp` and wants the command as an array, where Claude
+Code and Claude Desktop read `mcpServers` with a string command and a separate `args` — so a single
+snippet would be a guess. [`docs/mcp-hosts.md`](docs/mcp-hosts.md) has both, written down, with the
+sources they were taken from.
+
 On Windows that command needs no Node installation of your own — it runs through the Node runtime
 that ships with Open Merchant.
 

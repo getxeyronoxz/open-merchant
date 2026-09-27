@@ -41,6 +41,7 @@ import {
   pluginCatalogSchema,
   standingReviewsSchema,
 } from "./phase3";
+import { mcpHostConfigSchema } from "./mcp-host-config";
 
 /**
  * The IPC contract between renderer and main process. This map is the single
@@ -404,7 +405,10 @@ export const ipc = {
     response: z.object({
       available: z.boolean(),
       command: z.string(),
-      configExample: z.string(),
+      // One entry per verified host format. Hosts disagree on the top-level
+      // key, the transport spelling, and whether the command is a string or an
+      // array, so a single snippet is a guess the seller has to debug.
+      configs: z.array(mcpHostConfigSchema),
     }),
   },
 

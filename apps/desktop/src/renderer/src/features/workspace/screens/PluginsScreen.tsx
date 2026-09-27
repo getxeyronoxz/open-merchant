@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import type { McpHostConfig } from "@open-merchant/shared";
+
 import { ErrorState } from "@open-merchant/ui";
 
 import { useDraftInbox } from "../DraftInboxProvider";
@@ -97,8 +99,8 @@ export function PluginsScreen({ root }: { readonly root: string }) {
 
       <McpLaneCard
         available={mcp.data?.available ?? false}
-        configExample={mcp.data?.configExample ?? ""}
         command={mcp.data?.command ?? ""}
+        configs={mcp.data?.configs ?? []}
       />
     </section>
   );
@@ -115,30 +117,75 @@ export function PluginsScreen({ root }: { readonly root: string }) {
  */
 function McpLaneCard({
   available,
-  configExample,
   command,
+  configs,
 }: {
   available: boolean;
-  configExample: string;
   command: string;
+  configs: readonly McpHostConfig[];
 }) {
+  // A single snippet would be a guess. Hosts disagree on the top-level key, the
+  // transport spelling, and whether the command is a string or an array, so the
+  // seller picks the host they actually run rather than being handed something
+  // that silently will not be read.
+  const [hostId, setHostId] = useState(configs[0]?.id ?? "");
+  const host = configs.find((entry) => entry.id === hostId) ?? configs[0];
+
   return (
     <section className="om-card" aria-label="Read-only MCP lane">
       <p className="om-eyebrow">Let your AI read the record</p>
       <p className="om-field__hint">
         Open Merchant ships a local MCP server your AI assistant can spawn, so it can read this
         project&apos;s evidence, competitors, scenarios, and reports. It cannot write: every write is
-        refused, and every read is recorded in the project&apos;s run log. Nothing leaves your machine.
+        refused, and every read is recorded in the project&apos;s run log. Nothing leaves your
+        machine.
       </p>
-      {available ? (
+      {available && host !== undefined ? (
         <>
           <p className="om-field__hint">
-            Paste this into your MCP host&apos;s config to open this project. It points at{" "}
-            <code>{command}</code>.
+            Add it to the host you use. It points at <code>{command}</code> and opens this project.
           </p>
-          <pre className="om-code" aria-label="MCP host configuration">
-            {configExample}
+          {configs.length > 1 ? (
+            <div className="om-field" role="group" aria-label="Which app are you adding this to?">
+              <span className="om-field__label" id="om-mcp-host-label">
+                I use
+              </span>
+              <div className="draft-desk__actions">
+                {configs.map((entry) => (
+                  <button
+                    aria-pressed={entry.id === host.id}
+                    className={`om-button ${entry.id === host.id ? "om-button--primary" : "om-button--secondary"}`}
+                    key={entry.id}
+                    onClick={() => setHostId(entry.id)}
+                    type="button"
+                  >
+                    {entry.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          <p className="om-field__hint">
+            Paste this into {host.fileHint}:
+          </p>
+          <pre className="om-code" aria-label={`${host.label} configuration`}>
+            {host.snippet}
           </pre>
+          {host.cli === "" ? null : (
+            <>
+              <p className="om-field__hint">
+                Or skip the file entirely and run this instead:
+              </p>
+              <pre className="om-code" aria-label={`${host.label} command`}>
+                {host.cli}
+              </pre>
+            </>
+          )}
+          <p className="om-field__hint">
+            Other hosts speak the same protocol but name the settings differently — the shape above
+            is the one {host.label} reads. If yours differs, it needs <code>command</code> and the
+            project folder as its first argument.
+          </p>
         </>
       ) : (
         <p className="om-field__hint">
