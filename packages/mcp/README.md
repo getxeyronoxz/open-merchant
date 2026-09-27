@@ -1,4 +1,4 @@
-# `@open-merchant/mcp`
+# `open-merchant-mcp`
 
 Phase 3, build-order item 1: Open Merchant as a **local, read-only MCP server**.
 Any MCP host (Claude Desktop, an IDE agent, a local script) can spawn it against
@@ -19,7 +19,7 @@ follow a project the app does not own, or when the app's own install is not
 available:
 
 ```bash
-npx --yes @open-merchant/mcp /path/to/project
+npx --yes open-merchant-mcp /path/to/project
 ```
 
 ## Ground rules (the draft gate, protocol edition)
@@ -84,8 +84,8 @@ project that must remain readable by an older alpha app.
 ## Build and verify locally
 
 ```bash
-pnpm --filter @open-merchant/mcp build
-pnpm --filter @open-merchant/mcp test
+pnpm --filter open-merchant-mcp build
+pnpm --filter open-merchant-mcp test
 ```
 
 The test command rebuilds `dist/cli.mjs` first and includes a real spawned-child

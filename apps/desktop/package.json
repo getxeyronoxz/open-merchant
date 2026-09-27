@@ -7,7 +7,7 @@
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "pnpm --filter @open-merchant/mcp build && node stage-mcp.cjs && electron-vite build",
+    "build": "pnpm --filter open-merchant-mcp build && node stage-mcp.cjs && electron-vite build",
     "dist": "pnpm run build && electron-builder --publish never",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",

@@ -89,7 +89,7 @@ command and a config to paste, and asks which host you use first — because hos
 It is also on npm if you would rather not go through the app at all:
 
 ```bash
-npx --yes @open-merchant/mcp /path/to/project
+npx --yes open-merchant-mcp /path/to/project
 ```
 opencode reads an `mcp` key with the transport spelled `local` and the command as an array; Claude
 Code and Claude Desktop read `mcpServers` with `stdio`, a string command, and a separate `args`.

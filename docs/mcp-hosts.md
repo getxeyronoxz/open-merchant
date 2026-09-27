@@ -25,10 +25,10 @@ Two routes, same binary:
 
 - **In the app.** A published install always includes it, and the Plugins screen shows the exact
   path and a config to paste. This is the easy route and needs no Node of your own.
-- **On npm.** `@open-merchant/mcp` is a single self-contained file with no runtime dependencies:
+- **On npm.** `open-merchant-mcp` is a single self-contained file with no runtime dependencies:
 
   ```bash
-  npx --yes @open-merchant/mcp /path/to/project
+  npx --yes open-merchant-mcp /path/to/project
   ```
 
   Useful when the server has to follow a project the app does not own, or when you would rather not
