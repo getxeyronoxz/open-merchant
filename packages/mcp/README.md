@@ -11,8 +11,16 @@ open-merchant-mcp /path/to/project
 **It ships inside the desktop app**, so most users never run the command above
 themselves. `apps/desktop/stage-mcp.cjs` stages the built server into the app's
 resources at build time, and the Plugins screen hands the user the exact path and
-a host config for the project they have open. This package is `private: true` and
-is **not published to npm**; the app bundle is the distribution channel.
+a host config for the project they have open.
+
+It is also on npm, as a single self-contained binary with no runtime
+dependencies — the same bundle the app ships. Useful when the server has to
+follow a project the app does not own, or when the app's own install is not
+available:
+
+```bash
+npx --yes @open-merchant/mcp /path/to/project
+```
 
 ## Ground rules (the draft gate, protocol edition)
 

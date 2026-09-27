@@ -86,6 +86,11 @@ level rather than by a check that could be bypassed. Every read appends one reco
 
 The server ships inside the app. **Plugins → "Let your AI read the record"** gives you the exact
 command and a config to paste, and asks which host you use first — because hosts genuinely disagree.
+It is also on npm if you would rather not go through the app at all:
+
+```bash
+npx --yes @open-merchant/mcp /path/to/project
+```
 opencode reads an `mcp` key with the transport spelled `local` and the command as an array; Claude
 Code and Claude Desktop read `mcpServers` with `stdio`, a string command, and a separate `args`.
 [`docs/mcp-hosts.md`](docs/mcp-hosts.md) has both, with the sources they came from.
@@ -274,7 +279,7 @@ a local update feed, and `OPEN_MERCHANT_TEST_UPDATE_URL` points an installed bui
   Nothing in a project folder is ever lost.
 - No plugins are installed for you. There is no marketplace and no installer — you copy a folder, and
   a runnable example is in `examples/sample-connector`.
-- The MCP server ships inside the app but is not published to npm, and the app is not on Flathub.
+- The app is not on Flathub yet. The MCP server is on npm, so it is available either way.
 - A snap keeps its data in a per-release directory, so plugins and a stored key can appear to vanish
   across an update. Prefer AppImage or flatpak until that is fixed.
 - One writer per project at a time. Don't edit a project elsewhere while Open Merchant has unsaved

@@ -19,6 +19,22 @@ each host actually expects.
 
 Point it at **one project folder**. The server serves that folder and nothing else.
 
+## Where the server comes from
+
+Two routes, same binary:
+
+- **In the app.** A published install always includes it, and the Plugins screen shows the exact
+  path and a config to paste. This is the easy route and needs no Node of your own.
+- **On npm.** `@open-merchant/mcp` is a single self-contained file with no runtime dependencies:
+
+  ```bash
+  npx --yes @open-merchant/mcp /path/to/project
+  ```
+
+  Useful when the server has to follow a project the app does not own, or when you would rather not
+  install the app at all. It does need a `node` on your `PATH` (20 or newer); the copy inside the app
+  does not.
+
 ## The two formats, and why they differ
 
 The wire protocol is identical everywhere. The *config file* is not: hosts disagree on the
