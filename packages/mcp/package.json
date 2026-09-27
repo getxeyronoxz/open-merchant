@@ -5,7 +5,7 @@
   "description": "Read-only MCP server for an Open Merchant project folder. stdio only, no network socket, every read journaled.",
   "type": "module",
   "bin": {
-    "open-merchant-mcp": "./dist/cli.mjs"
+    "open-merchant-mcp": "dist/cli.mjs"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
