@@ -1,7 +1,8 @@
-import { type IpcChannel, type IpcRequest, type IpcResponse, AppError, ipc } from "@open-merchant/shared";
+import { type IpcChannel, type IpcRequest, type IpcResponse, AppError, ipc, mcpHostConfig } from "@open-merchant/shared";
 import { parseCsv, renderReportHtml } from "@open-merchant/core";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
-import { writeFile } from "node:fs/promises";
+import { access, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 
 import { RecentsStore } from "./recents";
 import type { PluginStore } from "./plugin-store";
@@ -16,6 +17,28 @@ import type { MerchantService } from "./service";
  */
 
 type AnyHandler = (request: unknown) => Promise<unknown>;
+
+/**
+ * Where the bundled read-only MCP server lives, for the current platform.
+ *
+ * `process.resourcesPath` and not `app.getAppPath()`: in a packaged build the
+ * app lives inside `app.asar`, and everything electron-builder copies as an
+ * extra resource sits beside it under `resources/`. Windows gets the `.cmd`
+ * shim, because a host cannot spawn a bare `.mjs` there.
+ */
+function bundledMcpCommand(): string {
+  const name = process.platform === "win32" ? "open-merchant-mcp.cmd" : "open-merchant-mcp.mjs";
+  return join(process.resourcesPath, "mcp", name);
+}
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Captures the exact contract types for one channel while erasing them for
@@ -259,6 +282,18 @@ export function registerIpcHandlers(
     "ai/audit-report": channel<"ai/audit-report">(async ({ root }) =>
       service.auditGeneratedReport(root),
     ),
+
+    "mcp/locate": channel<"mcp/locate">(async ({ root }) => {
+      const command = bundledMcpCommand();
+      // The server is bundled into the installer as a resource, so a released
+      // build always has one at a path that matches its own version. A dev
+      // checkout has not built it, and says so rather than pointing a host at
+      // a file that is not there.
+      if (!(await exists(command))) {
+        return { available: false, command, configExample: "" };
+      }
+      return { available: true, command, configExample: mcpHostConfig(command, root) };
+    }),
 
     "plugins/list": channel<"plugins/list">(async () => plugins.list()),
     "plugins/source": channel<"plugins/source">(async ({ pluginId }) => ({

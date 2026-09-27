@@ -45,6 +45,9 @@ export default tseslint.config(
     ignores: [
       "**/dist/**",
       "**/out/**",
+      // Staged at build time by apps/desktop/stage-mcp.cjs; the source of
+      // truth is packages/mcp. A megabyte of generated bundle is not source.
+      "apps/desktop/resources/**",
       "**/node_modules/**",
       "**/*.config.js",
       "**/*.cjs",

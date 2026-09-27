@@ -7,3 +7,4 @@ export * from "./errors";
 export * from "./ipc";
 export * from "./ai";
 export * from "./version";
+export * from "./mcp-host-config";

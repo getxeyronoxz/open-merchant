@@ -17,7 +17,7 @@ interface JsonRpcResponse {
   readonly error?: { readonly code: number; readonly message: string };
 }
 
-const CLI = fileURLToPath(new URL("../dist/cli.js", import.meta.url));
+const CLI = fileURLToPath(new URL("../dist/cli.mjs", import.meta.url));
 
 class StdioClient {
   private readonly child: ChildProcessWithoutNullStreams;

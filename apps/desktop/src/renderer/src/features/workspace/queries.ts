@@ -232,6 +232,21 @@ export function useApplyCurrencyChange(root: string) {
   });
 }
 
+/**
+ * Where the read-only MCP server is, and the host config to paste for it.
+ *
+ * `available` is false in a dev checkout, where the server has not been staged
+ * into the bundle. The screen says so rather than offering a path that is not
+ * there — the same rule the rest of the app follows for a missing capability.
+ */
+export function useMcpServer(root: string) {
+  return useQuery({
+    queryKey: ["mcp", "locate", root],
+    queryFn: () => client.locateMcpServer(root),
+    enabled: root !== "",
+  });
+}
+
 export function usePluginCatalog() {
   return useQuery({ queryKey: ["plugins"], queryFn: () => client.listPlugins() });
 }

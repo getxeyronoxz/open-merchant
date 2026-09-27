@@ -8,6 +8,13 @@ directories:
 files:
   - out/**
   - package.json
+# The read-only MCP server, staged by stage-mcp.cjs at build time. electron-builder
+# copies it beside the app, which is where the main process resolves it
+# (process.resourcesPath/mcp) so a released build can hand a user a host config
+# that points at a file which actually exists.
+extraResources:
+  - from: resources/mcp
+    to: mcp
 # Workspace packages are bundled into out/ by electron-vite; node_modules
 # needed at runtime are only electron itself.
 npmRebuild: false

@@ -569,6 +569,14 @@ export function createMockDesktopClient(
       throw new AppError({ code: "not-found", message: "PDF export is available in the desktop app." });
     },
 
+    locateMcpServer: async (root) => {
+      await Promise.resolve();
+      requireProject(projects, root);
+      // The mock has no bundled server, and says so rather than inventing a
+      // path. A dev-mode host reading "available: false" is the honest answer.
+      return { available: false, command: "", configExample: "" };
+    },
+
     fetchFromConnector: async (root, pluginId, query) => {
       await Promise.resolve();
       requireProject(projects, root);

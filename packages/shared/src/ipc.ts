@@ -391,6 +391,23 @@ export const ipc = {
     response: z.object({ drafts: z.array(connectorDraftSchema).min(1), fetchedAt: isoDateTimeSchema }),
   },
 
+  /**
+   * Where the read-only MCP server is, and the host config to paste for it.
+   *
+   * `available` is false in a dev checkout, where the server has not been
+   * built into the bundle. The app says so rather than handing out a path that
+   * does not exist, which is the rule everywhere else in this contract: a
+   * capability that is not there is stated, not implied.
+   */
+  "mcp/locate": {
+    request: z.object({ root: z.string() }),
+    response: z.object({
+      available: z.boolean(),
+      command: z.string(),
+      configExample: z.string(),
+    }),
+  },
+
   // --- standing reviews (phase 3) -------------------------------------------
 
   /**

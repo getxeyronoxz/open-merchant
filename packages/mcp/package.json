@@ -16,7 +16,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "pnpm run build && vitest run",
-    "build": "esbuild src/cli.ts --bundle --platform=node --target=node22 --format=esm --sourcemap --outfile=dist/cli.js --external:zod --external:@modelcontextprotocol/server"
+    "build": "esbuild src/cli.ts --bundle --platform=node --target=node22 --format=esm --sourcemap --outfile=dist/cli.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.0.0",

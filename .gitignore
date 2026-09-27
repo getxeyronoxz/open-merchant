@@ -11,6 +11,10 @@ src-tauri/target/
 # Electron / packaging
 release/
 
+# The MCP server is staged into the bundle by apps/desktop/stage-mcp.cjs at
+# build time. The source of truth is packages/mcp; this copy is build output.
+apps/desktop/resources/mcp/
+
 # Environment
 .env
 .env.*

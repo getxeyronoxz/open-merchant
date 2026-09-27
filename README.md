@@ -162,7 +162,6 @@ the direction of the product.
 - Assistants cannot browse: you supply page content by pasting it.
 - Unaccepted drafts are session-scoped: a draft waiting for review on the Draft Desk is lost when you quit. Accepting it is the only thing that persists. Nothing is ever lost from a project folder.
 - No plugins ship with the app, and there is no plugin installer — a plugin is a folder you place under this app's `plugins` directory yourself, and no sample connector is published yet, so the connector features have nothing to run out of the box.
-- The read-only MCP server is not in the installer yet; it is currently only runnable from a source checkout.
 - One writer per project at a time; do not edit a project elsewhere while Open Merchant has unsaved changes.
 - The checked-in example project contains clearly-marked demo data, not live commercial claims.
 
