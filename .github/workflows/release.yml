@@ -1,6 +1,6 @@
 # Builds installers on GitHub runners (never on a dev machine) and publishes
 # them — plus the latest.yml update feed — to GitHub Releases. Tag a commit
-# (v1.0.0-alpha.1, …) to cut a release. Code-signing secrets are optional
+# (v1.0.0, …) to cut a release. Code-signing secrets are optional
 # slots: empty today, and the same workflow produces signed builds later.
 name: Release
 
@@ -74,6 +74,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y flatpak flatpak-builder
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          # The runtime and SDK are installed explicitly rather than left to
+          # flatpak-builder's auto-download, so a build fails here with a clear
+          # message instead of producing a flatpak that nobody can install.
+          # Keep this in step with flatpak.runtimeVersion in electron-builder.yml.
+          flatpak install --user -y flathub org.freedesktop.Platform//26.08 org.freedesktop.Sdk//26.08
 
       - name: Build renderer + main + preload
         run: pnpm --filter @open-merchant/desktop build

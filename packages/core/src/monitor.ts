@@ -31,7 +31,10 @@ export function worstFlagStatus(
 
 export function marginMonitor(
   assumptions: CostAssumptions,
-  scenarios: EconomicsScenario[],
+  // Read-only: the monitor only maps over the scenarios, and callers that hold
+  // an immutable view of a project's economics should not have to copy to ask
+  // what the margins look like.
+  scenarios: readonly EconomicsScenario[],
   marketPrice: string | null,
   marketSource: string | null,
 ): MarginMonitorResult {

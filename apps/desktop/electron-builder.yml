@@ -8,6 +8,13 @@ directories:
 files:
   - out/**
   - package.json
+# The read-only MCP server, staged by stage-mcp.cjs at build time. electron-builder
+# copies it beside the app, which is where the main process resolves it
+# (process.resourcesPath/mcp) so a released build can hand a user a host config
+# that points at a file which actually exists.
+extraResources:
+  - from: resources/mcp
+    to: mcp
 # Workspace packages are bundled into out/ by electron-vite; node_modules
 # needed at runtime are only electron itself.
 npmRebuild: false
@@ -25,12 +32,23 @@ nsis:
   allowToChangeInstallationDirectory: true
 mac:
   target:
+    # The DMG is what a person downloads. The zip is not for them: electron-updater's
+    # macOS path applies a zip diff, so a build with no zip target has nothing to
+    # patch against and the macOS update feed cannot work. Both are published; the
+    # DMG is unchanged as the artifact a user opens.
     - dmg
+    - zip
   icon: build/icon.png
   category: public.app-category.business
 linux:
   target:
     - AppImage
+    # AppImage needs libfuse2, which Arch dropped for fuse3 and which many
+    # minimal systems do not have — a refused install with a missing-library
+    # error. deb and tar.gz are the no-FUSE paths: a real installer on
+    # Debian/Ubuntu/Mint, and a plain archive anyone can unpack anywhere.
+    - deb
+    - tar.gz
     - snap
     - flatpak
   icon: build/icon.png
@@ -42,7 +60,11 @@ linux:
   # (Snap-specific options live in the top-level `snap:` block below — the
   # LinuxConfiguration schema has no snap key.)
 flatpak:
-  runtimeVersion: "23.08"
+  # Was 23.08, an end-of-life runtime from 2023. Flathub keeps only supported
+  # runtimes in the main repository, so a flatpak built against one cannot be
+  # installed on a current system. Verified against the Flathub runtime list:
+  # 26.08 is the current freedesktop runtime.
+  runtimeVersion: "26.08"
 # The snap artifact filename must not contain the scoped package name:
 # electron-builder derives it from "${name}" (the package name
 # @open-merchant/desktop) and the "/" makes mksquashfs fail with "Could not

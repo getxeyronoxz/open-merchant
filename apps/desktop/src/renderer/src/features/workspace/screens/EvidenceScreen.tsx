@@ -319,21 +319,21 @@ function SourceForm({
         {draft.observations.map((observation, index) => (
           <div className="evidence__observation" key={`${observation.id}-${index}`}>
             <input
-              aria-label="Label"
+              aria-label={`Observation ${index + 1} label`}
               className="om-input"
               onChange={(event) => setObservation(index, { ...observation, label: event.target.value })}
               placeholder="Label"
               value={observation.label}
             />
             <input
-              aria-label="Value"
+              aria-label={`Observation ${index + 1} value`}
               className="om-input om-money"
               onChange={(event) => setObservation(index, { ...observation, value: event.target.value })}
               placeholder="Value"
               value={observation.value}
             />
             <input
-              aria-label="Unit"
+              aria-label={`Observation ${index + 1} unit`}
               className="om-input"
               onChange={(event) =>
                 setObservation(index, { ...observation, unit: event.target.value || null })

@@ -1,11 +1,13 @@
 import { useState } from "react";
 
-import type { Competitor, CompetitorDraft, MarketSnapshot } from "@open-merchant/shared";
+import type { AiOrigin, Competitor, CompetitorDraft, MarketSnapshot } from "@open-merchant/shared";
+import { applyCsvImporterPreset } from "@open-merchant/shared";
 import { EmptyState, ErrorState, Field, LedgerRow } from "@open-merchant/ui";
 
 import { useProject } from "../../../state/project";
 import {
   useCaptureMarketSnapshot,
+  useCsvImporterPresets,
   useCompetitorStatistics,
   useCompetitors,
   useDraftCompetitors,
@@ -17,6 +19,7 @@ import {
 import { client } from "../../../client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { SectionName } from "../useWorkflowProgress";
+import { moneyLabel } from "../moneyLabel";
 
 function nextCompetitorId(existing: Competitor[]): string {
   const highest = existing.reduce((max, competitor) => {
@@ -41,6 +44,7 @@ export function CompetitorsScreen({
   const [form, setForm] = useState({ product: "", brand: "", price: "", marketplace: "", url: "" });
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [aiDrafts, setAiDrafts] = useState<CompetitorDraft[] | null>(null);
+  const [aiOrigin, setAiOrigin] = useState<AiOrigin | null>(null);
   const { project } = useProject();
   const projectCurrency = project?.manifest.currency ?? "";
 
@@ -105,9 +109,10 @@ export function CompetitorsScreen({
         observedAt: new Date().toISOString(),
       };
     });
-    save.mutate([...competitors, ...additions], {
+    save.mutate({ competitors: [...competitors, ...additions], origin: aiOrigin ?? undefined }, {
       onSuccess: () => {
         setAiDrafts(null);
+        setAiOrigin(null);
         setAiPanelOpen(false);
       },
     });
@@ -130,7 +135,10 @@ export function CompetitorsScreen({
             event.preventDefault();
             const data = new FormData(event.currentTarget);
             draftAi.mutate(String(data.get("pastedListings") ?? ""), {
-              onSuccess: (result) => setAiDrafts(result.competitors),
+              onSuccess: (result) => {
+                setAiDrafts(result.competitors);
+                setAiOrigin(result.origin);
+              },
             });
           }}
         >
@@ -184,7 +192,7 @@ export function CompetitorsScreen({
             addCompetitor();
           }}
         >
-          <Field label={`Product (${projectCurrency})`}>
+          <Field label={moneyLabel("Product", projectCurrency)}>
             <input
               className="om-input"
               onChange={(event) => setForm({ ...form, product: event.target.value })}
@@ -335,6 +343,7 @@ function SpreadsheetBridgeCard({ root, currency }: { root: string; currency: str
   const [csvText, setCsvText] = useState<string | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
+  const presets = useCsvImporterPresets();
   const [importResult, setImportResult] = useState<{
     imported: number;
     skipped: number;
@@ -449,18 +458,47 @@ function SpreadsheetBridgeCard({ root, currency }: { root: string; currency: str
       </div>
       {exportError ? <ErrorState error={exportError} /> : null}
 
-      <div className="om-field" style={{ marginTop: "var(--om-space-3)" }}>
-        <span className="om-field__label">Import competitors from CSV</span>
-        <input
-          accept=".csv,text/csv"
-          className="om-input"
-          onChange={(event) => void onFileChosen(event.target.files?.[0])}
-          type="file"
-        />
+      <div style={{ marginTop: "var(--om-space-3)" }}>
+        <Field label="Import competitors from CSV">
+          <input
+            accept=".csv,text/csv"
+            className="om-input"
+            onChange={(event) => void onFileChosen(event.target.files?.[0])}
+            type="file"
+          />
+        </Field>
       </div>
       {csvText !== null && headers.length > 0 ? (
         <>
           <p className="om-eyebrow">Column mapping</p>
+          {presets.length > 0 ? (
+            <div className="om-field">
+              <label className="om-field__label" htmlFor="csv-preset">
+                Start from a saved dialect
+              </label>
+              <select
+                className="om-input"
+                id="csv-preset"
+                onChange={(event) => {
+                  const preset = presets.find((entry) => entry.id === event.target.value);
+                  if (!preset) return;
+                  setMapping(applyCsvImporterPreset(preset.mapping, headers));
+                }}
+                value=""
+              >
+                <option value="">Choose a dialect…</option>
+                {presets.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.name}
+                  </option>
+                ))}
+              </select>
+              <p className="om-field__hint">
+                A dialect only fills in the columns this file actually has — every mapping stays
+                yours to change.
+              </p>
+            </div>
+          ) : null}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "var(--om-space-3)" }}>
             {mappingSelect("Product", "product", true)}
             {mappingSelect("Brand", "brand", false)}

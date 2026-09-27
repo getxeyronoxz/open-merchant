@@ -142,6 +142,60 @@ describe("Field", () => {
     expect(html).toContain("Title");
     expect(html).not.toContain("om-field__hint");
   });
+
+  it("keeps the hint out of the label, so a hint is not part of the field's name", () => {
+    // The label wrapping the control is what gave the association for free, but
+    // it made the hint part of every accessible name too. A 200-character
+    // connector hint then became what a screen reader announced for the field,
+    // instead of the question the field actually asks.
+    const html = renderToStaticMarkup(
+      <Field hint="Leave empty to keep it." label="API key">
+        <input />
+      </Field>,
+    );
+    const label = html.match(/<label[^>]*>[\s\S]*?<\/label>/u)?.[0] ?? "";
+
+    expect(label).toContain("API key");
+    expect(label).not.toContain("Leave empty to keep it.");
+  });
+
+  it("points the control at the hint so it is still announced", () => {
+    const html = renderToStaticMarkup(
+      <Field hint="0–100" label="Rate">
+        <input />
+      </Field>,
+    );
+    const hintId = html.match(/class="om-field__hint" id="([^"]+)"/u)?.[1];
+
+    expect(hintId).toBeTruthy();
+    expect(html).toContain(`aria-describedby="${hintId}"`);
+  });
+
+  it("names the control from the label alone", () => {
+    const html = renderToStaticMarkup(
+      <Field label="Title">
+        <input />
+      </Field>,
+    );
+    const controlId = html.match(/<input[^>]*id="([^"]+)"/u)?.[1];
+
+    expect(controlId).toBeTruthy();
+    expect(html).toContain(`for="${controlId}"`);
+  });
+
+  it("keeps an id and description the caller already set", () => {
+    // Cloning the control must not silently discard what a caller needed to
+    // wire up its own labels.
+    const html = renderToStaticMarkup(
+      <Field hint="0–100" label="Rate">
+        <input aria-describedby="own" id="own" />
+      </Field>,
+    );
+
+    expect(html).toContain('for="own"');
+    expect(html).toContain('id="own"');
+    expect(html).toContain("own");
+  });
 });
 
 describe("LedgerRow", () => {

@@ -10,6 +10,13 @@ src-tauri/target/
 
 # Electron / packaging
 release/
+# A one-off packaged build used to verify a launcher without disturbing an
+# existing release/ tree (a locked app.asar makes electron-builder fail).
+apps/desktop/release-verify/
+
+# The MCP server is staged into the bundle by apps/desktop/stage-mcp.cjs at
+# build time. The source of truth is packages/mcp; this copy is build output.
+apps/desktop/resources/mcp/
 
 # Environment
 .env
@@ -31,5 +38,9 @@ graphify-out/
 # demo recorder frames
 .om-frames/
 
+# Local agent scratch output (logs, run artifacts — never commit)
+.agent/
+
 # Local Claude Code settings (per-machine)
 .claude/settings.local.json
+.superpowers/

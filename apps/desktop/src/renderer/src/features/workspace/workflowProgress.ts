@@ -5,6 +5,8 @@ export type SectionName =
   | "Economics"
   | "Report"
   | "Artifacts"
+  | "Drafts"
+  | "Plugins"
   | "AI";
 
 export interface WorkflowStep {

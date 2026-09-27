@@ -16,7 +16,7 @@ import {
   reportSectionsSchema,
   snapshotDiffSchema,
 } from "./artifacts";
-import { marketSnapshotIdSchema } from "./money";
+import { currencyCodeSchema, marketSnapshotIdSchema } from "./money";
 import {
   auditReportSchema,
   competitorDraftSchema,
@@ -24,7 +24,24 @@ import {
   providerIdSchema,
   researchPlanSchema,
 } from "./ai";
-import { aiOriginSchema, generationOriginSchema, provenanceRecordSchema, runRecordSchema } from "./provenance";
+import {
+  aiOriginSchema,
+  conversionRateSchema,
+  currencyChangePreviewSchema,
+  currencyChangeRecordSchema,
+  generationOriginSchema,
+  provenanceRecordSchema,
+  reviewDispositionSchema,
+  reviewKeyShape,
+  runRecordSchema,
+} from "./provenance";
+import {
+  connectorDraftSchema,
+  installedPluginSchema,
+  pluginCatalogSchema,
+  standingReviewsSchema,
+} from "./phase3";
+import { mcpHostConfigSchema } from "./mcp-host-config";
 
 /**
  * The IPC contract between renderer and main process. This map is the single
@@ -66,9 +83,23 @@ export const rootOnlyInputSchema = z.object({ root: z.string() });
  * downloaded update is ready; it never needs to poll.
  */
 export const updateStatusSchema = z.object({
-  state: z.enum(["checking", "available", "not-available", "downloaded", "error"]),
+  /**
+   * `unavailable` means this build has no updater at all — a development
+   * checkout. It is a real state rather than a missing one, because a dev build
+   * reports Electron's version as the app's and would otherwise claim "you are
+   * on 39.x, the newest release" about software that is not Open Merchant.
+   */
+  state: z.enum(["checking", "available", "not-available", "downloaded", "error", "unavailable"]),
   version: z.string().optional(),
+  /**
+   * Why, in a sentence a person can act on. Carried because "not updated" and
+   * "we could not find out" are different facts, and a UI that renders them
+   * the same way is lying by omission: a seller whose update check has been
+   * failing for a week has no other way to notice.
+   */
+  detail: z.string().optional(),
 });
+
 
 export type UpdateStatus = z.infer<typeof updateStatusSchema>;
 
@@ -85,6 +116,16 @@ export const ipc = {
       appVersion: z.string(),
       platform: z.string(),
     }),
+  },
+  /**
+   * Ask for a check now, and get the honest result rather than a fire-and-
+   * forget promise. The menu item needs to answer the person who clicked it:
+   * "you are on the newest release" and "we could not reach the feed" are
+   * different answers and only one of them is good news.
+   */
+  "update/check": {
+    request: z.object({}),
+    response: z.object({ status: updateStatusSchema }),
   },
   "update/install": {
     request: z.object({}),
@@ -151,7 +192,12 @@ export const ipc = {
     response: z.object({ competitors: z.array(competitorSchema) }),
   },
   "competitors/save": {
-    request: z.object({ root: z.string(), competitors: z.array(competitorSchema) }),
+    request: z.object({
+      root: z.string(),
+      competitors: z.array(competitorSchema),
+      // Set when the saved content originated from an accepted AI draft.
+      origin: generationOriginSchema.optional(),
+    }),
     response: z.object({}),
   },
   "competitors/statistics": {
@@ -352,6 +398,88 @@ export const ipc = {
   "ai/audit-report": {
     request: rootOnlyInputSchema,
     response: z.object({ audit: auditReportSchema, origin: aiOriginSchema }),
+  },
+  "plugins/list": {
+    request: z.object({}),
+    response: pluginCatalogSchema,
+  },
+  "plugins/source": {
+    request: z.object({ pluginId: z.string().min(1) }),
+    response: z.object({ source: z.string() }),
+  },
+  "plugins/set-enabled": {
+    request: z.object({ pluginId: z.string().min(1), enabled: z.boolean() }),
+    response: z.object({ plugin: installedPluginSchema }),
+  },
+  "connectors/fetch": {
+    request: z.object({ root: z.string(), pluginId: z.string().min(1), query: z.string().min(1) }),
+    response: z.object({ drafts: z.array(connectorDraftSchema).min(1), fetchedAt: isoDateTimeSchema }),
+  },
+
+  /**
+   * Where the read-only MCP server is, and the host config to paste for it.
+   *
+   * `available` is false in a dev checkout, where the server has not been
+   * built into the bundle. The app says so rather than handing out a path that
+   * does not exist, which is the rule everywhere else in this contract: a
+   * capability that is not there is stated, not implied.
+   */
+  "mcp/locate": {
+    request: z.object({ root: z.string() }),
+    response: z.object({
+      available: z.boolean(),
+      command: z.string(),
+      // One entry per verified host format. Hosts disagree on the top-level
+      // key, the transport spelling, and whether the command is a string or an
+      // array, so a single snippet is a guess the seller has to debug.
+      configs: z.array(mcpHostConfigSchema),
+    }),
+  },
+
+  // --- standing reviews (phase 3) -------------------------------------------
+
+  /**
+   * The attention queue across every project the app knows about. `now` is
+   * read in the main process, not sent: the renderer cannot be trusted to
+   * decide what "stale" means, and a review that disagreed with the clock that
+   * produced it would be worse than none.
+   */
+  "reviews/standing": {
+    request: z.object({}),
+    response: standingReviewsSchema,
+  },
+  /**
+   * Snooze or dismiss one review. The request names only the key; the main
+   * process looks the review up and records *its* due date as the occurrence
+   * being silenced, so the renderer cannot silence a different one by
+   * asserting a date.
+   */
+  "reviews/dispose": {
+    request: z.object({ root: z.string(), reviewKey: reviewKeyShape, action: z.enum(["snoozed", "dismissed"]) }),
+    response: z.object({ disposition: reviewDispositionSchema }),
+  },
+  /**
+   * Restate a project in another currency, at a rate the seller types. There is
+   * no network call behind this channel: the rate is an input, never a lookup.
+   *
+   * Both channels take only the seller's intent. The main process derives the
+   * change from the artifacts on disk and the renderer never supplies a plan,
+   * so a stale or hand-built preview cannot decide what gets written.
+   */
+  "currency/preview": {
+    request: z.object({ root: z.string(), toCurrency: currencyCodeSchema, rate: conversionRateSchema }),
+    response: currencyChangePreviewSchema,
+  },
+  "currency/apply": {
+    request: z.object({ root: z.string(), toCurrency: currencyCodeSchema, rate: conversionRateSchema }),
+    // The snapshot comes back because the change moves the project's own
+    // currency: every screen reading the manifest would otherwise keep showing
+    // the old one until the window was reopened.
+    response: z.object({
+      change: currencyChangeRecordSchema,
+      changedCount: z.number().int().nonnegative(),
+      snapshot: projectSnapshotSchema,
+    }),
   },
 } as const;
 

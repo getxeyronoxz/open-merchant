@@ -1,18 +1,22 @@
 import { useEffect, useState } from "react";
 
-import type { CostAssumptions, EconomicsScenario } from "@open-merchant/shared";
+import type { CostAssumptions, CurrencyChangePreview, EconomicsScenario } from "@open-merchant/shared";
 import { EmptyState, ErrorState, Field, LedgerRow } from "@open-merchant/ui";
 
 import { useProject } from "../../../state/project";
 import {
+  useApplyCurrencyChange,
   useAssumptions,
   useCalculateScenarios,
+  useCurrencyPreview,
   useMarginMonitor,
   useReviewEconomics,
   useSaveAssumptions,
   useScenarios,
 } from "../queries";
 import type { SectionName } from "../useWorkflowProgress";
+import { CurrencyChangePanel } from "./CurrencyChangePanel";
+import { moneyLabel } from "../moneyLabel";
 
 /**
  * Unit economics: cost assumptions and low/base/high price scenarios.
@@ -68,6 +72,8 @@ export function EconomicsScreen({
 
       <MarginMonitorCard root={root} />
 
+      <CurrencyChangeCard root={root} />
+
       {scenarios.length > 0 && onNavigate ? (
         <div className="om-card screen__nav-foot">
           <div>
@@ -98,7 +104,7 @@ function AssumptionsForm({ root, initial }: { root: string; initial: CostAssumpt
   useEffect(() => setDraft(initial), [initial]);
 
   const moneyField = (label: string, key: "acquisitionCost" | "shippingCost" | "otherCosts") => (
-    <Field label={`${label} (${currency})`}>
+    <Field label={moneyLabel(label, currency)}>
       <input
         className="om-input om-money"
         inputMode="decimal"
@@ -140,7 +146,7 @@ function AssumptionsForm({ root, initial }: { root: string; initial: CostAssumpt
 
       <p className="om-eyebrow">Selling prices</p>
       {(["low", "base", "high"] as const).map((key) => (
-        <Field key={key} label={`${key.charAt(0).toUpperCase()}${key.slice(1)} price (${currency})`}>
+        <Field key={key} label={moneyLabel(`${key.charAt(0).toUpperCase()}${key.slice(1)} price`, currency)}>
           <input
             className="om-input om-money"
             inputMode="decimal"
@@ -283,6 +289,61 @@ function ScenarioPanel({
         </>
       )}
     </aside>
+  );
+}
+
+/**
+ * Phase 3 — restating a project in another currency.
+ *
+ * The wiring lives here and the panel stays a pure function of props, because
+ * "the change you confirmed is the change you were shown" is a property worth
+ * testing without a renderer. The manifest that comes back from the change is
+ * pushed into project state, so every screen picks up the new currency at once
+ * rather than on next open.
+ */
+function CurrencyChangeCard({ root }: { root: string }) {
+  const { project, updateManifest } = useProject();
+  const currency = project?.manifest.currency ?? "";
+  const [toCurrency, setToCurrency] = useState("");
+  const [rate, setRate] = useState("");
+  const [preview, setPreview] = useState<CurrencyChangePreview | null>(null);
+  const previewChange = useCurrencyPreview();
+  const applyChange = useApplyCurrencyChange(root);
+
+  if (currency === "") return null;
+
+  return (
+    <CurrencyChangePanel
+      currency={currency}
+      error={previewChange.error ?? applyChange.error}
+      isApplying={applyChange.isPending}
+      isPreviewing={previewChange.isPending}
+      onApply={() =>
+        applyChange.mutate(
+          { toCurrency, rate },
+          {
+            onSuccess: (result) => {
+              updateManifest(result.snapshot);
+              setPreview(null);
+              setToCurrency("");
+              setRate("");
+            },
+          },
+        )
+      }
+      onCurrencyChange={setToCurrency}
+      onPreview={() =>
+        previewChange.mutate({ root, toCurrency, rate }, { onSuccess: setPreview })
+      }
+      onRateChange={setRate}
+      onRetry={() => {
+        previewChange.reset();
+        applyChange.reset();
+      }}
+      preview={preview}
+      rate={rate}
+      toCurrency={toCurrency}
+    />
   );
 }
 

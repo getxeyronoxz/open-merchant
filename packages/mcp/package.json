@@ -1,0 +1,52 @@
+{
+  "name": "@open-merchant/mcp",
+  "version": "1.0.0",
+  "license": "AGPL-3.0-only",
+  "description": "Read-only MCP server for an Open Merchant project folder. stdio only, no network socket, every read journaled.",
+  "type": "module",
+  "bin": {
+    "open-merchant-mcp": "./dist/cli.mjs"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm run build && vitest run",
+    "build": "esbuild src/cli.ts --bundle --platform=node --target=node22 --format=esm --sourcemap --outfile=dist/cli.mjs",
+    "prepublishOnly": "pnpm run build",
+    "prepack": "pnpm run build"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/server": "^2.0.0",
+    "@open-merchant/core": "workspace:*",
+    "@open-merchant/shared": "workspace:*",
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.25.12",
+    "typescript": "^5.8.0",
+    "vitest": "^4.1.11",
+    "zod": "^3.24.0"
+  },
+  "files": [
+    "dist/cli.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "open-merchant",
+    "read-only",
+    "stdio",
+    "local-first"
+  ],
+  "homepage": "https://github.com/getxeyronoxz/open-merchant#readme",
+  "bugs": {
+    "url": "https://github.com/getxeyronoxz/open-merchant/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/getxeyronoxz/open-merchant.git",
+    "directory": "packages/mcp"
+  }
+}

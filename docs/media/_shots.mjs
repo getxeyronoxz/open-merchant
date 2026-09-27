@@ -23,7 +23,7 @@ await page.screenshot({ path: `${out}/app-objective.png` });
 console.log("app-objective.png");
 
 // Evidence: add two sources.
-await page.getByRole("button", { name: "Evidence" }).click();
+await page.getByRole("button", { name: /^Evidence/ }).first().click();
 await page.getByRole("button", { name: "Add source" }).click();
 await page.getByPlaceholder("https://…").fill("https://example.com/keyboards/category");
 await page.getByPlaceholder("Marketplace category page").fill("Marketplace category page");
@@ -39,7 +39,7 @@ await page.screenshot({ path: `${out}/app-evidence.png` });
 console.log("app-evidence.png");
 
 // Competitors: add three listings.
-await page.getByRole("button", { name: "Competitors" }).click();
+await page.getByRole("button", { name: /^Competitors/ }).first().click();
 const form = page.locator("form").first();
 const addListing = async (product, brand, price) => {
   await page.getByPlaceholder("65% hot-swappable keyboard").fill(product);
@@ -56,7 +56,7 @@ await page.screenshot({ path: `${out}/app-competitors.png` });
 console.log("app-competitors.png");
 
 // Economics: fill assumptions and calculate.
-await page.getByRole("button", { name: "Economics" }).click();
+await page.getByRole("button", { name: /^Economics/ }).first().click();
 const money = page.locator("input.om-money");
 await money.nth(0).fill("1800.00");
 await money.nth(1).fill("180.00");
@@ -74,7 +74,7 @@ await page.screenshot({ path: `${out}/app-economics.png` });
 console.log("app-economics.png");
 
 // Report: fill every section, generate, show the paper.
-await page.getByRole("button", { name: "Report" }).click();
+await page.getByRole("button", { name: /^Report/ }).first().click();
 await page
   .getByPlaceholder("What did you decide, and why?")
   .fill("Enter with a limited first batch of 65% boards; validate supplier quotes before scaling.");
@@ -92,7 +92,7 @@ await page.screenshot({ path: `${out}/app-report.png` });
 console.log("app-report.png");
 
 // Artifacts.
-await page.getByRole("button", { name: "Artifacts" }).click();
+await page.getByRole("button", { name: /^Artifacts/ }).first().click();
 await page.waitForTimeout(500);
 await page.getByRole("button", { name: /opportunity-report/ }).click();
 await page.waitForTimeout(600);

@@ -390,10 +390,26 @@ body {
 
 .shell__rail-label {
   margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--om-space-2);
   color: var(--om-text-muted);
   font-size: var(--om-text-xs);
   text-transform: uppercase;
   letter-spacing: var(--om-tracking-caps);
+}
+
+.shell__kbd-hint {
+  font-family: var(--om-font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--om-text-muted);
+  border: 1px solid var(--om-border-subtle);
+  border-radius: var(--om-radius-sm);
+  padding: 0 5px;
+  line-height: 1.6;
 }
 
 .shell__nav {
@@ -422,7 +438,8 @@ body {
   text-align: left;
   transition:
     background-color var(--om-motion-fast),
-    color var(--om-motion-fast);
+    color var(--om-motion-fast),
+    transform var(--om-motion-fast);
 }
 
 .shell__nav-item:hover:not(.is-active) {
@@ -456,9 +473,37 @@ body {
 .shell__toolbar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: var(--om-space-4);
   padding: var(--om-space-2) var(--om-space-5);
   border-bottom: 1px solid var(--om-border-subtle);
+}
+
+/* Where you are: project / section, with the folder path alongside. */
+.shell__crumb {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--om-space-2);
+  min-width: 0;
+  font-size: var(--om-text-sm);
+  color: var(--om-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.shell__crumb strong {
+  color: var(--om-text-primary);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shell__toolbar-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
 }
 
 .shell__scroll {
@@ -628,6 +673,9 @@ body {
   padding: var(--om-space-3) var(--om-space-4);
   cursor: pointer;
   text-align: left;
+  transition:
+    transform var(--om-motion-fast),
+    border-color var(--om-motion-fast);
 }
 
 .artifacts__item:disabled {
@@ -637,6 +685,10 @@ body {
 
 .artifacts__item.is-selected {
   border-color: var(--om-accent);
+  box-shadow: inset 0 0 0 1px var(--om-accent);
+  /* Weight as well as hue: the selection has to survive a greyscale render
+     and a colour-vision difference, not just a dark background. */
+  font-weight: 600;
 }
 
 .artifacts__provenance {
@@ -680,11 +732,20 @@ body {
 .history__tabs .om-badge {
   cursor: pointer;
   user-select: none;
+  transition: transform var(--om-motion-fast);
 }
 
 .history__list {
   display: grid;
   gap: var(--om-space-2);
+}
+
+/* The list rows are <li> purely so the buttons inside keep the button role;
+   the app resets lists per-class rather than globally, so this one is explicit. */
+.history__row {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .history__item {
@@ -701,7 +762,11 @@ body {
   text-align: left;
   cursor: pointer;
   border-radius: var(--om-radius-md);
-  transition: border-color var(--om-motion-fast), box-shadow var(--om-motion-fast);
+  transition:
+    border-color var(--om-motion-fast),
+    box-shadow var(--om-motion-fast),
+    transform var(--om-motion-fast);
+}
 }
 
 .history__item:hover:not(:disabled) {
@@ -851,7 +916,8 @@ body {
   transition:
     border-color var(--om-motion-fast),
     background-color var(--om-motion-fast),
-    color var(--om-motion-fast);
+    color var(--om-motion-fast),
+    transform var(--om-motion-fast);
 }
 
 .om-guide__step-btn:hover {
@@ -973,6 +1039,136 @@ body {
   flex-wrap: wrap;
 }
 
+/* ---------- Draft Desk ---------- */
+
+.draft-desk__layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.5fr);
+  gap: var(--om-space-5);
+  align-items: start;
+}
+
+.draft-desk__tools,
+.draft-desk__queue {
+  display: grid;
+  gap: var(--om-space-4);
+  min-width: 0;
+}
+
+.draft-desk__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--om-space-2);
+}
+
+.draft-desk__actions .om-button {
+  white-space: normal;
+}
+
+.draft-desk__queue-head,
+.draft-desk__review-head,
+.draft-desk__review-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--om-space-3);
+  flex-wrap: wrap;
+}
+
+.draft-desk__queue-head > div {
+  display: grid;
+  gap: var(--om-space-1);
+}
+
+.draft-desk__queue-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--om-space-2);
+}
+
+.draft-desk__kbd {
+  color: var(--om-text-muted, #a3ada5);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.draft-desk__queue-head strong,
+.draft-desk__review-head h2 {
+  margin: 0;
+}
+
+.draft-desk__tabs {
+  display: flex;
+  gap: var(--om-space-2);
+  overflow-x: auto;
+  padding-bottom: var(--om-space-1);
+}
+
+.draft-desk__tab {
+  border: 1px solid var(--om-border-subtle);
+  border-radius: var(--om-radius-md);
+  background: var(--om-surface-inset);
+  color: var(--om-text-secondary);
+  padding: var(--om-space-2) var(--om-space-3);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color var(--om-motion-fast), background var(--om-motion-fast), transform var(--om-motion-fast);
+}
+
+.draft-desk__tab:hover,
+.draft-desk__tab.is-active {
+  border-color: var(--om-accent);
+  background: var(--om-accent-soft);
+  color: var(--om-text-primary);
+}
+
+.draft-desk__tab:active {
+  transform: translateY(1px);
+}
+
+.draft-desk__origin {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--om-space-2);
+  border-block: 1px solid var(--om-border-subtle);
+  padding-block: var(--om-space-3);
+}
+
+.draft-desk__origin > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.draft-desk__editor,
+.draft-desk__list {
+  display: grid;
+  gap: var(--om-space-3);
+}
+
+.draft-desk__list-row {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr 0.65fr 0.9fr;
+  gap: var(--om-space-2);
+}
+
+.draft-desk__empty {
+  display: grid;
+  gap: var(--om-space-2);
+  color: var(--om-text-secondary);
+  border-style: dashed;
+}
+
+@media (max-width: 1000px) {
+  .draft-desk__layout,
+  .draft-desk__origin {
+    grid-template-columns: 1fr;
+  }
+  .draft-desk__list-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 /* ---------- Global interaction polish ---------- */
 
 ::selection {
@@ -1010,22 +1206,24 @@ body {
   background-clip: content-box;
 }
 
-.om-button {
-  transition:
-    transform var(--om-motion-fast),
-    box-shadow var(--om-motion-fast),
-    background var(--om-motion-fast),
-    border-color var(--om-motion-fast),
-    color var(--om-motion-fast);
+/* Haptic layer — clickable ledger surfaces answer the pointer: rows, steps,
+   and cards sink 1px on press; the rail nudges toward the stage. Button
+   lift + press polish lives in the design system (components.css). */
+.home__recent:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.35);
 }
 
-.om-button--primary:not(:disabled):hover {
-  transform: translateY(-1px);
-  box-shadow: var(--om-shadow-raised);
+.shell__nav-item:active {
+  transform: translateX(2px);
 }
 
-.om-button--primary:not(:disabled):active {
-  transform: translateY(0);
+.om-guide__step-btn:active,
+.ai-provider:active,
+.history__item:active:not(:disabled),
+.artifacts__item:active:not(:disabled),
+.history__tabs .om-badge:active {
+  transform: translateY(1px);
 }
 
 /* ---------- AI provider picker ---------- */
@@ -1044,7 +1242,8 @@ body {
   cursor: pointer;
   transition:
     border-color var(--om-motion-fast),
-    background var(--om-motion-fast);
+    background var(--om-motion-fast),
+    transform var(--om-motion-fast);
 }
 
 .ai-provider:hover {
@@ -1087,9 +1286,9 @@ body {
   box-shadow: inset 2px 0 0 var(--om-brass-soft);
 }
 
-/* --- Update banner: non-blocking, bottom-right, design-system surfaces --- */
+/* --- Update strip: always present, quiet when there is nothing to say --- */
 
-.update-banner {
+.update-strip {
   position: fixed;
   right: var(--om-space-5);
   bottom: var(--om-space-5);
@@ -1097,7 +1296,7 @@ body {
   display: flex;
   align-items: center;
   gap: var(--om-space-5);
-  max-width: 30rem;
+  max-width: 32rem;
   padding: var(--om-space-4) var(--om-space-5);
   background: var(--om-surface-overlay);
   border: 1px solid var(--om-border-strong);
@@ -1107,6 +1306,48 @@ body {
     0 12px 32px rgb(0 0 0 / 45%),
     inset 0 1px 0 var(--om-border-subtle);
   animation: update-banner-in 240ms ease-out;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--om-text-secondary);
+}
+
+/* All well. Present but unmissable-on-purpose: "up to date" should be
+   something the app says, not something inferred from silence. */
+.update-strip--quiet {
+  padding: var(--om-space-2) var(--om-space-4);
+  gap: var(--om-space-3);
+  max-width: none;
+  background: var(--om-surface-raised);
+  border: 1px solid var(--om-border-subtle);
+  border-top: 1px solid var(--om-border-subtle);
+  box-shadow: none;
+  color: var(--om-text-muted);
+  font-size: var(--om-text-xs);
+}
+
+.update-strip--quiet .om-button {
+  padding: 2px var(--om-space-2);
+  font-size: var(--om-text-xs);
+}
+
+/* A failed check is escalated, not softened. It is a different fact from
+   "up to date" and must not be dressed as calm news. */
+.update-strip--urgent {
+  border-top-color: var(--om-warn, var(--om-brass));
+}
+
+.update-strip__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.update-strip__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--om-space-2);
+  flex-shrink: 0;
 }
 
 @keyframes update-banner-in {
@@ -1120,32 +1361,8 @@ body {
   }
 }
 
-.update-banner__copy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 0.82rem;
-  line-height: 1.45;
-}
 
-.update-banner__copy strong {
-  font-family: var(--om-font-serif, Georgia, serif);
-  font-size: 0.95rem;
-  color: var(--om-text-primary);
-}
-
-.update-banner__copy span {
-  color: var(--om-text-secondary);
-}
-
-.update-banner__actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--om-space-2);
-  flex-shrink: 0;
-}
-
-.update-banner__actions .om-button {
+.update-strip__actions .om-button {
   font-size: 0.8rem;
   padding: 6px 14px;
 }

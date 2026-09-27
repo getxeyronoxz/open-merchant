@@ -1,7 +1,7 @@
 {
   "name": "open-merchant",
   "private": true,
-  "version": "1.0.0-alpha.4",
+  "version": "1.0.0",
   "license": "AGPL-3.0-only",
   "description": "Local-first, AI-native commerce research workbench.",
   "type": "module",
@@ -12,6 +12,9 @@
   "pnpm": {
     "overrides": {
       "js-yaml@<4.3.2": "4.3.2"
+    },
+    "patchedDependencies": {
+      "extract-zip@2.0.1": "patches/extract-zip@2.0.1.patch"
     }
   },
   "scripts": {

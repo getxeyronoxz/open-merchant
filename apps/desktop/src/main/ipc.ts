@@ -1,9 +1,19 @@
-import { type IpcChannel, type IpcRequest, type IpcResponse, AppError, ipc } from "@open-merchant/shared";
+import {
+  type IpcChannel,
+  type IpcRequest,
+  type IpcResponse,
+  type UpdateStatus,
+  AppError,
+  ipc,
+  mcpHostConfigs,
+} from "@open-merchant/shared";
 import { parseCsv, renderReportHtml } from "@open-merchant/core";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
-import { writeFile } from "node:fs/promises";
+import { access, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 
 import { RecentsStore } from "./recents";
+import type { PluginStore } from "./plugin-store";
 import type { AiConfigStore } from "./ai-config";
 import { runAgent } from "./service";
 import type { MerchantService } from "./service";
@@ -17,6 +27,38 @@ import type { MerchantService } from "./service";
 type AnyHandler = (request: unknown) => Promise<unknown>;
 
 /**
+ * Where the bundled read-only MCP server lives, for the current platform.
+ *
+ * `process.resourcesPath` and not `app.getAppPath()`: in a packaged build the
+ * app lives inside `app.asar`, and everything electron-builder copies as an
+ * extra resource sits beside it under `resources/`. Windows gets the `.cmd`
+ * shim, because a host cannot spawn a bare `.mjs` there.
+ */
+function bundledMcpCommand(): string {
+  // An explicit override exists so a development checkout — which does not
+  // stage the server — can still point at one, and so the end-to-end suite can
+  // exercise the "server present" branch rather than only the honest "not in
+  // this build" one.
+  const override = process.env.OPEN_MERCHANT_MCP_COMMAND;
+  if (override !== undefined && override !== "") return override;
+  // Windows cannot spawn a bare .mjs at all, so it gets the .cmd. macOS and
+  // Linux get the shell launcher rather than the bundle itself: it prefers the
+  // Node runtime that ships with the app, so a seller who never installed Node
+  // is not left with a command that cannot start.
+  const name = process.platform === "win32" ? "open-merchant-mcp.cmd" : "open-merchant-mcp";
+  return join(process.resourcesPath, "mcp", name);
+}
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Captures the exact contract types for one channel while erasing them for
  * uniform dispatch; the contract parse immediately before invocation is what
  * makes this safe.
@@ -28,6 +70,13 @@ function channel<C extends IpcChannel>(handle: (request: IpcRequest<C>) => Promi
 export function registerIpcHandlers(
   service: MerchantService,
   aiConfig: AiConfigStore,
+  plugins: PluginStore,
+  /**
+   * Runs one update check and resolves with the honest result. Injected rather
+   * than reached for here so the updater stays owned by the process that also
+   * owns the app's lifecycle, and so this module can be exercised without one.
+   */
+  checkForUpdates: () => Promise<UpdateStatus>,
 ): void {
   const recents = new RecentsStore(app.getPath("userData"));
 
@@ -37,6 +86,7 @@ export function registerIpcHandlers(
       appVersion: app.getVersion(),
       platform: process.platform,
     })),
+    "update/check": channel<"update/check">(async () => ({ status: await checkForUpdates() })),
     "update/install": channel<"update/install">(async () => {
       // Packaged builds only: in dev there is no updater feed to install from.
       if (!app.isPackaged) return { quitting: false };
@@ -96,8 +146,8 @@ export function registerIpcHandlers(
     "competitors/load": channel<"competitors/load">(async ({ root }) => ({
       competitors: await service.loadCompetitors(root),
     })),
-    "competitors/save": channel<"competitors/save">(async ({ root, competitors }) => {
-      await service.saveCompetitors(root, competitors);
+    "competitors/save": channel<"competitors/save">(async ({ root, competitors, origin }) => {
+      await service.saveCompetitors(root, competitors, origin);
       return {};
     }),
     "competitors/statistics": channel<"competitors/statistics">(async ({ root }) => ({
@@ -167,6 +217,18 @@ export function registerIpcHandlers(
     "portfolio/overview": channel<"portfolio/overview">(async () => ({
       projects: await service.portfolioOverview(await recents.list()),
     })),
+    "reviews/standing": channel<"reviews/standing">(async () => ({
+      reviews: await service.standingReviews(await recents.list()),
+    })),
+    "reviews/dispose": channel<"reviews/dispose">(async ({ root, reviewKey, action }) => ({
+      disposition: await service.disposeReview(root, reviewKey, action),
+    })),
+    "currency/preview": channel<"currency/preview">(async ({ root, toCurrency, rate }) =>
+      service.currencyPreview(root, toCurrency, rate),
+    ),
+    "currency/apply": channel<"currency/apply">(async ({ root, toCurrency, rate }) =>
+      service.applyCurrencyChange(root, toCurrency, rate),
+    ),
 
     "csv/export": channel<"csv/export">(async ({ root, kind }) => service.exportCsv(root, kind)),
     "csv/parse": channel<"csv/parse">(async ({ csv }) => {
@@ -244,6 +306,29 @@ export function registerIpcHandlers(
     ),
     "ai/audit-report": channel<"ai/audit-report">(async ({ root }) =>
       service.auditGeneratedReport(root),
+    ),
+
+    "mcp/locate": channel<"mcp/locate">(async ({ root }) => {
+      const command = bundledMcpCommand();
+      // The server is bundled into the installer as a resource, so a released
+      // build always has one at a path that matches its own version. A dev
+      // checkout has not built it, and says so rather than pointing a host at
+      // a file that is not there.
+      if (!(await exists(command))) {
+        return { available: false, command, configs: [] };
+      }
+      return { available: true, command, configs: mcpHostConfigs(command, root) };
+    }),
+
+    "plugins/list": channel<"plugins/list">(async () => plugins.list()),
+    "plugins/source": channel<"plugins/source">(async ({ pluginId }) => ({
+      source: await plugins.readSource(pluginId),
+    })),
+    "plugins/set-enabled": channel<"plugins/set-enabled">(async ({ pluginId, enabled }) => ({
+      plugin: await plugins.setEnabled(pluginId, enabled),
+    })),
+    "connectors/fetch": channel<"connectors/fetch">(async ({ root, pluginId, query }) =>
+      service.fetchFromConnector(root, pluginId, query),
     ),
   };
 

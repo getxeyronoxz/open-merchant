@@ -16,10 +16,12 @@
   letter-spacing: 0.01em;
   cursor: pointer;
   white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
   transition:
     background-color var(--om-motion-fast),
     border-color var(--om-motion-fast),
     color var(--om-motion-fast),
+    box-shadow var(--om-motion-fast),
     transform var(--om-motion-fast);
 }
 
@@ -33,6 +35,15 @@
   cursor: not-allowed;
 }
 
+/* `aria-disabled` rather than `disabled` on a button that is busy *because the
+   seller just pressed it*: `disabled` removes it from the tab order, so focus
+   falls to <body> and the keyboard user is dropped back at the top of the
+   page. Guarded in the click handler instead, and dressed the same. */
+.om-button[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: progress;
+}
+
 .om-button--primary {
   background: var(--om-accent);
   color: var(--om-accent-contrast);
@@ -41,9 +52,12 @@
 }
 .om-button--primary:hover:not(:disabled) {
   background: var(--om-accent-strong);
+  transform: translateY(-1px);
+  box-shadow: var(--om-shadow-raised);
 }
 .om-button--primary:active:not(:disabled) {
   transform: translateY(1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 .om-button--secondary {
@@ -54,6 +68,7 @@
 }
 .om-button--secondary:hover:not(:disabled) {
   border-color: var(--om-accent);
+  transform: translateY(-1px);
 }
 
 .om-button--ghost {
@@ -64,10 +79,12 @@
   color: var(--om-text-primary);
   background: var(--om-surface-inset);
   border-color: var(--om-border-strong);
+  transform: translateY(-1px);
 }
 
 .om-button--secondary:active:not(:disabled),
-.om-button--ghost:active:not(:disabled) {
+.om-button--ghost:active:not(:disabled),
+.om-button--danger:active:not(:disabled) {
   transform: translateY(1px);
 }
 
@@ -78,6 +95,7 @@
 }
 .om-button--danger:hover:not(:disabled) {
   background: var(--om-danger-soft);
+  transform: translateY(-1px);
 }
 
 /* ---------- Fields ---------- */
@@ -438,4 +456,163 @@
   border-left: 3px solid var(--om-paper-edge);
   padding-left: var(--om-space-3);
   color: var(--om-paper-muted);
+}
+
+/* ---------- Lists (attention queues, review rows) ---------- */
+
+/*
+ * A row-per-item list for things that need a decision. Unlike .om-table this
+ * is not tabular data: the copy wraps, the actions sit at the end, and the row
+ * stays readable at phone width by stacking rather than scrolling sideways.
+ */
+.om-list {
+  list-style: none;
+  margin: var(--om-space-4) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.om-list__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--om-space-4);
+  padding: var(--om-space-3) 0;
+  border-top: 1px solid var(--om-border-subtle);
+}
+
+.om-list__row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.om-list__copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--om-space-1);
+}
+
+.om-list__title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--om-space-2);
+  flex-wrap: wrap;
+  font-size: var(--om-text-sm);
+  font-weight: 600;
+  color: var(--om-text-primary);
+}
+
+.om-list__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--om-space-2);
+  flex-shrink: 0;
+}
+
+/* Rows carry their own hover so a long queue reads as one list, not a table. */
+.om-list__row:hover {
+  background: var(--om-surface-inset);
+}
+
+.om-list__row:hover .om-list__actions .om-button--ghost {
+  border-color: var(--om-border-subtle);
+}
+
+@media (max-width: 640px) {
+  .om-list__row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .om-list__actions {
+    justify-content: flex-start;
+  }
+}
+
+/* ---------- Currency change (before → after) ---------- */
+
+/*
+ * A diff reads as pairs, not as two columns you have to track across a
+ * screen, so each row keeps its field name, its old value and its new value
+ * in one block, and only stacks on a phone. Money is monospaced because the
+ * point of the row is to see the digits line up.
+ */
+.om-diff {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--om-space-4);
+  border-top: 1px solid var(--om-border-subtle);
+}
+
+.om-diff__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: baseline;
+  gap: var(--om-space-2);
+  padding: var(--om-space-2) 0;
+  border-bottom: 1px solid var(--om-border-subtle);
+  font-size: var(--om-text-sm);
+}
+
+.om-diff__field {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--om-text-secondary);
+}
+
+.om-diff__before,
+.om-diff__after {
+  font-family: var(--om-font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The old value is struck rather than dimmed: it is still on screen on
+ * purpose, and a seller comparing two numbers should not have to remember
+ * which column is which. */
+.om-diff__before {
+  color: var(--om-text-muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--om-border-strong);
+}
+
+.om-diff__arrow {
+  color: var(--om-text-muted);
+}
+
+.om-diff__after {
+  color: var(--om-accent);
+  font-weight: 600;
+}
+
+.currency-change__inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--om-space-3);
+  margin-top: var(--om-space-4);
+}
+
+.currency-change__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--om-space-2);
+  margin-top: var(--om-space-4);
+}
+
+@media (max-width: 560px) {
+  .om-diff__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--om-space-1);
+  }
+
+  .om-diff__arrow {
+    display: none;
+  }
+
+  .om-diff__after {
+    grid-column: 2;
+  }
 }

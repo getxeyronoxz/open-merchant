@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import { EmptyState, ErrorState } from "@open-merchant/ui";
+import { EmptyState, ErrorState, Field } from "@open-merchant/ui";
 
 import { client } from "../../../client";
 import { diffLines, type DiffLineKind } from "../../../lib/diff";
@@ -139,6 +139,9 @@ export function ArtifactsScreen({
         <div className="om-ledger artifacts__list">
           {artifacts.data.artifacts.map((artifact) => (
             <button
+              // The selected row was marked by border colour alone, which is
+              // no selection at all for anything that cannot see colour.
+              aria-current={selected === artifact.path ? "true" : undefined}
               className={`om-card artifacts__item${selected === artifact.path ? " is-selected" : ""}`}
               disabled={!artifact.exists}
               key={artifact.path}
@@ -218,21 +221,25 @@ export function ArtifactsScreen({
                 const isLatest = generation.runId === latestRun?.runId;
                 const isBaseline = generation.runId === previousRun?.runId;
                 return (
-                  <button
-                    aria-pressed={isBaseline}
-                    className={`om-card history__item${isLatest ? " is-latest" : ""}${isBaseline ? " is-baseline" : ""}`}
-                    disabled={isLatest}
-                    key={generation.runId}
-                    onClick={() => setBaselineRunId(isBaseline ? null : generation.runId)}
-                    role="listitem"
-                    type="button"
-                  >
-                    <span className="om-data">{new Date(generation.generatedAt).toLocaleString()}</span>
-                    <span className="om-data">run {generation.runId.slice(0, 13)}…</span>
-                    <span className={`om-badge${isLatest ? " om-badge--accent" : isBaseline ? " om-badge--warn" : ""}`}>
-                      {isLatest ? "latest" : isBaseline ? "baseline" : `#${index + 1}`}
-                    </span>
-                  </button>
+                  // The <li> carries the list role, so the button inside keeps
+                  // its own. An explicit role="listitem" on the button overrode
+                  // it, and the row was announced as a list item that could not
+                  // be pressed.
+                  <li className="history__row" key={generation.runId}>
+                    <button
+                      aria-pressed={isBaseline}
+                      className={`om-card history__item${isLatest ? " is-latest" : ""}${isBaseline ? " is-baseline" : ""}`}
+                      disabled={isLatest}
+                      onClick={() => setBaselineRunId(isBaseline ? null : generation.runId)}
+                      type="button"
+                    >
+                      <span className="om-data">{new Date(generation.generatedAt).toLocaleString()}</span>
+                      <span className="om-data">run {generation.runId.slice(0, 13)}…</span>
+                      <span className={`om-badge${isLatest ? " om-badge--accent" : isBaseline ? " om-badge--warn" : ""}`}>
+                        {isLatest ? "latest" : isBaseline ? "baseline" : `#${index + 1}`}
+                      </span>
+                    </button>
+                  </li>
                 );
               })}
             </div>
@@ -677,18 +684,19 @@ function DataBackupsCard({ onRestored }: { onRestored: () => void }) {
           {busy === "archive" ? "Packing…" : "Create archive (.omarchive)"}
         </button>
       </div>
-      <div className="om-field" style={{ marginTop: "var(--om-space-3)" }}>
-        <span className="om-field__label">Restore from archive</span>
-        <input
-          accept=".omarchive,application/json"
-          className="om-input"
-          disabled={busy !== null}
-          onChange={(event) => restoreArchive(event.target.files?.[0])}
-          type="file"
-        />
-        <span className="om-field__hint">
-          Restores into a new project folder — never overwrites existing work.
-        </span>
+      <div style={{ marginTop: "var(--om-space-3)" }}>
+        <Field
+          hint="Restores into a new project folder — never overwrites existing work."
+          label="Restore from archive"
+        >
+          <input
+            accept=".omarchive,application/json"
+            className="om-input"
+            disabled={busy !== null}
+            onChange={(event) => restoreArchive(event.target.files?.[0])}
+            type="file"
+          />
+        </Field>
       </div>
       {message ? (
         <p className="om-badge om-badge--accent" role="status">

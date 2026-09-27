@@ -5,12 +5,15 @@ import type {
   CostAssumptions,
   EconomicsScenario,
   EvidenceSource,
+  InstalledPlugin,
   ListingPriceHistory,
   MarginFlag,
   MarketSnapshot,
   ProjectSnapshot,
   ReportSections,
+  ReviewDisposition,
   SnapshotDiff,
+  StandingReview,
 } from "@open-merchant/shared";
 import { AppError, emptyReportSections } from "@open-merchant/shared";
 
@@ -21,6 +24,36 @@ import type { DesktopClient } from "./client";
  * Electron. State lives entirely in memory with the same coded-error
  * semantics as the real shell. AI drafts are deterministic placeholders.
  */
+
+/** Stand-in digests: the mock stores no bytes, so it hashes nothing real. */
+const MOCK_HASH = "0".repeat(64);
+let MOCK_RUNS = 0;
+
+/** The same two refusals the core makes, so a mock project fails like a real one. */
+function assertCurrencyChange(from: string, toCurrency: string, rate: string): void {
+  if (!/^[A-Z]{3}$/u.test(toCurrency)) {
+    throw new AppError({
+      code: "invalid-input",
+      message: "Currency must be exactly three uppercase ASCII letters",
+    });
+  }
+  if (toCurrency === from) {
+    throw new AppError({ code: "invalid-input", message: "That is already this project's currency" });
+  }
+  if (!/^(?:0\.(?:0*[1-9]\d{0,11})|[1-9]\d*(?:\.\d{1,12})?)$/u.test(rate)) {
+    throw new AppError({
+      code: "invalid-input",
+      message: "Enter the conversion rate as a positive decimal, for example 0.011",
+    });
+  }
+}
+
+/** Mirrors STALE_AFTER_DAYS and SNOOZE_DAYS in @open-merchant/core. */
+const MOCK_STALE_AFTER_DAYS = 30;
+const MOCK_SNOOZE_DAYS = 7;
+
+/** Snoozes and dismissals recorded in this session, keyed by project root. */
+const mockDispositions = new Map<string, ReviewDisposition[]>();
 
 export interface MockProjectState {
   snapshot: ProjectSnapshot;
@@ -76,6 +109,29 @@ const EMPTY_STATS: CompetitorStatistics = {
   average: null,
   median: null,
 };
+
+/**
+ * A stable 64-character hex stand-in for a connector's response digest.
+ *
+ * This is deliberately NOT a hash. The real client computes SHA-256 with
+ * node:crypto, and the renderer reaches this module in development, so a node
+ * builtin here would follow the bundle into the browser. The value only has to
+ * be deterministic and the right shape for the UI to render; a mock that
+ * claimed a real digest would be lying about provenance.
+ */
+function mockResponseHash(seed: string): string {
+  let out = "";
+  let h1 = 0x811c9dc5;
+  let h2 = 0x01000193;
+  for (let round = 0; out.length < 64; round += 1) {
+    for (const character of `${seed}:${round}`) {
+      h1 = Math.imul(h1 ^ character.charCodeAt(0), 0x01000193) >>> 0;
+      h2 = Math.imul(h2 + character.charCodeAt(0) + round, 0x85ebca6b) >>> 0;
+    }
+    out += h1.toString(16).padStart(8, "0") + h2.toString(16).padStart(8, "0");
+  }
+  return out.slice(0, 64);
+}
 
 /** Dev/test-only statistics over money strings; mirrors core's rounding shape. */
 function mockCompetitorStatistics(competitors: Competitor[]): CompetitorStatistics {
@@ -168,6 +224,28 @@ export function createMockDesktopClient(
   seed: Partial<{ projects: MockProjectState[]; version: string }> = {},
 ): DesktopClient & { projects: MockProjectState[] } {
   const projects = seed.projects ?? [];
+
+  // The mock ships one disabled report-section plugin so the renderer can be
+  // developed and screenshotted without a real plugins folder on disk.
+  const installedPlugins: InstalledPlugin[] = [
+    {
+      manifest: {
+        id: "risk-checklist",
+        name: "Risk checklist",
+        version: "1.0.0",
+        author: "Open Merchant",
+        minAppVersion: "1.0.0",
+        capabilities: { reads: [], writes: [], network: false },
+        kind: "report-section",
+        description: "A short pre-launch risk checklist.",
+        section: "risks",
+        markdown: "## Risk checklist\nConfirm supplier MOQ before committing.",
+      },
+      directory: "C:/mock/plugins/risk-checklist",
+      enabled: false,
+      enabledAt: null,
+    },
+  ];
   const now = () => new Date().toISOString();
   const historyByProject = new Map<string, Record<"scenarios" | "report", Map<string, string>>>();
   let snapshotCounter = 0;
@@ -191,6 +269,13 @@ export function createMockDesktopClient(
       appVersion: seed.version ?? "0.0.0-mock",
       platform: "mock",
     }),
+
+    checkForUpdates: async () => {
+      // The mock has no updater. It says so rather than claiming to be current,
+      // which is the whole point of distinguishing "up to date" from "could not
+      // find out".
+      return { status: { state: "error" as const, detail: "the mock client has no update feed" } };
+    },
 
     installUpdate: async () => {
       // The mock has no updater; nothing to install.
@@ -491,6 +576,84 @@ export function createMockDesktopClient(
       throw new AppError({ code: "not-found", message: "PDF export is available in the desktop app." });
     },
 
+    locateMcpServer: async (root) => {
+      await Promise.resolve();
+      requireProject(projects, root);
+      // The mock has no bundled server, and says so rather than inventing a
+      // path. A dev-mode host reading "available: false" is the honest answer.
+      return { available: false, command: "", configs: [] };
+    },
+
+    fetchFromConnector: async (root, pluginId, query) => {
+      await Promise.resolve();
+      requireProject(projects, root);
+      const fetchedAt = new Date(0).toISOString();
+      const rawResponseHash = mockResponseHash(`${pluginId}:${query}`);
+      const origin = { kind: "connector" as const, connectorId: pluginId, pluginId, fetchedAt, rawResponseHash };
+      return {
+        fetchedAt,
+        drafts: [
+          {
+            id: `DRAFT-${pluginId}-mock-E`,
+            kind: "evidence" as const,
+            origin,
+            createdAt: fetchedAt,
+            value: {
+              id: "EV-MOCK",
+              url: "https://example.com/listing",
+              title: "A listing the connector found",
+              notes: "",
+              observations: [],
+              observedAt: fetchedAt,
+              createdAt: fetchedAt,
+              updatedAt: fetchedAt,
+            },
+          },
+          {
+            id: `DRAFT-${pluginId}-mock-C`,
+            kind: "competitors" as const,
+            origin,
+            createdAt: fetchedAt,
+            value: [
+              { product: "75% Keyboard", brand: "Acme", price: "1299.00", marketplace: "Example", url: "https://example.com/kb" },
+            ],
+          },
+        ],
+      };
+    },
+
+    listPlugins: async () => {
+      await Promise.resolve();
+      return {
+        plugins: installedPlugins.map((plugin) => ({ ...plugin })),
+        broken: [],
+        directory: "<app data>/plugins",
+      };
+    },
+    readPluginSource: async (pluginId) => {
+      await Promise.resolve();
+      const plugin = installedPlugins.find((entry) => entry.manifest.id === pluginId);
+      if (!plugin) throw new AppError({ code: "not-found", message: `Unknown plugin "${pluginId}".` });
+      const manifest = plugin.manifest;
+      if (manifest.kind === "report-section") return { source: manifest.markdown };
+      if (manifest.kind === "csv-importer") return { source: JSON.stringify(manifest.mapping, null, 2) };
+      return { source: `command: ${manifest.command}\nargs: ${manifest.args.join(" ")}\n` };
+    },
+    setPluginEnabled: async (pluginId, enabled) => {
+      await Promise.resolve();
+      const current = installedPlugins.find((entry) => entry.manifest.id === pluginId);
+      if (!current) {
+        throw new AppError({ code: "not-found", message: `Unknown plugin "${pluginId}".` });
+      }
+      const updated: InstalledPlugin = {
+        ...current,
+        enabled,
+        enabledAt: enabled ? new Date(0).toISOString() : null,
+      };
+      installedPlugins.splice(installedPlugins.indexOf(current), 1, updated);
+      return { plugin: updated };
+    },
+
     portfolioOverview: async () => {
       await Promise.resolve();
       const severity = { breached: 0, watch: 1, healthy: 2, none: 3 } as const;
@@ -526,6 +689,152 @@ export function createMockDesktopClient(
           (a, b) =>
             severity[a.worstStatus] - severity[b.worstStatus] || a.name.localeCompare(b.name),
         ),
+      };
+    },
+
+    /**
+     * A development stand-in for the real derivation, which lives in
+     * `@open-merchant/core` and cannot be imported here: core is node-only and
+     * this module is pulled into the browser bundle for renderer development.
+     * It covers stale evidence only, which is enough to exercise the queue and
+     * the snooze/dismiss controls against real UI states.
+     */
+    standingReviews: async () => {
+      await Promise.resolve();
+      const now = new Date();
+      const reviews: StandingReview[] = [];
+      for (const project of projects) {
+        const root = project.snapshot.root;
+        const disposed = mockDispositions.get(root) ?? [];
+        for (const source of project.evidence) {
+          const dueAt = new Date(
+            Date.parse(source.observedAt) + MOCK_STALE_AFTER_DAYS * 86_400_000,
+          ).toISOString();
+          if (dueAt > now.toISOString()) continue;
+          const key = `stale-evidence:${source.id}`;
+          const silenced = disposed.find(
+            (entry) =>
+              entry.reviewKey === key &&
+              entry.reviewDueAt === dueAt &&
+              (entry.action === "dismissed" ||
+                (entry.until !== null && Date.parse(entry.until) > now.getTime())),
+          );
+          if (silenced) continue;
+          const ageDays = Math.max(
+            0,
+            Math.floor((now.getTime() - Date.parse(source.observedAt)) / 86_400_000),
+          );
+          reviews.push({
+            key,
+            kind: "stale-evidence",
+            title: `Evidence is ${ageDays} days old`,
+            detail: `${source.title} was observed ${ageDays} days ago and has not been re-checked.`,
+            dueAt,
+            severity: "warning",
+            projectRoot: root,
+            projectName: project.snapshot.manifest.name,
+          });
+        }
+      }
+      return { reviews };
+    },
+
+    disposeReview: async (root, reviewKey, action) => {
+      requireProject(projects, root);
+      const found = (await client.standingReviews()).reviews.find(
+        (review) => review.key === reviewKey,
+      );
+      if (!found) {
+        throw new AppError({
+          code: "not-found",
+          message: "That review is no longer showing, so there is nothing to snooze.",
+        });
+      }
+      const recordedAt = new Date().toISOString();
+      const disposition: ReviewDisposition = {
+        reviewKey,
+        action,
+        reviewDueAt: found.dueAt,
+        until:
+          action === "snoozed"
+            ? new Date(Date.now() + MOCK_SNOOZE_DAYS * 86_400_000).toISOString()
+            : null,
+        recordedAt,
+      };
+      mockDispositions.set(root, [
+        ...(mockDispositions.get(root) ?? []).filter((entry) => entry.reviewKey !== reviewKey),
+        disposition,
+      ]);
+      return { disposition };
+    },
+
+    currencyPreview: async (root, toCurrency, rate) => {
+      const project = requireProject(projects, root);
+      const from = project.snapshot.manifest.currency;
+      assertCurrencyChange(from, toCurrency, rate);
+      // The real derivation lives in @open-merchant/core, which this module
+      // cannot import: core is node-only and every runtime file here reaches
+      // the browser bundle. Inventing amounts with a float would put numbers on
+      // screen that no decimal engine produced, so the mock reports the
+      // artifacts a change would touch and says plainly that it converted
+      // nothing. That is also a real state - a project with no priced
+      // competitors changes its currency code and no amount at all.
+      return {
+        fromCurrency: from,
+        toCurrency,
+        rate,
+        createdAt: new Date().toISOString(),
+        affectedArtifacts: [
+          { path: ".openmerchant/manifest.json", sha256: MOCK_HASH },
+          ...(project.competitors.length > 0
+            ? [{ path: "market/competitors.json", sha256: MOCK_HASH }]
+            : []),
+          ...(project.assumptions === null
+            ? []
+            : [{ path: "economics/assumptions.json", sha256: MOCK_HASH }]),
+          ...(project.scenarios.length > 0
+            ? [{ path: "economics/scenarios.json", sha256: MOCK_HASH }]
+            : []),
+        ],
+        beforeHash: MOCK_HASH,
+        afterHash: MOCK_HASH,
+        oldValues: {},
+        newValues: {},
+        changedCount: 0,
+      };
+    },
+
+    applyCurrencyChange: async (root, toCurrency, rate) => {
+      const project = requireProject(projects, root);
+      const from = project.snapshot.manifest.currency;
+      assertCurrencyChange(from, toCurrency, rate);
+      const changedAt = new Date().toISOString();
+      const preview = await client.currencyPreview(root, toCurrency, rate);
+      project.snapshot = {
+        ...project.snapshot,
+        manifest: { ...project.snapshot.manifest, currency: toCurrency, updatedAt: changedAt },
+      };
+      if (project.competitors.length > 0) {
+        project.competitors = project.competitors.map((listing) => ({ ...listing, currency: toCurrency }));
+      }
+      if (project.assumptions !== null) {
+        project.assumptions = { ...project.assumptions, currency: toCurrency };
+      }
+      return {
+        change: {
+          runId: `RUN-mock-${MOCK_RUNS++}`,
+          fromCurrency: from,
+          toCurrency,
+          rate,
+          changedAt,
+          affectedArtifacts: preview.affectedArtifacts,
+          beforeHash: preview.beforeHash,
+          afterHash: preview.afterHash,
+          oldValues: preview.oldValues,
+          newValues: preview.newValues,
+        },
+        changedCount: preview.changedCount,
+        snapshot: project.snapshot,
       };
     },
 

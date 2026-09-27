@@ -7,6 +7,7 @@ import {
   ValidationError,
   WorkspaceError,
   WorkspaceStore,
+  appendPluginSections,
   calculateScenarios,
   competitorStatistics,
   createArchive,
@@ -18,7 +19,12 @@ import {
   projectFolderName,
   readArchive,
   renderOpportunityReport,
+  planCurrencyChange,
+  SNOOZE_DAYS,
+  standingReviews,
+  type StandingReviewInput,
   worstFlagStatus,
+  writeCurrencyPlan,
   writeFileAtomically,
 } from "@open-merchant/core";
 import {
@@ -31,25 +37,40 @@ import {
   draftResearchPlan,
   reviewEconomics,
 } from "@open-merchant/ai";
+import { createHash } from "node:crypto";
+
 import {
+  competitorSchema,
+  costAssumptionsSchema,
+  currencyChangePreviewSchema,
+  economicsScenarioSchema,
   manifestSchema,
   type AiOrigin,
+  type ArtifactFingerprint,
   type AuditReport,
   type Competitor,
   type CompetitorDraft,
   type CompetitorStatistics,
+  type ConnectorDraft,
+  type ConnectorOrigin,
   type CostAssumptions,
+  type CurrencyChangePreview,
+  type CurrencyChangeRecord,
   type DecisionJournal,
   type EconomicsReview,
   type EconomicsScenario,
   type EvidenceSource,
   type GenerationOrigin,
+  type InstalledPlugin,
   type ListingPriceHistory,
   type Manifest,
   type MarginMonitorResult,
   type MarketSnapshot,
   type PortfolioEntry,
+  type ReviewDisposition,
+  type StandingReview,
   type ProvenanceRecord,
+  type ProjectSnapshot,
   type ReportSections,
   type ResearchPlan,
   type RunRecord,
@@ -58,6 +79,11 @@ import {
 import { AppError } from "@open-merchant/shared";
 
 import type { AiConfigStore } from "./ai-config";
+import type { PluginStore } from "./plugin-store";
+import {
+  fetchFromConnector as runConnector,
+  type ConnectorClientFactory,
+} from "./connector-client";
 import type { HistoryKind } from "@open-merchant/core";
 
 /** Maps agent-layer failures to coded app errors. */
@@ -123,10 +149,25 @@ function toAppError(error: unknown): AppError {
 export class MerchantService {
   private readonly appVersion: string;
   private readonly aiConfig: AiConfigStore | null;
+  private readonly plugins: PluginStore | null;
 
-  constructor(appVersion: string, aiConfig?: AiConfigStore) {
+  constructor(appVersion: string, aiConfig?: AiConfigStore, plugins?: PluginStore) {
     this.appVersion = appVersion;
     this.aiConfig = aiConfig ?? null;
+    this.plugins = plugins ?? null;
+  }
+
+  /**
+   * Enabled report-section plugins, or an empty list when no plugin store is
+   * wired. A plugin can only ever add static boilerplate: it never reads the
+   * project and never writes to it.
+   */
+  private async enabledReportSectionPlugins(): Promise<InstalledPlugin[]> {
+    if (!this.plugins) return [];
+    const catalog = await this.plugins.list();
+    return catalog.plugins.filter(
+      (plugin) => plugin.enabled && plugin.manifest.kind === "report-section",
+    );
   }
 
   async openStore(root: string): Promise<WorkspaceStore> {
@@ -236,9 +277,16 @@ export class MerchantService {
     return this.withStore(root, (store) => store.loadCompetitors());
   }
 
-  async saveCompetitors(root: string, competitors: Competitor[]): Promise<void> {
+  async saveCompetitors(
+    root: string,
+    competitors: Competitor[],
+    origin?: GenerationOrigin,
+  ): Promise<void> {
     const store = await this.openStore(root);
     await this.run(() => store.saveCompetitors(competitors));
+    if (origin?.kind === "agent") {
+      await this.journalAgentAcceptance(store, "agentDraftProduced", [ArtifactPaths.competitors], origin);
+    }
   }
 
   competitorStatistics(root: string): Promise<CompetitorStatistics> {
@@ -574,7 +622,10 @@ export class MerchantService {
 
       const markdown = renderOpportunityReport({
         manifest: store.manifest,
-        sections: await store.loadReportSections(),
+        sections: appendPluginSections(
+          await store.loadReportSections(),
+          await this.enabledReportSectionPlugins(),
+        ),
         evidence: await store.loadEvidence(),
         competitorStatistics: competitorStatistics(await store.loadCompetitors()),
         scenarios,
@@ -638,6 +689,81 @@ export class MerchantService {
     return this.withStore(root, (store) => store.journal.listRuns());
   }
 
+  /**
+   * Runs one enabled connector and returns its output as drafts.
+   *
+   * Nothing is written to the project. A connector is a third-party program
+   * running as the user; the one thing it may ever produce is a draft a human
+   * accepts on the Draft Desk. A fetch that fails writes nothing at all — not
+   * even a run record — so a broken process cannot leave a trace in a project
+   * it was only ever allowed to read.
+   */
+  async fetchFromConnector(
+    root: string,
+    pluginId: string,
+    query: string,
+    createClient?: ConnectorClientFactory,
+  ): Promise<{ drafts: ConnectorDraft[]; fetchedAt: string }> {
+    // The connector is told the version this app was actually packaged with,
+    // which is the same string every run record carries.
+    const store = await this.openStore(root);
+    return this.run(async () => {
+      const catalog = this.plugins ? await this.plugins.list() : { plugins: [], broken: [] };
+      const plugin = catalog.plugins.find((entry) => entry.manifest.id === pluginId);
+      if (!plugin || plugin.manifest.kind !== "connector") {
+        throw new AppError({ code: "not-found", message: `No connector named "${pluginId}" is installed.` });
+      }
+      if (!plugin.enabled) {
+        throw new AppError({ code: "not-found", message: `Connector "${pluginId}" is disabled.` });
+      }
+
+      const fetchedAt = new Date().toISOString();
+      const result = await runConnector(
+        plugin.manifest,
+        plugin.directory,
+        { query },
+        { appVersion: this.appVersion, createClient },
+      );
+      const origin: ConnectorOrigin = {
+        kind: "connector",
+        connectorId: plugin.manifest.id,
+        pluginId,
+        fetchedAt,
+        rawResponseHash: result.rawResponseHash,
+      };
+      // Two fetches can land in the same millisecond, so the id carries a
+      // random suffix rather than treating the timestamp as unique.
+      const stem = `DRAFT-${pluginId}-${fetchedAt.replace(/\D/gu, "")}-${randomUUID().slice(0, 8)}`;
+      const drafts: ConnectorDraft[] = [];
+      const [firstEvidence] = result.result.evidence;
+      if (firstEvidence) {
+        drafts.push({ id: `${stem}-E`, kind: "evidence", origin, createdAt: fetchedAt, value: firstEvidence });
+      }
+      if (result.result.competitors.length > 0) {
+        drafts.push({
+          id: `${stem}-C`,
+          kind: "competitors",
+          origin,
+          createdAt: fetchedAt,
+          value: result.result.competitors,
+        });
+      }
+
+      await store.journal.appendRun({
+        runId: `RUN-${randomUUID()}`,
+        operation: "connectorFetched",
+        startedAt: fetchedAt,
+        completedAt: new Date().toISOString(),
+        status: "succeeded",
+        appVersion: this.appVersion,
+        inputArtifacts: [],
+        outputArtifacts: [],
+        errorSummary: null,
+      });
+      return { drafts, fetchedAt };
+    });
+  }
+
   /** Captures an immutable market snapshot and journals it. */
   async captureMarketSnapshot(root: string, note: string): Promise<MarketSnapshot> {
     const store = await this.openStore(root);
@@ -694,6 +820,245 @@ export class MerchantService {
     return this.withStore(root, async (store) =>
       decisionJournal(await store.journal.listRuns(), await store.loadEvidence(), new Date()),
     );
+  }
+
+  /**
+   * Reads one project into the shape the standing-review derivation wants.
+   *
+   * This is where a project that cannot be opened stops mattering: the caller
+   * catches the failure and omits it. A queue that refused to render because
+   * one folder in the portfolio is unreadable would be worse than a queue with
+   * a gap in it.
+   */
+  private async standingReviewInput(
+    root: string,
+  ): Promise<StandingReviewInput & { name: string }> {
+    const store = await this.openStore(root);
+    const snapshots = await store.listMarketSnapshots();
+    return {
+      root,
+      name: store.manifest.name,
+      runs: await store.journal.listRuns(),
+      evidence: await store.loadEvidence(),
+      assumptions: await store.loadAssumptions(),
+      scenarios: await store.loadScenarios(),
+      snapshots,
+    };
+  }
+
+  /**
+   * The attention queue across every project the app knows about — what needs
+   * attention this week, worst and oldest first. Purely local: the signals come
+   * from artifacts already on disk, and nothing here contacts a service.
+   */
+  async standingReviews(recents: readonly { name: string; path: string }[]): Promise<StandingReview[]> {
+    const now = new Date();
+    const inputs = await Promise.all(
+      recents.map(async (recent) => {
+        try {
+          return await this.standingReviewInput(recent.path);
+        } catch {
+          // An unreadable project is omitted rather than fatal, matching how
+          // the portfolio still lists a project it could not open.
+          return null;
+        }
+      }),
+    );
+    return standingReviews(inputs.filter((input): input is StandingReviewInput => input !== null), now);
+  }
+
+  /**
+   * Snoozes or dismisses one review, on the record.
+   *
+   * The review is looked up in a freshly derived queue and *its* due date is
+   * what gets recorded, so a caller cannot silence a different occurrence of
+   * the same condition by asserting a date of its own. A key that is not
+   * currently showing is refused: there is nothing to silence, and recording a
+   * disposition for it would only be a claim nobody can check.
+   */
+  async disposeReview(
+    root: string,
+    reviewKey: string,
+    action: "snoozed" | "dismissed",
+  ): Promise<ReviewDisposition> {
+    const now = new Date();
+    const input = await this.standingReviewInput(root);
+    const review = standingReviews([input], now).find((entry) => entry.key === reviewKey);
+    if (!review) {
+      throw new AppError({
+        code: "not-found",
+        message: "That review is no longer showing, so there is nothing to snooze.",
+      });
+    }
+    const until =
+      action === "snoozed" ? new Date(now.getTime() + SNOOZE_DAYS * 86_400_000).toISOString() : null;
+    const disposition: ReviewDisposition = {
+      reviewKey,
+      action,
+      reviewDueAt: review.dueAt,
+      until,
+      recordedAt: now.toISOString(),
+    };
+    const store = await this.openStore(root);
+    await store.journal.appendRun({
+      runId: `RUN-${randomUUID()}`,
+      operation: action === "snoozed" ? "reviewSnoozed" : "reviewDismissed",
+      startedAt: now.toISOString(),
+      completedAt: now.toISOString(),
+      status: "succeeded",
+      appVersion: this.appVersion,
+      inputArtifacts: [],
+      outputArtifacts: [],
+      errorSummary: null,
+      review: disposition,
+    });
+    return disposition;
+  }
+
+  /**
+   * Reads the project and derives what a currency change would do to it.
+   * Writes nothing: the seller has to see the diff and confirm it.
+   *
+   * The request carries only an intent — a currency and a rate. Nothing about
+   * the plan crosses this boundary, so a preview the renderer could have built
+   * or edited has no way to decide what gets written.
+   */
+  private async currencyChangePlan(root: string, toCurrency: string, rate: string) {
+    return this.run(async () => {
+      const store = await this.openStore(root);
+      const manifest = store.manifest;
+      // Absence is decided by asking what exists, never by swallowing a read
+      // error. A project that has never calculated has no scenarios file; a
+      // project whose assumptions cannot be read must be refused outright,
+      // because converting everything except the one artifact that failed to
+      // load is a silent partial change — the exact outcome this operation
+      // exists to avoid.
+      const present = new Set(
+        (await store.listArtifacts())
+          .filter((artifact) => artifact.exists)
+          .map((artifact) => artifact.path),
+      );
+      const optional = (relativePath: string): Promise<string | null> =>
+        present.has(relativePath) ? store.readArtifactText(relativePath) : Promise.resolve(null);
+      const [competitorsRaw, assumptionsRaw, scenariosRaw, snapshots] = await Promise.all([
+        optional(ArtifactPaths.competitors),
+        optional(ArtifactPaths.assumptions),
+        optional(ArtifactPaths.scenarios),
+        store.listMarketSnapshots(),
+      ]);
+      const parse = <T>(raw: string | null, schema: { parse: (value: unknown) => T }): T | null =>
+        raw === null ? null : schema.parse(JSON.parse(raw));
+
+      return planCurrencyChange({
+        fromCurrency: manifest.currency,
+        toCurrency,
+        rate,
+        changedAt: new Date().toISOString(),
+        manifest,
+        competitors: parse(competitorsRaw, competitorSchema.array()),
+        assumptions: parse(assumptionsRaw, costAssumptionsSchema),
+        scenarios: parse(scenariosRaw, economicsScenarioSchema.array()),
+        snapshots,
+      });
+    });
+  }
+
+  async currencyPreview(
+    root: string,
+    toCurrency: string,
+    rate: string,
+  ): Promise<CurrencyChangePreview> {
+    const plan = await this.currencyChangePlan(root, toCurrency, rate);
+    return currencyChangePreviewSchema.parse({
+      fromCurrency: plan.fromCurrency,
+      toCurrency: plan.toCurrency,
+      rate: plan.rate,
+      createdAt: plan.changedAt,
+      affectedArtifacts: plan.artifacts.map((artifact) => ({
+        path: artifact.path,
+        sha256: createHash("sha256").update(artifact.after).digest("hex"),
+      })),
+      beforeHash: plan.beforeHash,
+      afterHash: plan.afterHash,
+      oldValues: { ...plan.oldValues },
+      newValues: { ...plan.newValues },
+      changedCount: Object.keys(plan.newValues).length,
+    });
+  }
+
+  /**
+   * Restates the project in another currency, on the record.
+   *
+   * The plan is derived here rather than taken from the caller, so a seller who
+   * edited a competitor price between the preview and this call gets the
+   * current price converted and the journal records the value that was really
+   * on disk. The journal entry is appended only once the folder is known to
+   * hold what the record describes; a change that cannot land rolls itself back
+   * and is recorded as the failure it was.
+   */
+  async applyCurrencyChange(
+    root: string,
+    toCurrency: string,
+    rate: string,
+  ): Promise<{ change: CurrencyChangeRecord; changedCount: number; snapshot: ProjectSnapshot }> {
+    const startedAt = new Date().toISOString();
+    const runId = `RUN-${randomUUID()}`;
+    const store = await this.openStore(root);
+    const plan = await this.currencyChangePlan(root, toCurrency, rate);
+    const change: CurrencyChangeRecord = {
+      runId,
+      fromCurrency: plan.fromCurrency,
+      toCurrency: plan.toCurrency,
+      rate: plan.rate,
+      changedAt: plan.changedAt,
+      affectedArtifacts: plan.artifacts.map((artifact) => ({
+        path: artifact.path,
+        sha256: createHash("sha256").update(artifact.after).digest("hex"),
+      })),
+      beforeHash: plan.beforeHash,
+      afterHash: plan.afterHash,
+      oldValues: { ...plan.oldValues },
+      newValues: { ...plan.newValues },
+    };
+    let written: ArtifactFingerprint[];
+    try {
+      written = await writeCurrencyPlan(root, plan);
+    } catch (error) {
+      // A change that could not land journals as the failure it was, with no
+      // payload: a run record cannot describe a conversion that did not happen.
+      // The plan has already put back what it took, so the folder is whole.
+      await store.journal.appendRun({
+        runId,
+        operation: "currencyChanged",
+        startedAt,
+        completedAt: new Date().toISOString(),
+        status: "failed",
+        appVersion: this.appVersion,
+        inputArtifacts: [],
+        outputArtifacts: [],
+        errorSummary: error instanceof Error ? error.message : String(error),
+      });
+      throw toAppError(error);
+    }
+    await store.journal.appendRun({
+      runId,
+      operation: "currencyChanged",
+      startedAt,
+      completedAt: new Date().toISOString(),
+      status: "succeeded",
+      appVersion: this.appVersion,
+      inputArtifacts: [],
+      outputArtifacts: written,
+      errorSummary: null,
+      currencyChange: change,
+    });
+    return {
+      change,
+      changedCount: Object.keys(change.newValues).length,
+      // Re-read rather than patch: the manifest on disk is the canonical
+      // currency now, and the UI is told what the folder actually says.
+      snapshot: { root, manifest: (await this.openStore(root)).manifest },
+    };
   }
 
   /** File-first pillar: CSV export of the requested table. */

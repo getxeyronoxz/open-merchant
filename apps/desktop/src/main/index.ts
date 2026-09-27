@@ -1,12 +1,24 @@
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { BrowserWindow, Menu, app, dialog, safeStorage, shell } from "electron";
 import { autoUpdater } from "electron-updater";
 
-import { updateStatusSchema } from "@open-merchant/shared";
+import { updateStatusSchema, type UpdateStatus } from "@open-merchant/shared";
+
+import { describeUpdate } from "./update-notice";
 
 import { AiConfigStore } from "./ai-config";
+import { PluginStore } from "./plugin-store";
 import { MerchantService } from "./service";
 import { registerIpcHandlers } from "./ipc";
+
+/**
+ * This package is `"type": "module"`, so electron-vite emits the main process
+ * as ESM and CommonJS globals like `__dirname` do not exist. Deriving it from
+ * the module URL is the supported equivalent; using `__dirname` here throws
+ * before the window is ever created.
+ */
+const mainDirectory = dirname(fileURLToPath(import.meta.url));
 
 function createMainWindow() {
   const win = new BrowserWindow({
@@ -37,7 +49,7 @@ function createMainWindow() {
       ? {}
       : { icon: join(app.getAppPath(), "build", "icon.png") }),
     webPreferences: {
-      preload: join(__dirname, "../preload/index.js"),
+      preload: join(mainDirectory, "../preload/index.js"),
       sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
@@ -55,7 +67,7 @@ function createMainWindow() {
   if (process.env.ELECTRON_RENDERER_URL) {
     void win.loadURL(process.env.ELECTRON_RENDERER_URL);
   } else {
-    void win.loadFile(join(__dirname, "../renderer/index.html"));
+    void win.loadFile(join(mainDirectory, "../renderer/index.html"));
   }
 }
 
@@ -82,8 +94,22 @@ function buildApplicationMenu() {
               });
               return;
             }
-            autoUpdater.checkForUpdates().catch(() => {
-              // Offline or no feed: the updater stays silent.
+            // Answers the person who clicked it. Previously this fired a check
+            // and said nothing either way, so "you are on the newest release"
+            // and "the feed was unreachable" were the same silence — and only
+            // one of those is good news.
+            void dialog.showMessageBox({
+              type: "info",
+              title: "Updates",
+              message: "Checking for updates…",
+            });
+            void checkForUpdates().then((status) => {
+              const notice = describeUpdate(status, app.getVersion());
+              void dialog.showMessageBox({
+                type: notice.isProblem ? "warning" : "info",
+                title: "Updates",
+                message: notice.message,
+              });
             });
           },
         },
@@ -155,7 +181,13 @@ app.whenReady().then(() => {
   if (customUserData) app.setPath("userData", customUserData);
 
   const aiConfig = new AiConfigStore(app.getPath("userData"), safeStorage);
-  registerIpcHandlers(new MerchantService(app.getVersion(), aiConfig), aiConfig);
+  const plugins = new PluginStore(app.getPath("userData"), app.getVersion());
+  registerIpcHandlers(
+    new MerchantService(app.getVersion(), aiConfig, plugins),
+    aiConfig,
+    plugins,
+    checkForUpdates,
+  );
   buildApplicationMenu();
   initAutoUpdate();
   createMainWindow();
@@ -174,8 +206,16 @@ app.on("window-all-closed", () => {
  * "update:status" channel. The payload is parsed with the shared schema on
  * this side too, so the renderer receives only contract-shaped data.
  */
-function sendUpdateStatus(state: "available" | "not-available" | "downloaded", version?: string) {
-  const payload = updateStatusSchema.parse(version ? { state, version } : { state });
+function sendUpdateStatus(
+  state: "checking" | "available" | "not-available" | "downloaded" | "error",
+  version?: string,
+  detail?: string,
+) {
+  const payload = updateStatusSchema.parse({
+    state,
+    ...(version === undefined ? {} : { version }),
+    ...(detail === undefined ? {} : { detail }),
+  });
   for (const window of BrowserWindow.getAllWindows()) {
     window.webContents.send("update:status", payload);
   }
@@ -206,11 +246,82 @@ function initAutoUpdate() {
   autoUpdater.on("update-available", (info) => {
     sendUpdateStatus("available", info.version);
   });
+  autoUpdater.on("update-not-available", () => {
+    sendUpdateStatus("not-available");
+  });
   autoUpdater.on("update-downloaded", (info) => {
     sendUpdateStatus("downloaded", info.version);
   });
-
-  autoUpdater.checkForUpdates().catch(() => {
-    // Offline, rate-limited, or no release yet: stay quiet.
+  // Without this the failure is invisible: the promise rejects into a comment
+  // and electron-updater's own logger writes to a stdout nobody reads in a
+  // packaged build. A seller then cannot tell that they are missing fixes.
+  autoUpdater.on("error", (error: Error) => {
+    sendUpdateStatus("error", undefined, error.message);
   });
+
+  // A single check at launch is not enough. Launching offline is ordinary —
+  // this is a local-first app — and one failed check at startup used to leave a
+  // user on a stale build with no further attempt and no way to know.
+  void checkForUpdates();
+  const timer = setInterval(() => void checkForUpdates(), UPDATE_CHECK_INTERVAL_MS);
+  timer.unref();
+}
+
+/** Six hours: often enough to notice a release in a session, rarely enough to be quiet. */
+const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+/** How long a completed check is good for before a caller asking again re-checks. */
+const UPDATE_STATUS_FRESH_MS = 60 * 1000;
+
+let lastCheck: { at: number; status: UpdateStatus } | null = null;
+let inFlight: Promise<UpdateStatus> | null = null;
+
+/**
+ * One update check, reported honestly whichever way it goes.
+ *
+ * The menu, the timer, and the window on mount all ask through here, so a
+ * fresh result is shared rather than each one hitting the network. Returns the
+ * state so a caller that asked can answer immediately, and pushes the same
+ * state to any open window: "up to date", "could not ask", and "a newer
+ * version is downloading" are three different facts.
+ */
+async function checkForUpdates(options: { force?: boolean } = {}): Promise<UpdateStatus> {
+  // Guarded here, not only in initAutoUpdate. The renderer and the menu both
+  // call this directly, and without the guard a development checkout reached
+  // the network with no feed — and app.getVersion() there reports Electron's
+  // version, so the strip announced "you are on 39.8.10, the newest release"
+  // about software that is not Open Merchant.
+  if (!app.isPackaged) {
+    return { state: "unavailable", detail: "This is a development build; it has no update feed." };
+  }
+
+  const fresh = lastCheck !== null && Date.now() - lastCheck.at < UPDATE_STATUS_FRESH_MS;
+  if (!options.force && fresh && lastCheck !== null) return lastCheck.status;
+  // A second caller arriving while the first is still running joins it rather
+  // than starting a competing check.
+  if (inFlight !== null) return inFlight;
+
+  sendUpdateStatus("checking");
+  inFlight = (async (): Promise<UpdateStatus> => {
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      // A resolved check with no updateInfo is "nothing newer"; the
+      // update-not-available event is what usually reports it, and this covers
+      // the case where it has already fired before we got here.
+      const version = result?.updateInfo?.version;
+      const status: UpdateStatus =
+        version === undefined ? { state: "not-available" } : { state: "available", version };
+      if (version !== undefined) sendUpdateStatus("available", version);
+      lastCheck = { at: Date.now(), status };
+      return status;
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      sendUpdateStatus("error", undefined, detail);
+      lastCheck = { at: Date.now(), status: { state: "error", detail } };
+      return lastCheck.status;
+    } finally {
+      inFlight = null;
+    }
+  })();
+  return inFlight;
 }

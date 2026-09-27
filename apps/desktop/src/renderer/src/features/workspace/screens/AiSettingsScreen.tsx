@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { ProviderId } from "@open-merchant/shared";
 import { ErrorState, Field } from "@open-merchant/ui";
@@ -33,6 +33,7 @@ export function AiSettingsScreen() {
   const [modelId, setModelId] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
+  const providerGridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (configQuery.data) {
@@ -60,6 +61,19 @@ export function AiSettingsScreen() {
   const config = configQuery.data;
   const hasKey = Boolean(config.hasKeys[providerId]);
   const isLocal = providerId === "local-openai";
+
+  /**
+   * Choosing a provider is one action with two consequences: which key and
+   * model apply, and which fields are shown. Every path that changes the
+   * provider goes through here, so the model and base URL cannot drift out of
+   * step with the selection — a stale model id silently saved against the wrong
+   * provider is the kind of thing that only surfaces days later as a 404.
+   */
+  function selectProvider(id: ProviderId): void {
+    setProviderId(id);
+    setModelId(config.models[id] ?? "");
+    setBaseUrl(config.baseUrls[id] ?? "");
+  }
 
   return (
     <section className="screen">
@@ -91,17 +105,36 @@ export function AiSettingsScreen() {
           });
         }}
       >
-        <div className="ai-providers" role="radiogroup" aria-label="AI provider">
+        <div
+          aria-label="AI provider"
+          className="ai-providers"
+          onKeyDown={(event) => {
+            // A radiogroup is only usable if the arrow keys move within it, so
+            // these are real radios rather than toggle buttons that merely sit
+            // inside something labelled as a radio group.
+            const forward = event.key === "ArrowRight" || event.key === "ArrowDown";
+            const backward = event.key === "ArrowLeft" || event.key === "ArrowUp";
+            if (!forward && !backward) return;
+            const current = PROVIDERS.findIndex((provider) => provider.id === providerId);
+            const step = forward ? 1 : -1;
+            const next = PROVIDERS[(current + step + PROVIDERS.length) % PROVIDERS.length];
+            if (next === undefined) return;
+            event.preventDefault();
+            selectProvider(next.id);
+            const tabs = providerGridRef.current?.querySelectorAll<HTMLButtonElement>('[role="radio"]');
+            tabs?.[PROVIDERS.indexOf(next)]?.focus();
+          }}
+          ref={providerGridRef}
+          role="radiogroup"
+        >
           {PROVIDERS.map((provider) => (
             <button
-              aria-pressed={providerId === provider.id}
+              aria-checked={providerId === provider.id}
               className={`om-card ai-provider${providerId === provider.id ? " is-active" : ""}`}
               key={provider.id}
-              onClick={() => {
-                setProviderId(provider.id);
-                setModelId(config.models[provider.id] ?? "");
-                setBaseUrl(config.baseUrls[provider.id] ?? "");
-              }}
+              onClick={() => selectProvider(provider.id)}
+              role="radio"
+              tabIndex={providerId === provider.id ? 0 : -1}
               type="button"
             >
               <strong>{provider.label}</strong>

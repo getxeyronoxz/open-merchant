@@ -35,6 +35,7 @@ function bind<C extends IpcChannel>(raw: RawInvoke, channel: C): (request: IpcRe
 
 export interface DesktopClient {
   appInfo(): Promise<IpcResponse<"app/info">>;
+  checkForUpdates(): Promise<IpcResponse<"update/check">>;
   installUpdate(): Promise<IpcResponse<"update/install">>;
   chooseDirectory(title: string): Promise<IpcResponse<"dialog/choose-directory">>;
   createProject(request: IpcRequest<"project/create">): Promise<IpcResponse<"project/create">>;
@@ -52,7 +53,11 @@ export interface DesktopClient {
   ): Promise<IpcResponse<"evidence/save">>;
 
   loadCompetitors(root: string): Promise<IpcResponse<"competitors/load">>;
-  saveCompetitors(root: string, competitors: IpcRequest<"competitors/save">["competitors"]): Promise<IpcResponse<"competitors/save">>;
+  saveCompetitors(
+    root: string,
+    competitors: IpcRequest<"competitors/save">["competitors"],
+    origin?: IpcRequest<"competitors/save">["origin"],
+  ): Promise<IpcResponse<"competitors/save">>;
   competitorStatistics(root: string): Promise<IpcResponse<"competitors/statistics">>;
 
   loadAssumptions(root: string): Promise<IpcResponse<"assumptions/load">>;
@@ -86,12 +91,34 @@ export interface DesktopClient {
   marginMonitor(root: string): Promise<IpcResponse<"monitor/margin">>;
   decisionJournal(root: string): Promise<IpcResponse<"journal/decision">>;
   portfolioOverview(): Promise<IpcResponse<"portfolio/overview">>;
+  standingReviews(): Promise<IpcResponse<"reviews/standing">>;
+  disposeReview(
+    root: string,
+    reviewKey: string,
+    action: "snoozed" | "dismissed",
+  ): Promise<IpcResponse<"reviews/dispose">>;
+  currencyPreview(
+    root: string,
+    toCurrency: string,
+    rate: string,
+  ): Promise<IpcResponse<"currency/preview">>;
+  applyCurrencyChange(
+    root: string,
+    toCurrency: string,
+    rate: string,
+  ): Promise<IpcResponse<"currency/apply">>;
   exportCsv(root: string, kind: IpcRequest<"csv/export">["kind"]): Promise<IpcResponse<"csv/export">>;
   parseCsv(csv: string): Promise<IpcResponse<"csv/parse">>;
   importCompetitorsCsv(root: string, csv: string, mapping?: Record<string, string>): Promise<IpcResponse<"csv/import">>;
   createArchive(root: string): Promise<IpcResponse<"archive/create">>;
   restoreArchive(parentDirectory: string, archiveBase64: string): Promise<IpcResponse<"archive/restore">>;
   exportReportPdf(root: string): Promise<IpcResponse<"report/export-pdf">>;
+
+  listPlugins(): Promise<IpcResponse<"plugins/list">>;
+  readPluginSource(pluginId: string): Promise<IpcResponse<"plugins/source">>;
+  setPluginEnabled(pluginId: string, enabled: boolean): Promise<IpcResponse<"plugins/set-enabled">>;
+  fetchFromConnector(root: string, pluginId: string, query: string): Promise<IpcResponse<"connectors/fetch">>;
+  locateMcpServer(root: string): Promise<IpcResponse<"mcp/locate">>;
 
   loadAiConfig(): Promise<IpcResponse<"ai/config/load">>;
   saveAiConfig(request: IpcRequest<"ai/config/save">): Promise<IpcResponse<"ai/config/save">>;
@@ -110,6 +137,7 @@ export interface DesktopClient {
 export function createDesktopClient(raw: RawInvoke): DesktopClient {
   return {
     appInfo: () => invoke(raw, "app/info", {}),
+    checkForUpdates: () => invoke(raw, "update/check", {}),
     installUpdate: () => invoke(raw, "update/install", {}),
     chooseDirectory: (title) => invoke(raw, "dialog/choose-directory", { title }),
     createProject: bind(raw, "project/create"),
@@ -123,7 +151,8 @@ export function createDesktopClient(raw: RawInvoke): DesktopClient {
     saveEvidence: (root, sources, origin) => invoke(raw, "evidence/save", { root, sources, origin }),
 
     loadCompetitors: (root) => invoke(raw, "competitors/load", { root }),
-    saveCompetitors: (root, competitors) => invoke(raw, "competitors/save", { root, competitors }),
+    saveCompetitors: (root, competitors, origin) =>
+      invoke(raw, "competitors/save", { root, competitors, origin }),
     competitorStatistics: (root) => invoke(raw, "competitors/statistics", { root }),
 
     loadAssumptions: (root) => invoke(raw, "assumptions/load", { root }),
@@ -150,6 +179,13 @@ export function createDesktopClient(raw: RawInvoke): DesktopClient {
     marginMonitor: (root) => invoke(raw, "monitor/margin", { root }),
     decisionJournal: (root) => invoke(raw, "journal/decision", { root }),
     portfolioOverview: () => invoke(raw, "portfolio/overview", {}),
+    standingReviews: () => invoke(raw, "reviews/standing", {}),
+    disposeReview: (root, reviewKey, action) =>
+      invoke(raw, "reviews/dispose", { root, reviewKey, action }),
+    currencyPreview: (root, toCurrency, rate) =>
+      invoke(raw, "currency/preview", { root, toCurrency, rate }),
+    applyCurrencyChange: (root, toCurrency, rate) =>
+      invoke(raw, "currency/apply", { root, toCurrency, rate }),
     exportCsv: (root, kind) => invoke(raw, "csv/export", { root, kind }),
     parseCsv: (csv) => invoke(raw, "csv/parse", { csv }),
     importCompetitorsCsv: (root, csv, mapping) =>
@@ -158,6 +194,13 @@ export function createDesktopClient(raw: RawInvoke): DesktopClient {
     restoreArchive: (parentDirectory, archiveBase64) =>
       invoke(raw, "archive/restore", { parentDirectory, archiveBase64 }),
     exportReportPdf: (root) => invoke(raw, "report/export-pdf", { root }),
+
+    listPlugins: () => invoke(raw, "plugins/list", {}),
+    readPluginSource: (pluginId) => invoke(raw, "plugins/source", { pluginId }),
+    setPluginEnabled: (pluginId, enabled) => invoke(raw, "plugins/set-enabled", { pluginId, enabled }),
+    fetchFromConnector: (root, pluginId, query) =>
+      invoke(raw, "connectors/fetch", { root, pluginId, query }),
+    locateMcpServer: (root) => invoke(raw, "mcp/locate", { root }),
 
     loadAiConfig: () => invoke(raw, "ai/config/load", {}),
     saveAiConfig: (request) => invoke(raw, "ai/config/save", request),

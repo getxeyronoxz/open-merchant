@@ -12,11 +12,13 @@ Instructions for Codex working in this repository.
 
 ## Git conventions
 
-- Owner: Xeyronox (`getxeyronoxz`). Commit as the configured repo identity; keep
-  `Co-Authored-By: Codex <noreply@anthropic.com>` trailers on Codex-assisted commits.
+- Owner: Xeyronox (`getxeyronoxz`). Commit as the configured repo identity.
+  Do not add `Co-Authored-By` trailers or any other authorship attribution
+  (human or AI) unless the owner explicitly requests it. Only the owner merges
+  pull requests.
 - Work on feature branches off `dev` (e.g. `feature/*`). `dev` is the active line;
   `main` holds the archived V0 (Tauri/Rust) codebase and stays frozen.
-- Releases are cut by pushing a `v*` tag (e.g. `v1.0.0-alpha.1`): the Release
+- Releases are cut by pushing a `v*` tag (e.g. `v1.0.0`): the Release
   workflow builds NSIS/DMG/AppImage on GitHub runners and publishes them with
   the auto-update feed to GitHub Releases. Bump `apps/desktop/package.json`
   (and the root version) to match before tagging.

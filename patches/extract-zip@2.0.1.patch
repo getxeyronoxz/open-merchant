@@ -1,0 +1,19 @@
+diff --git a/index.js b/index.js
+index 23384ea16bb848616886f356d8d69f94325535bf..61f2571a4be0a8033da7452226c88203d59d4562 100644
+--- a/index.js
++++ b/index.js
+@@ -129,6 +129,14 @@ class Extractor {
+       debug('creating symlink', link, dest)
+       await fs.symlink(link, dest)
+     } else {
++      // Local security patch (CVE-2026-19693 / GHSA-7pqw-9j4j-h8q3, upstream
++      // PR max-mapper/extract-zip#160): never write through a symlink planted
++      // at the entry's own final path component — the containment check above
++      // only covers the parent directory.
++      const existing = await fs.lstat(dest).catch(() => null)
++      if (existing && existing.isSymbolicLink()) {
++        throw new Error(`Out of bound path "${dest}" found while processing file ${entry.fileName}`)
++      }
+       await pipeline(readStream, createWriteStream(dest, { mode: procMode }))
+     }
+   }

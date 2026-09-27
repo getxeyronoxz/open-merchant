@@ -1,25 +1,27 @@
 {
   "name": "@open-merchant/desktop",
-  "version": "1.0.0-alpha.4",
+  "version": "1.0.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "electron-vite build",
-    "dist": "electron-vite build && electron-builder --publish never",
+    "build": "pnpm --filter @open-merchant/mcp build && node stage-mcp.cjs && electron-vite build",
+    "dist": "pnpm run build && electron-builder --publish never",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:e2e": "electron-vite build && vitest run -c vitest.e2e.config.ts",
-    "test:all": "vitest run && pnpm run test:e2e"
+    "test:all": "vitest run && pnpm run test:e2e",
+    "demo": "node record.cjs && node gif.mjs"
   },
   "description": "Local-first, AI-native commerce research workbench.",
   "author": {
     "name": "Xeyronox"
   },
   "dependencies": {
+    "@modelcontextprotocol/client": "2.0.0",
     "@open-merchant/ai": "workspace:*",
     "@open-merchant/core": "workspace:*",
     "@open-merchant/sdk": "workspace:*",
