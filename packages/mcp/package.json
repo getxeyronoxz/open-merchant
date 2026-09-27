@@ -1,6 +1,6 @@
 {
   "name": "@open-merchant/mcp",
-  "version": "1.0.0-alpha.0",
+  "version": "1.0.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "description": "Read-only, stdio-only MCP server exposing one Open Merchant project folder as resources.",
@@ -11,7 +11,7 @@
     ".": "./src/index.ts"
   },
   "bin": {
-    "open-merchant-mcp": "./dist/cli.js"
+    "open-merchant-mcp": "./dist/cli.mjs"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

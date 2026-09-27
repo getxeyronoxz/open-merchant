@@ -59,7 +59,15 @@ Agents draft; humans accept. The Draft Desk is the visible review lane: it shows
 
 ## Updates and releases
 
-Packaged builds check the project's own GitHub Releases feed (`latest.yml`, published by a `v*` tag build on GitHub runners) via `electron-updater` and download delta updates in the background. When an update is ready, the renderer shows a non-blocking banner — restart now, or keep working and it installs on quit. The notice travels over the same validated IPC contract as everything else (`update:status` push events plus an `update/install` channel), never a native dialog. There is no telemetry and no third-party service: the update check is a passive read of the owner's release feed, so the local-first boundary holds. Linux ships three containerized formats — AppImage, snap, and flatpak — built by the same tagged workflow.
+Packaged builds check the project's own GitHub Releases feed (`latest.yml`, published by a `v*` tag build on GitHub runners) via `electron-updater` and download delta updates in the background. The check runs at launch and every six hours; a result is cached for a minute and an in-flight check is joined rather than duplicated, so the menu, the timer, and a newly opened window do not each hit the network.
+
+Every one of the contract's five states is emitted — `checking`, `available`, `not-available`, `downloaded`, `error` — and the renderer renders them differently on purpose. "You are on the newest release" and "we could not reach the feed" are different facts, and a failed check is escalated to a `role="alert"` strip rather than rendered as calm news. The strip is always present, quiet when all is well, with a "Check now" action. Status travels over the same validated IPC contract as everything else (`update:status` push events, plus `update/check` and `update/install` request channels), never a native dialog.
+
+There is no telemetry and no third-party service: the update check is a passive read of the owner's release feed, so the local-first boundary holds.
+
+**A version bump is not a release.** The feed is GitHub Releases, so an untagged version has no release to come from and nothing to update to. Only the owner pushes a `v*` tag.
+
+Packaging, per platform: NSIS on Windows; DMG **and** zip on macOS (the zip is not for users — electron-updater's macOS path applies a zip diff, so without it the feed has nothing to patch against); AppImage, `deb`, `tar.gz`, snap, and flatpak on Linux. The AppImage needs `libfuse.so.2`, which Arch dropped for `fuse3`; `deb` and `tar.gz` are the no-FUSE path. The flatpak pins a supported runtime (`26.08`) because Flathub keeps only supported runtimes in its main repository, and CI installs that runtime and its SDK explicitly rather than relying on flatpak-builder's auto-download.
 
 ## Phase 2 cockpit
 
@@ -80,9 +88,50 @@ The change is journaled to `runs.jsonl` as a `currencyChanged` run carrying a ty
 | Renderer behavior | Focused Vitest, then `pnpm -r test`, `pnpm typecheck`, `pnpm lint`, `pnpm build` |
 | Core/workspace rules | `pnpm --filter @open-merchant/core test` (includes golden parity + real-example import) |
 | Agents | `pnpm --filter @open-merchant/ai test` (scripted-provider structured output tests) |
-| Installer | `pnpm --filter @open-merchant/desktop dist`, launch packaged app once per platform |
+| Installer | `pnpm --filter @open-merchant/desktop dist`, launch packaged app once per platform, and run the staged MCP launcher from inside the packaged tree (`docs/testing-platforms.md`) |
 | Electron window & IPC | `pnpm --filter @open-merchant/desktop test:e2e` — drives the real app (real preload, real IPC, real disk); CI runs it under xvfb with a 60s hook timeout |
+
+## Plugin and connector lane
+
+Plugins live in app data (`<userData>/plugins/<id>/manifest.json`), never in a project folder, and
+load **disabled**. A plugin is data, not code this app loads: no third-party JavaScript is ever
+imported into Electron. A manifest is zod-validated, and a manifest without an `author`, a directory
+whose name does not match its `id`, two folders claiming one `id`, or a symlinked folder are all
+refused — and every refusal is *listed with its reason* rather than skipped silently, so nothing is
+dropped without the seller seeing it.
+
+`minAppVersion` is enforced: a plugin needing a build this one has not reached is refused the same
+way, and the minimum is shown on its row. The comparison is semantic versioning's, not a string
+compare — `1.0.0-beta.1` sorts after `1.0.0` as text, so a naive compare would let a beta load a
+plugin written for the release, which is the exact case the field exists to prevent.
+
+`network: true` is a **disclosed contract the seller accepts at enable time, not a restriction this
+app can enforce**: Node cannot stop a spawned process from opening a socket. The Plugins screen
+shows the resolved install directory, because the path follows the package name and a plugin in the
+wrong place is indistinguishable from one that was ignored.
+
+A `connector` is the one kind that runs something — an external MCP stdio process. It must declare
+`writes: ["drafts"]` or the fetch is refused before the process starts, and the environment is
+scrubbed to `PATH`/temp only. What it returns arrives on the Draft Desk as **drafts** tagged with
+connector id, fetch time, and a SHA-256 hash of the raw response — never as an agent, provider, or
+model, and never as project data. A fetch writes nothing to the project: not evidence, not
+competitors, not provenance. The only trace is one `connectorFetched` run in `runs.jsonl`, and a
+failed fetch leaves the project byte-for-byte untouched, so a third-party process cannot so much as
+stamp a failure record.
+
+## Standing reviews
+
+The attention queue is **derived, never stored** — there is no reviews artifact, so it cannot drift
+out of step with the evidence it describes, and it is computed against an injected clock so it is
+deterministic. Snoozing and dismissing are both journaled to that project's `runs.jsonl` as a
+validated disposition, and a disposition records the *occurrence* it silenced rather than just the
+review kind, so re-observing your evidence and letting it go stale again raises the nag again
+instead of being silenced forever by a decision made about the old data.
 
 ## MCP lane (read-only, stdio)
 
 `packages/mcp` runs outside the app process: any MCP host (Claude Desktop, an IDE agent, a script) spawns `open-merchant-mcp <project-folder>` over stdio — a command the app itself resolves and hands over as a paste-ready host config, because the server is staged into the app's resources at build time (`apps/desktop/stage-mcp.cjs` → `process.resourcesPath/mcp`, copied by electron-builder's `extraResources`) — no network socket exists in the package. It reads only the known workspace layout through guarded directory and artifact resolvers in `@open-merchant/core`, validates exact bytes against `@open-merchant/shared`, and appends one guarded `mcpArtifactRead` record per successful read. It registers resources and zero tools: a host attempting any write fails loudly at the protocol level, so external reads stay observable and the canonical write path never loosens.
+
+The CLI is bundled self-contained — zod and the MCP SDK compiled in — so it needs no `node_modules` beside it, which is what makes a single staged file possible. Its reported version comes from its own `package.json` rather than a literal, and a test forbids a semver appearing anywhere in that file: a frozen literal there outlives every release, which is the defect the connector client had first. Each platform gets a launcher it can actually spawn — a `.cmd` on Windows, a `/bin/sh` script elsewhere — and both prefer the Node runtime that ships with the app over anything on `PATH`, so no separate Node install is required.
+
+The config a host needs is generated by the app, per host, because hosts disagree: opencode reads an `mcp` key with the transport spelled `local` and the command as an array, while Claude Code and Claude Desktop read `mcpServers` with `stdio`, a string command, and a separate `args`. Hosts whose format is not verified are deliberately absent from the list rather than guessed. `packages/mcp` is `private: true` and **not published to npm**; the app bundle is the distribution channel.

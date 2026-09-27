@@ -83,8 +83,9 @@ Code and Claude Desktop read `mcpServers` with a string command and a separate `
 snippet would be a guess. [`docs/mcp-hosts.md`](docs/mcp-hosts.md) has both, written down, with the
 sources they were taken from.
 
-On Windows that command needs no Node installation of your own — it runs through the Node runtime
-that ships with Open Merchant.
+That command needs no Node installation of your own on any platform — it runs through the Node
+runtime that ships with Open Merchant, and only falls back to a system Node if the app's own
+runtime is not where it expects to find it.
 
 ## Plugins and connectors
 

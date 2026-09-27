@@ -1,6 +1,6 @@
 # Builds installers on GitHub runners (never on a dev machine) and publishes
 # them — plus the latest.yml update feed — to GitHub Releases. Tag a commit
-# (v1.0.0-alpha.1, …) to cut a release. Code-signing secrets are optional
+# (v1.0.0, …) to cut a release. Code-signing secrets are optional
 # slots: empty today, and the same workflow produces signed builds later.
 name: Release
 

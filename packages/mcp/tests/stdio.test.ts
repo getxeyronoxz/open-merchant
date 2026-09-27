@@ -1,5 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
@@ -18,6 +19,11 @@ interface JsonRpcResponse {
 }
 
 const CLI = fileURLToPath(new URL("../dist/cli.mjs", import.meta.url));
+const manifestVersion = (
+  JSON.parse(readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8")) as {
+    version: string;
+  }
+).version;
 
 class StdioClient {
   private readonly child: ChildProcessWithoutNullStreams;
@@ -139,7 +145,11 @@ describe("spawned open-merchant-mcp executable", () => {
     }
     expect(await mcpReadCount(fixture.root)).toBe(before + resources.length);
 
-    expect(client.serverInfo).toMatchObject({ name: "open-merchant", version: "1.0.0-alpha.0" });
+    // The version comes from package.json, not a literal. This assertion used
+    // to hardcode one, which meant it was pinning the very defect it should
+    // have caught: a server that told every host it was the first alpha
+    // forever. Comparing against the manifest is the invariant that matters.
+    expect(client.serverInfo).toMatchObject({ name: "open-merchant", version: manifestVersion });
     expect(client.capabilities).toHaveProperty("resources");
     expect(client.capabilities).not.toHaveProperty("tools");
     const tools = await client.request("tools/list");
