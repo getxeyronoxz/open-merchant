@@ -286,6 +286,15 @@ let inFlight: Promise<UpdateStatus> | null = null;
  * version is downloading" are three different facts.
  */
 async function checkForUpdates(options: { force?: boolean } = {}): Promise<UpdateStatus> {
+  // Guarded here, not only in initAutoUpdate. The renderer and the menu both
+  // call this directly, and without the guard a development checkout reached
+  // the network with no feed — and app.getVersion() there reports Electron's
+  // version, so the strip announced "you are on 39.8.10, the newest release"
+  // about software that is not Open Merchant.
+  if (!app.isPackaged) {
+    return { state: "unavailable", detail: "This is a development build; it has no update feed." };
+  }
+
   const fresh = lastCheck !== null && Date.now() - lastCheck.at < UPDATE_STATUS_FRESH_MS;
   if (!options.force && fresh && lastCheck !== null) return lastCheck.status;
   // A second caller arriving while the first is still running joins it rather

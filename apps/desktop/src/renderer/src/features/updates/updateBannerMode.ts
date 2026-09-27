@@ -20,6 +20,16 @@ export interface UpdateBannerMode {
   readonly urgent: boolean;
 }
 
+/**
+ * True when the build has an updater and therefore has something to say.
+ *
+ * A type guard rather than a plain boolean so callers narrow to a non-null
+ * status, which a predicate on a function returning `boolean` does not give.
+ */
+export function hasUpdateStory(status: UpdateStatus | null): status is UpdateStatus {
+  return status !== null && status.state !== "unavailable";
+}
+
 export function updateBannerMode(status: UpdateStatus, currentVersion: string): UpdateBannerMode {
   const newer = status.version === undefined ? "a newer version" : `version ${status.version}`;
 

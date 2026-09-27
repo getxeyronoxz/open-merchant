@@ -5,7 +5,7 @@ import { Button } from "@open-merchant/ui";
 
 import { client } from "../../client";
 
-import { updateBannerMode } from "./updateBannerMode";
+import { hasUpdateStory, updateBannerMode } from "./updateBannerMode";
 
 /**
  * The update strip: always present, honest, and quiet when it can be.
@@ -64,7 +64,10 @@ export function UpdateBanner() {
     }
   }, []);
 
-  if (!status || (dismissed && status.state !== "downloaded")) return null;
+  // Nothing to say in a build with no updater, rather than a claim about a
+  // version that is not this app's.
+  if (!hasUpdateStory(status)) return null;
+  if (dismissed && status.state !== "downloaded") return null;
 
   const mode = updateBannerMode(status, version === "" ? "this build" : version);
   if (!mode.urgent) {

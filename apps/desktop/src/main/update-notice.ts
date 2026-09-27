@@ -48,6 +48,14 @@ export function describeUpdate(status: UpdateStatus, currentVersion: string): Up
         offersRestart: false,
         isProblem: false,
       };
+    case "unavailable":
+      // A development build. Stated rather than implied — the alternative was
+      // announcing Electron's version as if it were Open Merchant's.
+      return {
+        message: "This is a development build, so it does not update itself.",
+        offersRestart: false,
+        isProblem: false,
+      };
     case "error":
     default:
       return {

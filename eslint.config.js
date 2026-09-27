@@ -49,9 +49,11 @@ export default tseslint.config(
       // truth is packages/mcp. A megabyte of generated bundle is not source.
       "apps/desktop/resources/**",
       "**/node_modules/**",
-      // electron-builder output. Gitignored, but ESLint does not read
+      // electron-builder output, including the throwaway output directory a
+      // verification build uses. Gitignored, but ESLint does not read
       // .gitignore, and a packaged build is not source.
       "**/release/**",
+      "**/release-*/**",
       "**/*.config.js",
       "**/*.cjs",
       "apps/desktop/gif.mjs",

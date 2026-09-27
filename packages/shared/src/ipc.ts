@@ -83,7 +83,13 @@ export const rootOnlyInputSchema = z.object({ root: z.string() });
  * downloaded update is ready; it never needs to poll.
  */
 export const updateStatusSchema = z.object({
-  state: z.enum(["checking", "available", "not-available", "downloaded", "error"]),
+  /**
+   * `unavailable` means this build has no updater at all — a development
+   * checkout. It is a real state rather than a missing one, because a dev build
+   * reports Electron's version as the app's and would otherwise claim "you are
+   * on 39.x, the newest release" about software that is not Open Merchant.
+   */
+  state: z.enum(["checking", "available", "not-available", "downloaded", "error", "unavailable"]),
   version: z.string().optional(),
   /**
    * Why, in a sentence a person can act on. Carried because "not updated" and

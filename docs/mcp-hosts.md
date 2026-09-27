@@ -41,14 +41,19 @@ you use instead of guessing.
 ```
 
 Goes in `.mcp.json` at your project root, or in the Claude Desktop config. Claude Code also
-registers it without editing a file — the app shows you the exact command, with your paths already
-filled in:
+registers it without editing a file:
 
 ```bash
 claude mcp add --transport stdio open-merchant -- "<path>" "<project folder>"
 ```
 
 Check it with `claude mcp get open-merchant`.
+
+**The app does not generate that line for you, and that is deliberate.** Quoting that is correct in
+Windows `cmd` is wrong in PowerShell, and correct in a POSIX shell does nothing in `cmd` at all —
+so there is no single correct escaper, and an incomplete one hands you a path that looks quoted and
+is not. Type it yourself with your own paths, or use the JSON above, which has no quoting rules to
+get wrong.
 
 ### opencode — `mcp`, transport `local`, command as an array
 

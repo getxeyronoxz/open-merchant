@@ -171,16 +171,6 @@ function McpLaneCard({
           <pre className="om-code" aria-label={`${host.label} configuration`}>
             {host.snippet}
           </pre>
-          {host.cli === "" ? null : (
-            <>
-              <p className="om-field__hint">
-                Or skip the file entirely and run this instead:
-              </p>
-              <pre className="om-code" aria-label={`${host.label} command`}>
-                {host.cli}
-              </pre>
-            </>
-          )}
           <p className="om-field__hint">
             Other hosts speak the same protocol but name the settings differently — the shape above
             is the one {host.label} reads. If yours differs, it needs <code>command</code> and the

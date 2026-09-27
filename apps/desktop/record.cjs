@@ -98,7 +98,13 @@ async function smoothScroll(name, { steps = 14, dy = 70, pause = 90 } = {}) {
   await mkdir(FRAMES_DIR, { recursive: true });
 
   const electronApp = await _electron.launch({
-    args: ["./out/main/index.js"],
+    // Resolved against this file, not the working directory. A relative
+    // "./out/main/index.js" only resolves when the recorder happens to be run
+    // from apps/desktop, so running it from the repository root — the obvious
+    // way, and the one the README implies — launched nothing and failed with
+    // no useful message.
+    args: [join(__dirname, "out", "main", "index.js")],
+    cwd: __dirname,
     env: { ...process.env, OPEN_MERCHANT_USER_DATA: userDataDir },
   });
   await electronApp.evaluate(({ dialog }, parent) => {

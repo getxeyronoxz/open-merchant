@@ -30,32 +30,20 @@ export interface McpHostConfig {
   readonly label: string;
   /** Where the snippet belongs, in words rather than as a path we would have to guess. */
   readonly fileHint: string;
-  /** The snippet, ready to paste. */
+  /**
+   * The snippet, ready to paste. This is the whole payload on purpose.
+   *
+   * An earlier version also emitted a `claude mcp add …` one-liner, built by a
+   * shell-quoting helper. It was removed rather than repaired: quoting that is
+   * correct in `cmd` is wrong in PowerShell, and correct in POSIX `sh` does
+   * nothing in `cmd` at all, so a single correct escaper does not exist. An
+   * incomplete one is worse than none — a path that looks quoted and is not is
+   * an injection the user pastes without reading. JSON is exact, portable, and
+   * has no quoting rules to get wrong, so it is the only thing emitted. The
+   * `claude mcp add` form is documented for people who prefer it, with the
+   * user's own paths in it.
+   */
   readonly snippet: string;
-  /** A one-line command that registers the server instead of editing a file. */
-  readonly cli: string;
-}
-
-/**
- * Quote a value for a copy-paste command line.
- *
- * Backslashes are deliberately left alone. They are not escape characters in
- * Windows `cmd` or PowerShell — the two shells a desktop app's users actually
- * have — and doubling them would turn `C:\Program Files\…` into a path with
- * doubled separators. In a POSIX shell a backslash before an ordinary character
- * inside double quotes is also literal, so leaving them is right there too.
- *
- * Only the characters that genuinely break out of double quotes are escaped:
- * a double quote itself, and the two characters a POSIX shell still expands.
- */
-function shellQuote(value: string): string {
-  const needsQuoting = /[\s"'$`]/u.test(value);
-  if (!needsQuoting) return value;
-  // A trailing backslash would escape the closing quote on a POSIX shell.
-  const body = value.replace(/[\\]*$/u, "");
-  const trailing = value.slice(body.length);
-  const escaped = body.replace(/(["$`])/gu, "\\$1");
-  return `"${escaped}${trailing}"`;
 }
 
 function claudeCode(command: string, projectRoot: string): McpHostConfig {
@@ -72,7 +60,6 @@ function claudeCode(command: string, projectRoot: string): McpHostConfig {
       null,
       2,
     ),
-    cli: `claude mcp add --transport stdio ${MCP_HOST_CONFIG_NAME} -- ${shellQuote(command)} ${shellQuote(projectRoot)}`,
   };
 }
 
@@ -97,7 +84,6 @@ function opencode(command: string, projectRoot: string): McpHostConfig {
       null,
       2,
     ),
-    cli: "",
   };
 }
 
@@ -117,5 +103,4 @@ export const mcpHostConfigSchema = z.object({
   label: z.string().min(1),
   fileHint: z.string().min(1),
   snippet: z.string().min(1),
-  cli: z.string(),
 });

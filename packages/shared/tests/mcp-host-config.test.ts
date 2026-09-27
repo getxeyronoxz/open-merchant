@@ -50,28 +50,6 @@ describe("mcpHostConfigs", () => {
       expect(parsed.mcpServers["open-merchant"]?.args).toEqual([root]);
     });
 
-    it("gives a CLI that registers the same server without editing a file", () => {
-      const cli = host("claude-code").cli;
-
-      expect(cli).toContain("claude mcp add");
-      expect(cli).toContain("--transport stdio");
-      expect(cli).toContain("open-merchant");
-    });
-
-    it("quotes a path containing spaces in the CLI form", () => {
-      // Unquoted, the shell splits "Program Files" into two arguments and the
-      // server never starts.
-      expect(host("claude-code").cli).toContain(`"${command}"`);
-    });
-
-    it("leaves backslashes alone, because a Windows shell has no escape character", () => {
-      // Doubling them would paste a path with doubled separators, which is a
-      // different string from the one the app resolved.
-      const cli = host("claude-code").cli;
-
-      expect(cli).toContain("C:\\Program Files");
-      expect(cli).not.toContain("C:\\\\Program Files");
-    });
   });
 
   describe("the opencode format", () => {
@@ -106,6 +84,17 @@ describe("mcpHostConfigs", () => {
     it("carries the schema hint opencode's editor completion uses", () => {
       expect(JSON.parse(host("opencode").snippet).$schema).toBe("https://opencode.ai/config.json");
     });
+  });
+
+  it("emits no shell command line, because no quoting is correct everywhere", () => {
+    // There was a `claude mcp add …` one-liner here, built by a quoting helper.
+    // It is gone deliberately: quoting correct in cmd is wrong in PowerShell,
+    // and correct in POSIX sh does nothing in cmd, so a single correct escaper
+    // does not exist. An incomplete one hands the user a path that looks
+    // quoted and is not.
+    for (const entry of mcpHostConfigs(command, root)) {
+      expect(Object.keys(entry)).toEqual(["id", "label", "fileHint", "snippet"]);
+    }
   });
 
   it("survives a Windows path with backslashes and a space in it", () => {

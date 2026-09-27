@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { UpdateStatus } from "@open-merchant/shared";
 
-import { updateBannerMode } from "./updateBannerMode";
+import { hasUpdateStory, updateBannerMode } from "./updateBannerMode";
 
 /**
  * What the update strip says, and how loudly.
@@ -67,5 +67,21 @@ describe("updateBannerMode", () => {
 
     expect(mode.message.length).toBeGreaterThan(0);
     expect(mode.urgent).toBe(false);
+  });
+});
+
+describe("hasUpdateStory", () => {
+  it("says nothing at all in a build with no updater", () => {
+    // A development checkout reports Electron's version as the app's, so the
+    // alternative was a strip announcing "you are on 39.8.10, the newest
+    // release" about software that is not Open Merchant.
+    expect(hasUpdateStory({ state: "unavailable" })).toBe(false);
+    expect(hasUpdateStory(null)).toBe(false);
+  });
+
+  it("speaks for every real state", () => {
+    for (const state of ["checking", "available", "not-available", "downloaded", "error"] as const) {
+      expect(hasUpdateStory({ state })).toBe(true);
+    }
   });
 });
