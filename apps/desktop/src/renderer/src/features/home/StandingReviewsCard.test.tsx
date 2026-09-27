@@ -34,7 +34,7 @@ function render(props: Partial<Parameters<typeof StandingReviewsCard>[0]> = {}):
       error={null}
       onRetry={() => undefined}
       onDispose={() => undefined}
-      pendingKey={null}
+      pending={null}
       {...props}
     />,
   );
@@ -88,10 +88,45 @@ describe("StandingReviewsCard", () => {
   });
 
   it("marks the buttons busy while that review is being dispositioned", () => {
-    const html = render({ pendingKey: "stale-evidence:S-001" });
+    const html = render({ pending: { reviewKey: "stale-evidence:S-001", action: "snoozed" } });
 
     expect(html).toContain("Working…");
     expect(html).toContain("disabled");
+  });
+
+  it("marks the button the seller actually pressed, not the other one", () => {
+    // Both buttons used to go busy together, so dismissing a review left the
+    // Snooze button saying "Working…" — naming an action that was never taken.
+    const html = render({ pending: { reviewKey: "stale-evidence:S-001", action: "dismissed" } });
+    const buttons = html.match(/<button[\s\S]*?<\/button>/gu) ?? [];
+    const [snooze, dismiss] = buttons;
+
+    expect(buttons.filter((tag) => tag.includes('aria-busy="true"'))).toHaveLength(1);
+    expect(snooze).toContain('aria-busy="false"');
+    expect(snooze).toContain("Snooze a week");
+    expect(dismiss).toContain('aria-busy="true"');
+    expect(dismiss).toContain("Working…");
+  });
+
+  it("names the right action the other way round too", () => {
+    const html = render({ pending: { reviewKey: "stale-evidence:S-001", action: "snoozed" } });
+    const buttons = html.match(/<button[\s\S]*?<\/button>/gu) ?? [];
+    const [snooze, dismiss] = buttons;
+
+    expect(snooze).toContain('aria-busy="true"');
+    expect(snooze).toContain("Working…");
+    expect(dismiss).toContain('aria-busy="false"');
+    expect(dismiss).toContain("Dismiss");
+  });
+
+  it("leaves other reviews' buttons alone while one is in flight", () => {
+    const html = render({
+      reviews: [review(), review({ key: "margin-watch:Keyboards", projectName: "Keyboards" })],
+      pending: { reviewKey: "stale-evidence:S-001", action: "snoozed" },
+    });
+
+    expect(html.match(/aria-busy="true"/gu)).toHaveLength(1);
+    expect(html.match(/Working…/gu)).toHaveLength(1);
   });
 
   it("keeps its buttons out of any surrounding form", () => {

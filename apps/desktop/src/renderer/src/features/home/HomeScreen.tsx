@@ -310,7 +310,14 @@ export function HomeScreen() {
         error={reviewsQuery.error}
         onRetry={() => void reviewsQuery.refetch()}
         onDispose={(review, action) => dispose(review, action)}
-        pendingKey={disposeReview.isPending ? (disposeReview.variables?.reviewKey ?? null) : null}
+        pending={
+          disposeReview.isPending
+            ? {
+                reviewKey: disposeReview.variables?.reviewKey ?? "",
+                action: disposeReview.variables?.action ?? "snoozed",
+              }
+            : null
+        }
       />
 
       <PortfolioOverviewCard

@@ -736,6 +736,14 @@ body {
   gap: var(--om-space-2);
 }
 
+/* The list rows are <li> purely so the buttons inside keep the button role;
+   the app resets lists per-class rather than globally, so this one is explicit. */
+.history__row {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
 .history__item {
   display: flex;
   align-items: center;

@@ -218,21 +218,25 @@ export function ArtifactsScreen({
                 const isLatest = generation.runId === latestRun?.runId;
                 const isBaseline = generation.runId === previousRun?.runId;
                 return (
-                  <button
-                    aria-pressed={isBaseline}
-                    className={`om-card history__item${isLatest ? " is-latest" : ""}${isBaseline ? " is-baseline" : ""}`}
-                    disabled={isLatest}
-                    key={generation.runId}
-                    onClick={() => setBaselineRunId(isBaseline ? null : generation.runId)}
-                    role="listitem"
-                    type="button"
-                  >
-                    <span className="om-data">{new Date(generation.generatedAt).toLocaleString()}</span>
-                    <span className="om-data">run {generation.runId.slice(0, 13)}…</span>
-                    <span className={`om-badge${isLatest ? " om-badge--accent" : isBaseline ? " om-badge--warn" : ""}`}>
-                      {isLatest ? "latest" : isBaseline ? "baseline" : `#${index + 1}`}
-                    </span>
-                  </button>
+                  // The <li> carries the list role, so the button inside keeps
+                  // its own. An explicit role="listitem" on the button overrode
+                  // it, and the row was announced as a list item that could not
+                  // be pressed.
+                  <li className="history__row" key={generation.runId}>
+                    <button
+                      aria-pressed={isBaseline}
+                      className={`om-card history__item${isLatest ? " is-latest" : ""}${isBaseline ? " is-baseline" : ""}`}
+                      disabled={isLatest}
+                      onClick={() => setBaselineRunId(isBaseline ? null : generation.runId)}
+                      type="button"
+                    >
+                      <span className="om-data">{new Date(generation.generatedAt).toLocaleString()}</span>
+                      <span className="om-data">run {generation.runId.slice(0, 13)}…</span>
+                      <span className={`om-badge${isLatest ? " om-badge--accent" : isBaseline ? " om-badge--warn" : ""}`}>
+                        {isLatest ? "latest" : isBaseline ? "baseline" : `#${index + 1}`}
+                      </span>
+                    </button>
+                  </li>
                 );
               })}
             </div>

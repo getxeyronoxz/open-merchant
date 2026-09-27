@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   Competitor,
@@ -12,7 +12,13 @@ import { useProject } from "../../../state/project";
 import { DraftOriginPanel } from "./DraftOriginPanel";
 import { useDraftInbox } from "../DraftInboxProvider";
 import type { DraftRecord } from "../draftInbox";
-import { nextDraftIndex } from "../draftQueue";
+import {
+  arrowKeyBehaviour,
+  nextDraftIndex,
+  runningDraftKind,
+  type DraftKind,
+  type FocusTarget,
+} from "../draftQueue";
 import {
   useAuditReport,
   useCompetitors,
@@ -27,8 +33,6 @@ import {
   useSaveReportSections,
 } from "../queries";
 import type { SectionName } from "../useWorkflowProgress";
-
-type DraftKind = "plan" | "evidence" | "competitors" | "economics" | "sections" | "audit";
 
 const labels: Record<DraftKind, string> = {
   plan: "Research plan",
@@ -45,6 +49,21 @@ function nextId(existing: readonly { id: string }[], prefix: "S" | "C"): string 
     return match ? Math.max(max, Number(match[1])) : max;
   }, 0);
   return `${prefix}-${String(highest + 1).padStart(3, "0")}`;
+}
+
+/**
+ * Reads a real event target into the plain shape `arrowKeyBehaviour` reasons
+ * about. A thin adapter over the DOM, kept out of the pure module so that
+ * module stays testable without one.
+ */
+function describeFocus(element: HTMLElement | null, tabList: HTMLElement | null): FocusTarget | null {
+  if (element === null) return null;
+  return {
+    tagName: element.tagName,
+    isContentEditable: element.isContentEditable,
+    insideTabList: tabList !== null && tabList.contains(element),
+    role: element.getAttribute("role") ?? undefined,
+  };
 }
 
 /** One visible home for the six assistants, with the human gate kept explicit. */
@@ -71,6 +90,7 @@ export function DraftDeskScreen({
 
   const { drafts, activeId, setActiveId, enqueue, discard } = useDraftInbox();
   const queue = drafts;
+  const tabListRef = useRef<HTMLDivElement>(null);
   const [sourceUrl, setSourceUrl] = useState("");
   const [pageText, setPageText] = useState("");
   const [listingText, setListingText] = useState("");
@@ -85,37 +105,45 @@ export function DraftDeskScreen({
   // ArrowLeft / ArrowRight walk the review queue and wrap, so a full session can
   // be triaged without reaching for the mouse. The guard matches the shell's
   // Alt+digit handler: no modifier chords, and never while typing into a field.
+  // `arrowKeyBehaviour` decides the rest — see the note there for why the
+  // shortcut must not fire from a button, and must not eat the page's scrolling.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-      // Same guard as the shell's Alt+digit handler: never steal keys while the
-      // user is typing into the assistant panel's fields.
-      const target = event.target;
-      if (
-        target instanceof HTMLElement &&
-        (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
-      ) {
-        return;
-      }
+      const element = event.target instanceof HTMLElement ? event.target : null;
+      const behaviour = arrowKeyBehaviour(describeFocus(element, tabListRef.current));
+      if (!behaviour.steps) return;
       if (queue.length === 0) return;
-      event.preventDefault();
+      if (behaviour.preventDefault) event.preventDefault();
       const current = queue.findIndex((item) => item.id === active?.id);
       const step = event.key === "ArrowRight" ? 1 : -1;
       const index = nextDraftIndex(current, queue.length, step);
       const next = index === -1 ? undefined : queue[index];
       if (next) setActiveId(next.id);
+      // Focus follows the selection only when the seller drove the tabs. Moving
+      // focus from the page would yank it out of wherever they left it.
+      if (next && behaviour.preventDefault) {
+        const tabs = tabListRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+        tabs?.[index]?.focus();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [queue, active?.id]);
-  const pending =
-    plan.isPending ||
-    evidenceDraft.isPending ||
-    competitorDraft.isPending ||
-    economics.isPending ||
-    sectionDraft.isPending ||
-    audit.isPending;
+
+  // Which single assistant is running, and whether the lane is busy at all.
+  // The lane runs one at a time, so every button is disabled while any is
+  // pending — but only the one that is actually running says so.
+  const running = runningDraftKind({
+    plan: plan.isPending,
+    evidence: evidenceDraft.isPending,
+    competitors: competitorDraft.isPending,
+    economics: economics.isPending,
+    sections: sectionDraft.isPending,
+    audit: audit.isPending,
+  });
+  const pending = running !== null;
   const agentError =
     plan.error ??
     evidenceDraft.error ??
@@ -273,6 +301,7 @@ export function DraftDeskScreen({
           <div className="draft-desk__actions">
             {(Object.keys(labels) as DraftKind[]).map((kind) => (
               <button
+                aria-busy={running === kind}
                 className="om-button om-button--secondary"
                 disabled={
                   pending ||
@@ -283,7 +312,7 @@ export function DraftDeskScreen({
                 onClick={() => generate(kind)}
                 type="button"
               >
-                {pending ? "Working…" : labels[kind]}
+                {running === kind ? "Working…" : labels[kind]}
               </button>
             ))}
           </div>
@@ -321,6 +350,7 @@ export function DraftDeskScreen({
             <div
               aria-keyshortcuts="ArrowLeft ArrowRight"
               className="draft-desk__tabs"
+              ref={tabListRef}
               role="tablist"
               aria-label="Drafts waiting for review"
             >
@@ -331,6 +361,10 @@ export function DraftDeskScreen({
                   key={item.id}
                   onClick={() => setActiveId(item.id)}
                   role="tab"
+                  // Roving tabindex: one stop into the tablist, landing on the
+                  // draft actually under review. Every tab being tabbable meant
+                  // tabbing through N drafts to reach the one you were reading.
+                  tabIndex={item.id === active?.id ? 0 : -1}
                   type="button"
                 >
                   {labels[item.kind]}

@@ -30,6 +30,12 @@ function dueLabel(dueAt: string, now: number): string {
   return `${months} month${months === 1 ? "" : "s"} ago`;
 }
 
+/** Which disposition, if any, is in flight — both the review and the action. */
+export interface PendingDisposition {
+  readonly reviewKey: string;
+  readonly action: "snoozed" | "dismissed";
+}
+
 export function StandingReviewsCard({
   reviews,
   isPending,
@@ -37,7 +43,7 @@ export function StandingReviewsCard({
   error,
   onRetry,
   onDispose,
-  pendingKey,
+  pending,
 }: {
   readonly reviews: readonly StandingReview[];
   readonly isPending: boolean;
@@ -45,7 +51,7 @@ export function StandingReviewsCard({
   readonly error: unknown;
   readonly onRetry: () => void;
   readonly onDispose: (review: StandingReview, action: "snoozed" | "dismissed") => void;
-  readonly pendingKey: string | null;
+  readonly pending: PendingDisposition | null;
 }) {
   if (isError) {
     return (
@@ -68,7 +74,13 @@ export function StandingReviewsCard({
       </p>
       <ul className="om-list">
         {reviews.map((review) => {
-          const busy = pendingKey === review.key;
+          // The action is carried, not just the review key, so the button that
+          // says "Working…" is the one the seller actually pressed. Both used
+          // to go busy together, which meant dismissing a review left Snooze
+          // claiming a week-long hold that was never taken.
+          const snoozing = pending?.reviewKey === review.key && pending.action === "snoozed";
+          const dismissing = pending?.reviewKey === review.key && pending.action === "dismissed";
+          const busy = snoozing || dismissing;
           return (
             <li key={`${review.projectRoot}:${review.key}`} className="om-list__row">
               <div className="om-list__copy">
@@ -82,20 +94,22 @@ export function StandingReviewsCard({
               </div>
               <div className="om-list__actions">
                 <button
+                  aria-busy={snoozing}
                   className="om-button om-button--ghost"
                   disabled={busy}
                   onClick={() => onDispose(review, "snoozed")}
                   type="button"
                 >
-                  {busy ? "Working…" : "Snooze a week"}
+                  {snoozing ? "Working…" : "Snooze a week"}
                 </button>
                 <button
+                  aria-busy={dismissing}
                   className="om-button om-button--ghost"
                   disabled={busy}
                   onClick={() => onDispose(review, "dismissed")}
                   type="button"
                 >
-                  Dismiss
+                  {dismissing ? "Working…" : "Dismiss"}
                 </button>
               </div>
             </li>
