@@ -2,18 +2,85 @@
 
 ![Open Merchant — make the call, with evidence in hand.](docs/media/og-banner.png)
 
+<div align="center">
+
+[![Release](https://img.shields.io/github/v/release/getxeyronoxz/open-merchant?label=release&color=blue)](https://github.com/getxeyronoxz/open-merchant/releases/latest)
+[![License: AGPL-3.0](https://img.shields.io/github/license/getxeyronoxz/open-merchant?color=blue)](LICENSE)
+[![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-555555?logo=electron&logoColor=white)](https://www.electron.build/)
+[![MCP](https://img.shields.io/badge/MCP-read--only%20server-8A5CF5)](docs/mcp-hosts.md)
+[![npm](https://img.shields.io/npm/v/open-merchant-mcp?label=npm&color=cb3837&logo=npm&logoColor=white)](https://www.npmjs.com/package/open-merchant-mcp)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/codeql/codeql.yml?branch=dev&label=code%20scanning&color=green)](https://github.com/getxeyronoxz/open-merchant/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/ci.yml?branch=dev&label=ci&color=green)](https://github.com/getxeyronoxz/open-merchant/actions)
+[![Local-first](https://img.shields.io/badge/no%20cloud%20%7C%20no%20accounts%20%7C%20no%20telemetry-2EA44F)](https://github.com/getxeyronoxz/open-merchant)
+
+</div>
+
 A desktop workbench for deciding whether a product is worth pursuing, and for keeping the evidence
 behind that decision.
 
 Every decision gets its own folder on your own disk. Nothing is uploaded, nothing is locked in, and
 nothing happens without you pressing the button. The arithmetic is done in exact decimals by tested
-code — never by a language model, never by floating point. A language model can draft for you, but it
-cannot write anything into your project until you accept it.
-
-**Version 1.0.1.** [Releases](https://github.com/getxeyronoxz/open-merchant/releases) ·
-[Roadmap](ROADMAP.md) · [Architecture](docs/architecture.md)
+code — never by a language model, never by floating point. A language model can draft for you, but
+it cannot write anything into your project until you accept it.
 
 ---
+
+## Contents
+
+- [Download](#download)
+- [The loop](#the-loop)
+- [A look inside](#a-look-inside)
+- [Assistants](#assistants)
+- [Letting your AI read the record](#letting-your-ai-read-the-record)
+- [Plugins and connectors](#plugins-and-connectors)
+- [Your project folder](#your-project-folder)
+- [The arithmetic](#the-arithmetic)
+- [Development](#development)
+- [Where things are](#where-things-are)
+- [Known limitations](#known-limitations)
+- [Support](#support)
+- [License](#license)
+
+---
+
+## Download
+
+Latest release: **[v1.0.1](https://github.com/getxeyronoxz/open-merchant/releases/latest)** ·
+[all releases](https://github.com/getxeyronoxz/open-merchant/releases) ·
+[report an issue](https://github.com/getxeyronoxz/open-merchant/issues)
+
+| Platform | Format | Get it |
+| --- | --- | --- |
+| **Windows** | `.exe` installer | [Releases](https://github.com/getxeyronoxz/open-merchant/releases/latest) |
+| **macOS** | `.dmg` — Apple Silicon and Intel | [Releases](https://github.com/getxeyronoxz/open-merchant/releases/latest) |
+| **Linux** | `.AppImage` — one file, no install | [Releases](https://github.com/getxeyronoxz/open-merchant/releases/latest) |
+| | `.deb` — Debian, Ubuntu, Mint, Pop!_OS | [Releases](https://github.com/getxeyronoxz/open-merchant/releases/latest) |
+| | `.tar.gz` — unpack and run anywhere | [Releases](https://github.com/getxeyronoxz/open-merchant/releases/latest) |
+| | `snap` | [Releases](https://github.com/getxeyronoxz/open-merchant/releases/latest) |
+| | `flatpak` — `flatpak install --user <file>` | [Releases](https://github.com/getxeyronoxz/open-merchant/releases/latest) |
+
+Updates are automatic: the app checks this project's own Releases feed at launch and every six hours
+after, downloads in the background, and applies the change when you quit. It never asks.
+
+**If the AppImage refuses to start** with a missing `libfuse.so.2`, that is FUSE, not a bad download.
+Install `fuse2` from the AUR, run it with `--appimage-extract-and-run`, or use the `.deb`.
+
+<details>
+<summary><b>Running the installers before CA signing</b></summary>
+
+Open Merchant is an independent project and is not registered in Microsoft's or Apple's developer
+registries — those cost money. Your operating system may therefore flag the installer on first launch.
+The warning comes from the missing certificate, not from the software.
+
+- **Windows** — SmartScreen may say *"Windows protected your PC"*. Choose **More info → Run anyway**.
+  It may also say "unknown publisher"; installation proceeds either way.
+- **macOS** — Gatekeeper blocks the first launch. Open **System Settings → Privacy & Security** and
+  click **Open Anyway**, or right-click the app → **Open**. On Apple Silicon,
+  `xattr -cr "/Applications/Open Merchant.app"` clears it in one step.
+- **Linux** — nothing to do. `chmod +x` the AppImage and run it.
+
+A CA-issued certificate is on the [roadmap](ROADMAP.md) and will remove these warnings on its own.
+</details>
 
 ## The loop
 
@@ -32,6 +99,9 @@ Around that loop sit a few things that turn out to matter more than expected:
 - **A decision journal.** Every report is a dated entry. Put two side by side, see what changed, and
   find out whether you would still make the call today.
 - **A portfolio view.** Every project on one screen, worst margin first.
+- **A standing attention queue.** Across every project: evidence that has gone stale, margins that
+  drifted, work priced but never turned into a decision. Snoozing and dismissing are both on the
+  record.
 - **A restatement when the currency changes.** Enter the rate yourself — no network, no live feed —
   and every amount in the project is restated in exact decimals, after you have seen the
   before-and-after. Percentages stay percentages.
@@ -69,10 +139,8 @@ A draft arrives marked as one. It becomes project data when you edit and save it
 then — the run is journaled with the agent, provider, model, prompt hash, and a fingerprint of the
 artifact. Assistants read what you paste into them. Nothing browses anything on its own.
 
-**Getting around.** The toolbar always shows where you are: project, section, and the folder on disk.
-`Alt+1…9` jumps between sections. A walkthrough guide keeps the six steps a click away with progress
-badges, and reopening a project resumes at its first incomplete step. The Draft Desk collects every
-draft from every assistant into one lane you can work through with the arrow keys.
+Every draft from every source lands in one lane, the **Draft Desk**, which you can work through with
+the arrow keys.
 
 ## Letting your AI read the record
 
@@ -84,16 +152,18 @@ It cannot write. The server registers no tools at all, so a write attempt is ref
 level rather than by a check that could be bypassed. Every read appends one record to that project's
 `runs.jsonl`, so an agent reading your folder leaves the same kind of trace you would.
 
-The server ships inside the app. **Plugins → "Let your AI read the record"** gives you the exact
-command and a config to paste, and asks which host you use first — because hosts genuinely disagree.
-It is also on npm if you would rather not go through the app at all:
+It ships inside the app — **Plugins → "Let your AI read the record"** gives you the exact command and
+a config to paste, and asks which host you use first, because hosts genuinely disagree. opencode
+reads an `mcp` key with the transport spelled `local` and the command as an array; Claude Code and
+Claude Desktop read `mcpServers` with `stdio`, a string command, and a separate `args`.
+
+Or take it from npm, with no app involved at all:
 
 ```bash
 npx --yes open-merchant-mcp /path/to/project
 ```
-opencode reads an `mcp` key with the transport spelled `local` and the command as an array; Claude
-Code and Claude Desktop read `mcpServers` with `stdio`, a string command, and a separate `args`.
-[`docs/mcp-hosts.md`](docs/mcp-hosts.md) has both, with the sources they came from.
+
+[`docs/mcp-hosts.md`](docs/mcp-hosts.md) has both formats, with the sources they came from.
 
 ## Plugins and connectors
 
@@ -116,46 +186,12 @@ process from opening a socket. The Plugins screen tells you which plugins ask fo
 
 A **connector** is the one kind that runs something — an external process speaking MCP over stdio. It
 has to declare `writes: ["drafts"]`, and what it returns lands on the Draft Desk as drafts tagged with
-its id and a hash of the raw response, never dressed up as something a model produced. A fetch
-writes nothing to your project at all.
+its id and a hash of the raw response, never dressed up as something a model produced. A fetch writes
+nothing to your project at all.
 
 A runnable one is in [`examples/sample-connector`](examples/sample-connector): no dependencies, no
 `npm install`, no network, returning clearly-marked sample listings. Copy the folder across to see the
 whole path work.
-
-## Installing
-
-Grab the installer for your platform from
-[GitHub Releases](https://github.com/getxeyronoxz/open-merchant/releases):
-
-| | |
-| --- | --- |
-| **Windows** | `.exe` (NSIS) |
-| **macOS** | `.dmg` |
-| **Linux** | `AppImage`, `.deb`, `.tar.gz`, snap, flatpak |
-
-The app keeps itself current. It checks the project's own Releases feed at launch and every six hours
-after, downloads in the background, and offers to restart — or applies the change when you quit. The
-check is a passive read of a public feed; nothing about your projects is involved. The strip in the
-corner tells you which of those things actually happened, including when the check itself failed.
-
-### Before CA signing
-
-**A note for anyone installing this.** Open Merchant is an independent project and is not registered
-in Microsoft's or Apple's developer registries — those cost money. Your operating system may
-therefore flag the installer on first launch. The warning comes from the missing certificate, not
-from the software:
-
-- **Windows** — SmartScreen may say *"Windows protected your PC"*. Choose **More info → Run anyway**.
-  It may also say "unknown publisher"; installation proceeds either way.
-- **macOS** — Gatekeeper blocks the first launch. Open **System Settings → Privacy & Security** and
-  click **Open Anyway**, or right-click the app → **Open**. On Apple Silicon,
-  `xattr -cr "/Applications/Open Merchant.app"` clears it in one step.
-- **Linux** — nothing to do. On the AppImage, `chmod +x` and run it. If it refuses with a missing
-  `libfuse.so.2`, that is FUSE rather than a bad download: install `fuse2` from the AUR, run it with
-  `--appimage-extract-and-run`, or use the `.deb` or `.tar.gz` build.
-
-A CA-issued certificate is on the [roadmap](ROADMAP.md) and will remove these warnings on its own.
 
 ## Your project folder
 
@@ -177,8 +213,8 @@ my-project/
 
 Writes are atomic: an interrupted save leaves the previous file exactly as it was. A malformed file is
 rejected loudly rather than quietly repaired — if something is wrong with your project, you are told
-what, not handed a plausible-looking guess. Projects from schema version 1 can be brought forward
-with **Import legacy project** on the Home screen.
+what, not handed a plausible-looking guess. Projects from schema version 1 can be brought forward with
+**Import legacy project** on the Home screen.
 
 ## The arithmetic
 
@@ -219,9 +255,8 @@ pnpm --filter @open-merchant/desktop demo
 ```
 
 `record.cjs` drives the app with Playwright and writes frames; `gif.mjs` assembles them with
-`gifenc`, pure JavaScript, no ffmpeg and no network. The stills in this README are keyframes lifted
-from that same run, so they cannot drift from the GIF. The run ends on the Draft Desk, where the
-queue is honestly empty because a capture run has no keys: what the frame shows is the gate, not a
+`gifenc`, pure JavaScript, no ffmpeg and no network. The run ends on the Draft Desk, where the queue
+is honestly empty because a capture run has no keys: what the frame shows is the gate, not a
 fabricated result.
 
 ### Layout
@@ -246,23 +281,6 @@ docs/              Architecture, platform notes, host configs, testing
 The renderer never imports Electron. Everything crosses the one zod-validated IPC contract exposed
 through `packages/sdk`.
 
-### Packaging and releases
-
-```bash
-pnpm --filter @open-merchant/desktop dist
-```
-
-Builds an NSIS installer on Windows, a DMG and a zip on macOS, and AppImage, `deb`, `tar.gz`, snap,
-and flatpak on Linux.
-
-Pushing a `v*` tag runs the release workflow, which builds all three platforms and publishes them
-with the update feed. **A version bump is not a release** — the feed is GitHub Releases, so an
-untagged version has nothing to update to.
-
-For local signing on Windows, `apps/desktop/dev-signing.ps1` creates a self-signed certificate under
-the alias `Open Merchant Developer`. `apps/desktop/update-feed-server.cjs` serves a release folder as
-a local update feed, and `OPEN_MERCHANT_TEST_UPDATE_URL` points an installed build at it.
-
 ## Where things are
 
 - [`ROADMAP.md`](ROADMAP.md) — what has shipped and what is next
@@ -270,6 +288,7 @@ a local update feed, and `OPEN_MERCHANT_TEST_UPDATE_URL` points an installed bui
 - [`docs/platform-notes.md`](docs/platform-notes.md) — what differs per platform, and what is still shaky
 - [`docs/mcp-hosts.md`](docs/mcp-hosts.md) — connecting an assistant
 - [`docs/testing-platforms.md`](docs/testing-platforms.md) — verifying a real build on each OS
+- [`CHANGELOG.md`](CHANGELOG.md) — every release, in detail
 
 ## Known limitations
 
@@ -277,18 +296,30 @@ a local update feed, and `OPEN_MERCHANT_TEST_UPDATE_URL` points an installed bui
 - Assistants cannot browse. You paste the page content in.
 - Unaccepted drafts do not survive a restart. A draft is session-scoped; accepting it is what persists.
   Nothing in a project folder is ever lost.
-- No plugins are installed for you. There is no marketplace and no installer — you copy a folder, and
-  a runnable example is in `examples/sample-connector`.
-- The app is not on Flathub yet. The MCP server is on npm, so it is available either way.
-- A snap keeps its data in a per-release directory, so plugins and a stored key can appear to vanish
-  across an update. Prefer AppImage or flatpak until that is fixed.
-- One writer per project at a time. Don't edit a project elsewhere while Open Merchant has unsaved
-  changes.
+- Installers are self-signed, so macOS and Windows warn you on first launch.
+- A Linux **snap** keeps its data in a per-release directory, so plugins and a stored key can appear to
+  vanish across an update. Prefer AppImage or flatpak until that is fixed.
+- Not on Flathub yet.
 - The example project ships with clearly-marked demo data, not live commercial claims.
 
-## Star History
+## Support
 
-<a href="https://www.star-history.com/#getxeyronoxz/open-merchant&type=timeline&logscale&language=&date=frequency"><img src="https://api.star-history.com/chart?repos=getxeyronoxz/open-merchant&type=timeline&logscale&language=&date=frequency" alt="Star History Chart" /></a>
+If this is useful to you, the most useful things you can do, in order:
+
+1. **Open an issue** if something breaks your workflow. That is the single highest-value thing you can
+   give back, and it is worth more than a star.
+2. **Answer someone else's issue.** A reproduction case or a question is real work saved.
+3. **Star the repo** so other people can find it.
+4. **Tell someone who decides things on price.** This is a desktop app for people who want their
+   files, their exact numbers, and an assistant that waits to be told. That only spreads by word of
+   mouth.
+
+<p align="center">
+  <a href="https://github.com/sponsors/xeyronox"><img alt="Sponsor" src="https://img.shields.io/badge/sponsor-%E2%9D%A4-ff69b4?style=for-the-badge&logo=github&logoColor=white" height="30"></a>
+  <a href="https://github.com/getxeyronoxz/open-merchant/issues/new/choose"><img alt="Report an issue" src="https://img.shields.io/badge/report-an%20issue-ff5c5c?style=for-the-badge&logo=github&logoColor=white" height="30"></a>
+  <a href="https://github.com/getxeyronoxz/open-merchant/stargazers"><img alt="Star the repo" src="https://img.shields.io/github/stars/getxeyronoxz/open-merchant?style=for-the-badge&logo=github&logoColor=white" height="30"></a>
+  <a href="https://www.npmjs.com/package/open-merchant-mcp"><img alt="MCP server on npm" src="https://img.shields.io/npm/dm/open-merchant-mcp?style=for-the-badge&label=downloads&color=cb3837&logo=npm&logoColor=white" height="30"></a>
+</p>
 
 ## License
 
