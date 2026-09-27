@@ -16,7 +16,7 @@
     "test:all": "vitest run && pnpm run test:e2e",
     "demo": "node record.cjs && node gif.mjs"
   },
-  "description": "Local-first, AI-native commerce research workbench.",
+  "description": "Local-first desktop workbench for deciding whether a product is worth pursuing, keeping the evidence behind the decision.",
   "author": {
     "name": "Xeyronox"
   },
@@ -48,5 +48,6 @@
     "typescript": "^5.8.0",
     "vite": "^6.0.0",
     "vitest": "^4.1.11"
-  }
+  },
+  "homepage": "https://github.com/getxeyronoxz/open-merchant"
 }
