@@ -10,7 +10,7 @@ nothing happens without you pressing the button. The arithmetic is done in exact
 code — never by a language model, never by floating point. A language model can draft for you, but it
 cannot write anything into your project until you accept it.
 
-**Version 1.0.0.** [Releases](https://github.com/getxeyronoxz/open-merchant/releases) ·
+**Version 1.0.1.** [Releases](https://github.com/getxeyronoxz/open-merchant/releases) ·
 [Roadmap](ROADMAP.md) · [Architecture](docs/architecture.md)
 
 ---

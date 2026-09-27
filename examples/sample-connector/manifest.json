@@ -3,7 +3,7 @@
   "name": "Sample market connector",
   "version": "1.0.0",
   "author": "Open Merchant",
-  "minAppVersion": "1.0.0",
+  "minAppVersion": "1.0.1",
   "capabilities": {
     "reads": [
       "market"

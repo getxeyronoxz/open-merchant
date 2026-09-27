@@ -20,7 +20,7 @@ import { PluginStore } from "../src/main/plugin-store";
  */
 
 const EXAMPLE = fileURLToPath(new URL("../../../examples/sample-connector/", import.meta.url));
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.0.1";
 
 let userData: string;
 let parent: string;
@@ -63,7 +63,7 @@ describe("the shipped sample connector, run as a real process", () => {
   });
 
   it("is refused by a build older than the one it declares", async () => {
-    // The gate is not decorative: the same folder must not load before 1.0.0.
+    // The gate is not decorative: the same folder must not load before 1.0.1.
     const catalog = await new PluginStore(userData, "1.0.0-alpha.4").list();
 
     expect(catalog.plugins).toHaveLength(0);

@@ -4,7 +4,7 @@ All notable changes to Open Merchant are documented in this file.
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-09-27
+## [1.0.1] - 2026-09-27
 
 The first stable release. Phase 3 is in: the read-only MCP server, the connector client, the
 plugin surface, standing reviews, the Draft Desk, and the project currency change. `1.0.0` is a

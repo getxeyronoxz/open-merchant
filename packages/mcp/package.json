@@ -1,6 +1,6 @@
 {
   "name": "open-merchant-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "AGPL-3.0-only",
   "description": "Read-only MCP server for an Open Merchant project folder. stdio only, no network socket, every read journaled.",
   "type": "module",
