@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   isoDateTimeSchema,
   pluginManifestSchema,
+  satisfiesMinimum,
   type InstalledPlugin,
   type PluginCatalog,
   type PluginManifest,
@@ -27,7 +28,19 @@ type PersistedState = { plugins: Record<string, z.infer<typeof pluginStateEntryS
  * external command that the connector client spawns under its own controls.
  */
 export class PluginStore {
-  constructor(private readonly userDataDirectory: string) {}
+  /**
+   * `appVersion` is the running build's version, used to enforce each manifest's
+   * `minAppVersion`. It is injected rather than read from a package.json so the
+   * store cannot disagree with the version the app reports everywhere else, and
+   * so a test can state the build it is testing against.
+   *
+   * With no version supplied the gate is inert and every valid manifest loads:
+   * a store that cannot say what build it is should not guess a floor.
+   */
+  constructor(
+    private readonly userDataDirectory: string,
+    private readonly appVersion: string | null = null,
+  ) {}
 
   private get directory(): string {
     return join(this.userDataDirectory, "plugins");
@@ -70,6 +83,23 @@ export class PluginStore {
       const parsed = pluginManifestSchema.safeParse(candidate);
       if (!parsed.success) {
         broken.push({ directoryName, reason: describeIssues(parsed.error.issues) });
+        continue;
+      }
+      // `minAppVersion` is the field that stops a plugin loading against a build
+      // it was never written for. It was declared, format-checked, and then never
+      // compared with anything, so a plugin could require a version this app has
+      // not reached and still load. An incompatible plugin is refused, not hidden:
+      // it is listed with the reason, like every other refusal here.
+      if (
+        this.appVersion !== null &&
+        !satisfiesMinimum(this.appVersion, parsed.data.minAppVersion)
+      ) {
+        broken.push({
+          directoryName,
+          reason:
+            `Needs Open Merchant ${parsed.data.minAppVersion} or newer, and this is ` +
+            `${this.appVersion}. The plugin was written for a later build than this one.`,
+        });
         continue;
       }
       candidates.push({ directoryName, manifest: parsed.data });

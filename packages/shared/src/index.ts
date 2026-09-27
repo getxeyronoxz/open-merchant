@@ -6,3 +6,4 @@ export * from "./provenance";
 export * from "./errors";
 export * from "./ipc";
 export * from "./ai";
+export * from "./version";

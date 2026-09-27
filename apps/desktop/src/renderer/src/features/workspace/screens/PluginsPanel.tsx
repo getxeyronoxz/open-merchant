@@ -72,7 +72,8 @@ export function PluginsPanel({
                       <span className="om-badge">{manifest.kind}</span>
                     </p>
                     <p className="om-field__hint">
-                      {manifest.id} · {manifest.version} · {manifest.author}
+                      {manifest.id} · {manifest.version} · {manifest.author} · needs Open Merchant{" "}
+                      {manifest.minAppVersion}+
                     </p>
                     {reachesNetwork ? (
                       <p className="om-field__hint">This plugin may reach the internet.</p>

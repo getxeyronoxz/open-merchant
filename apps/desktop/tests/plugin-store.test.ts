@@ -281,3 +281,56 @@ describe("PluginStore discovery of unusual directories", () => {
     expect(broken.reason).toMatch(/symbolic link|symlink/i);
   });
 });
+
+/**
+ * `minAppVersion` is the field that stops a plugin loading against a build it
+ * was never written for. It was declared in the manifest, format-checked, and
+ * then never compared with anything — so these tests exist to prove the gate
+ * actually refuses, and refuses *visibly* rather than by omission.
+ */
+describe("PluginStore minAppVersion gate", () => {
+  const at = (minAppVersion: string) => ({ ...VALID_SECTION, minAppVersion });
+
+  it("loads a plugin whose minimum this build meets", async () => {
+    await writePlugin("report-risks", at("1.0.0-beta.1"));
+    const catalog = await new PluginStore(dir, "1.0.0-beta.1").list();
+
+    expect(catalog.plugins).toHaveLength(1);
+    expect(catalog.broken).toHaveLength(0);
+  });
+
+  it("refuses a plugin that needs a build this one has not reached", async () => {
+    await writePlugin("report-risks", at("99.0.0"));
+    const catalog = await new PluginStore(dir, "1.0.0-beta.1").list();
+
+    expect(catalog.plugins).toHaveLength(0);
+  });
+
+  it("refuses a plugin requiring the release while this is a beta", async () => {
+    // 1.0.0-beta.1 is genuinely older than 1.0.0. A string compare would get
+    // this backwards, because "1.0.0-beta.1" sorts after "1.0.0" as text.
+    await writePlugin("report-risks", at("1.0.0"));
+    const catalog = await new PluginStore(dir, "1.0.0-beta.1").list();
+
+    expect(catalog.plugins).toHaveLength(0);
+    expect(only(catalog.broken).reason).toContain("1.0.0");
+    expect(only(catalog.broken).reason).toContain("1.0.0-beta.1");
+  });
+
+  it("lists the refusal with a reason, rather than skipping it silently", async () => {
+    // The plugin surface's rule: nothing is dropped without a stated reason.
+    await writePlugin("report-risks", at("99.0.0"));
+    const broken = only((await new PluginStore(dir, "1.0.0-beta.1").list()).broken);
+
+    expect(broken.directoryName).toBe("report-risks");
+    expect(broken.reason).toMatch(/newer/iu);
+  });
+
+  it("loads everything when the store was not told which build it is", async () => {
+    // A store that cannot say what build it is must not invent a floor.
+    await writePlugin("report-risks", at("99.0.0"));
+    const catalog = await new PluginStore(dir).list();
+
+    expect(catalog.plugins).toHaveLength(1);
+  });
+});

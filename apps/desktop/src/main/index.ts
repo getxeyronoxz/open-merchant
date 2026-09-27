@@ -165,7 +165,7 @@ app.whenReady().then(() => {
   if (customUserData) app.setPath("userData", customUserData);
 
   const aiConfig = new AiConfigStore(app.getPath("userData"), safeStorage);
-  const plugins = new PluginStore(app.getPath("userData"));
+  const plugins = new PluginStore(app.getPath("userData"), app.getVersion());
   registerIpcHandlers(
     new MerchantService(app.getVersion(), aiConfig, plugins),
     aiConfig,
