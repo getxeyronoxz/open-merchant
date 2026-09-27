@@ -270,6 +270,13 @@ export function createMockDesktopClient(
       platform: "mock",
     }),
 
+    checkForUpdates: async () => {
+      // The mock has no updater. It says so rather than claiming to be current,
+      // which is the whole point of distinguishing "up to date" from "could not
+      // find out".
+      return { status: { state: "error" as const, detail: "the mock client has no update feed" } };
+    },
+
     installUpdate: async () => {
       // The mock has no updater; nothing to install.
       return { quitting: false };

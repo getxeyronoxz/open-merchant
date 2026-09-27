@@ -32,7 +32,12 @@ nsis:
   allowToChangeInstallationDirectory: true
 mac:
   target:
+    # The DMG is what a person downloads. The zip is not for them: electron-updater's
+    # macOS path applies a zip diff, so a build with no zip target has nothing to
+    # patch against and the macOS update feed cannot work. Both are published; the
+    # DMG is unchanged as the artifact a user opens.
     - dmg
+    - zip
   icon: build/icon.png
   category: public.app-category.business
 linux:

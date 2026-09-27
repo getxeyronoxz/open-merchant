@@ -3,7 +3,9 @@ import { fileURLToPath } from "node:url";
 import { BrowserWindow, Menu, app, dialog, safeStorage, shell } from "electron";
 import { autoUpdater } from "electron-updater";
 
-import { updateStatusSchema } from "@open-merchant/shared";
+import { updateStatusSchema, type UpdateStatus } from "@open-merchant/shared";
+
+import { describeUpdate } from "./update-notice";
 
 import { AiConfigStore } from "./ai-config";
 import { PluginStore } from "./plugin-store";
@@ -92,8 +94,22 @@ function buildApplicationMenu() {
               });
               return;
             }
-            autoUpdater.checkForUpdates().catch(() => {
-              // Offline or no feed: the updater stays silent.
+            // Answers the person who clicked it. Previously this fired a check
+            // and said nothing either way, so "you are on the newest release"
+            // and "the feed was unreachable" were the same silence — and only
+            // one of those is good news.
+            void dialog.showMessageBox({
+              type: "info",
+              title: "Updates",
+              message: "Checking for updates…",
+            });
+            void checkForUpdates().then((status) => {
+              const notice = describeUpdate(status, app.getVersion());
+              void dialog.showMessageBox({
+                type: notice.isProblem ? "warning" : "info",
+                title: "Updates",
+                message: notice.message,
+              });
             });
           },
         },
@@ -170,6 +186,7 @@ app.whenReady().then(() => {
     new MerchantService(app.getVersion(), aiConfig, plugins),
     aiConfig,
     plugins,
+    checkForUpdates,
   );
   buildApplicationMenu();
   initAutoUpdate();
@@ -189,8 +206,16 @@ app.on("window-all-closed", () => {
  * "update:status" channel. The payload is parsed with the shared schema on
  * this side too, so the renderer receives only contract-shaped data.
  */
-function sendUpdateStatus(state: "available" | "not-available" | "downloaded", version?: string) {
-  const payload = updateStatusSchema.parse(version ? { state, version } : { state });
+function sendUpdateStatus(
+  state: "checking" | "available" | "not-available" | "downloaded" | "error",
+  version?: string,
+  detail?: string,
+) {
+  const payload = updateStatusSchema.parse({
+    state,
+    ...(version === undefined ? {} : { version }),
+    ...(detail === undefined ? {} : { detail }),
+  });
   for (const window of BrowserWindow.getAllWindows()) {
     window.webContents.send("update:status", payload);
   }
@@ -221,11 +246,55 @@ function initAutoUpdate() {
   autoUpdater.on("update-available", (info) => {
     sendUpdateStatus("available", info.version);
   });
+  autoUpdater.on("update-not-available", () => {
+    sendUpdateStatus("not-available");
+  });
   autoUpdater.on("update-downloaded", (info) => {
     sendUpdateStatus("downloaded", info.version);
   });
-
-  autoUpdater.checkForUpdates().catch(() => {
-    // Offline, rate-limited, or no release yet: stay quiet.
+  // Without this the failure is invisible: the promise rejects into a comment
+  // and electron-updater's own logger writes to a stdout nobody reads in a
+  // packaged build. A seller then cannot tell that they are missing fixes.
+  autoUpdater.on("error", (error: Error) => {
+    sendUpdateStatus("error", undefined, error.message);
   });
+
+  // A single check at launch is not enough. Launching offline is ordinary —
+  // this is a local-first app — and one failed check at startup used to leave a
+  // user on a stale build with no further attempt and no way to know.
+  void checkForUpdates();
+  const timer = setInterval(() => void checkForUpdates(), UPDATE_CHECK_INTERVAL_MS);
+  timer.unref();
+}
+
+/** Six hours: often enough to notice a release in a session, rarely enough to be quiet. */
+const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * One update check, reported honestly whichever way it goes.
+ *
+ * Returns the state so a caller that asked can answer immediately, and pushes
+ * the same state to any open window. "Up to date", "could not ask", and "a
+ * newer version is downloading" are three different facts and are reported as
+ * three different states.
+ */
+async function checkForUpdates(): Promise<UpdateStatus> {
+  sendUpdateStatus("checking");
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    const version = result?.updateInfo?.version;
+    if (version === undefined) {
+      const status = { state: "not-available" } as const;
+      sendUpdateStatus("not-available");
+      return status;
+    }
+    // A check that resolves without an update reports nothing on its own; the
+    // not-available event above is what tells us, and this covers the case
+    // where the emitter has already fired.
+    return { state: "available", ...(version === undefined ? {} : { version }) };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    sendUpdateStatus("error", undefined, detail);
+    return { state: "error", detail };
+  }
 }

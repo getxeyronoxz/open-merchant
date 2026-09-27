@@ -85,7 +85,15 @@ export const rootOnlyInputSchema = z.object({ root: z.string() });
 export const updateStatusSchema = z.object({
   state: z.enum(["checking", "available", "not-available", "downloaded", "error"]),
   version: z.string().optional(),
+  /**
+   * Why, in a sentence a person can act on. Carried because "not updated" and
+   * "we could not find out" are different facts, and a UI that renders them
+   * the same way is lying by omission: a seller whose update check has been
+   * failing for a week has no other way to notice.
+   */
+  detail: z.string().optional(),
 });
+
 
 export type UpdateStatus = z.infer<typeof updateStatusSchema>;
 
@@ -102,6 +110,16 @@ export const ipc = {
       appVersion: z.string(),
       platform: z.string(),
     }),
+  },
+  /**
+   * Ask for a check now, and get the honest result rather than a fire-and-
+   * forget promise. The menu item needs to answer the person who clicked it:
+   * "you are on the newest release" and "we could not reach the feed" are
+   * different answers and only one of them is good news.
+   */
+  "update/check": {
+    request: z.object({}),
+    response: z.object({ status: updateStatusSchema }),
   },
   "update/install": {
     request: z.object({}),

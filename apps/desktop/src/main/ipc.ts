@@ -2,6 +2,7 @@ import {
   type IpcChannel,
   type IpcRequest,
   type IpcResponse,
+  type UpdateStatus,
   AppError,
   ipc,
   mcpHostConfigs,
@@ -70,6 +71,12 @@ export function registerIpcHandlers(
   service: MerchantService,
   aiConfig: AiConfigStore,
   plugins: PluginStore,
+  /**
+   * Runs one update check and resolves with the honest result. Injected rather
+   * than reached for here so the updater stays owned by the process that also
+   * owns the app's lifecycle, and so this module can be exercised without one.
+   */
+  checkForUpdates: () => Promise<UpdateStatus>,
 ): void {
   const recents = new RecentsStore(app.getPath("userData"));
 
@@ -79,6 +86,7 @@ export function registerIpcHandlers(
       appVersion: app.getVersion(),
       platform: process.platform,
     })),
+    "update/check": channel<"update/check">(async () => ({ status: await checkForUpdates() })),
     "update/install": channel<"update/install">(async () => {
       // Packaged builds only: in dev there is no updater feed to install from.
       if (!app.isPackaged) return { quitting: false };

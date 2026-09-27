@@ -223,6 +223,9 @@ genuinely differs — the MCP launcher per platform, the bundled Node runtime, t
 data directory and why it is the least-bad Linux package, connector behaviour under confinement,
 and macOS notarisation.
 
+Testing on a real platform, including an Arch checklist and the exact steps to verify a packaged
+build and the update flow, is in [`docs/testing-platforms.md`](docs/testing-platforms.md).
+
 ## Current limitations
 
 - No cloud sync, accounts, teams, or mobile clients.
