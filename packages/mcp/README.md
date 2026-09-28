@@ -87,16 +87,17 @@ in the main repository for both formats with their sources.
 - **Follow a symlink out of the project.** Directory and artifact resolution goes through the
   known-layout guard, and a linked journal is refused during an audited read.
 
-## Building and verifying locally
+## Verification
+
+The published bundle is exercised as a real child process, not a mock: initialize, list every
+resource, read each URI, confirm the run journal grows, verify the tools capability is absent, and
+attempt a write that must fail.
+
+To reproduce that from a clone of the main repository:
 
 ```bash
-pnpm --filter open-merchant-mcp build
 pnpm --filter open-merchant-mcp test
 ```
-
-The test command builds `dist/cli.mjs` first and includes a real spawned-child stdio test:
-initialize, list all resources, read each URI, confirm the run journal grows, verify the tools
-capability is absent, and attempt a write that must fail.
 
 ---
 

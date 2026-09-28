@@ -4,7 +4,7 @@ All notable changes to Open Merchant are documented in this file.
 
 ## [Unreleased]
 
-## [1.0.1] - 2026-09-27
+## [1.0.1] - 2026-09-28
 
 The first stable release. Phase 3 is in: the read-only MCP server, the connector client, the
 plugin surface, standing reviews, the Draft Desk, and the project currency change. `1.0.0` is a
@@ -46,6 +46,13 @@ the interchange-spec item was withdrawn by owner decision.
 ### Security
 - CodeQL flagged two high-severity findings in the MCP host-config helper this release added, both in the shell-quoting function that built a `claude mcp add` one-liner: a polynomial-time regular expression, and a sanitizer that does not escape backslashes. Both were real. The function was **removed rather than repaired** — quoting correct in `cmd` is wrong in PowerShell and a no-op in `sh`, so no single escaper is correct, and an incomplete one hands a user a path that looks quoted and is not. The JSON snippet is exact and portable and is now the only thing the app generates; the CLI form is documented for people who prefer it, with their own paths in it.
 - `extract-zip` patched against CVE-2026-19693 (GHSA-7pqw-9j4j-h8q3): pinned the upstream containment fix through `pnpm.patchedDependencies` so writes through a symlink at the entry's final path component are refused. Build-time-only dependency of the Electron install script; never shipped in installers.
+
+### Known gaps
+- Intel macOS has no build. The macOS runner produces one architecture, so only Apple Silicon is
+  published. Recorded rather than hidden; the ROADMAP tracks the fix.
+- The matrix's three platform jobs each create the GitHub Release, so a `v1.0.1` build left two
+  drafts for the same tag with the assets split between them. Known behaviour of publishing from
+  parallel jobs, not a packaging fault.
 
 ### Fixed
 - A development build announced Electron's version as its own. The `app.isPackaged` guard lived only in `initAutoUpdate`, so the renderer and the menu — which call `checkForUpdates` directly — bypassed it, reached the network with no feed, and rendered "You are on 39.8.10, the newest release" about software that is not Open Merchant. The guard moved into `checkForUpdates` itself, and a build with no updater now reports an explicit `unavailable` state and says nothing.

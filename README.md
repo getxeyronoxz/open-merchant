@@ -11,7 +11,6 @@
 [![npm](https://img.shields.io/npm/v/open-merchant-mcp?label=npm&color=cb3837&logo=npm&logoColor=white)](https://www.npmjs.com/package/open-merchant-mcp)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/codeql/codeql.yml?branch=dev&label=code%20scanning&color=green)](https://github.com/getxeyronoxz/open-merchant/actions)
 [![CI](https://img.shields.io/github/actions/workflow/status/ci.yml?branch=dev&label=ci&color=green)](https://github.com/getxeyronoxz/open-merchant/actions)
-[![Local-first](https://img.shields.io/badge/no%20cloud%20%7C%20no%20accounts%20%7C%20no%20telemetry-2EA44F)](https://github.com/getxeyronoxz/open-merchant)
 
 </div>
 
@@ -304,22 +303,11 @@ through `packages/sdk`.
 
 ## Support
 
-If this is useful to you, the most useful things you can do, in order:
+If something breaks your workflow, [open an issue](https://github.com/getxeyronoxz/open-merchant/issues/new/choose).
+That is worth more than a star: a report that reproduces a bug is the only way it gets fixed.
 
-1. **Open an issue** if something breaks your workflow. That is the single highest-value thing you can
-   give back, and it is worth more than a star.
-2. **Answer someone else's issue.** A reproduction case or a question is real work saved.
-3. **Star the repo** so other people can find it.
-4. **Tell someone who decides things on price.** This is a desktop app for people who want their
-   files, their exact numbers, and an assistant that waits to be told. That only spreads by word of
-   mouth.
-
-<p align="center">
-  <a href="https://github.com/sponsors/xeyronox"><img alt="Sponsor" src="https://img.shields.io/badge/sponsor-%E2%9D%A4-ff69b4?style=for-the-badge&logo=github&logoColor=white" height="30"></a>
-  <a href="https://github.com/getxeyronoxz/open-merchant/issues/new/choose"><img alt="Report an issue" src="https://img.shields.io/badge/report-an%20issue-ff5c5c?style=for-the-badge&logo=github&logoColor=white" height="30"></a>
-  <a href="https://github.com/getxeyronoxz/open-merchant/stargazers"><img alt="Star the repo" src="https://img.shields.io/github/stars/getxeyronoxz/open-merchant?style=for-the-badge&logo=github&logoColor=white" height="30"></a>
-  <a href="https://www.npmjs.com/package/open-merchant-mcp"><img alt="MCP server on npm" src="https://img.shields.io/npm/dm/open-merchant-mcp?style=for-the-badge&label=downloads&color=cb3837&logo=npm&logoColor=white" height="30"></a>
-</p>
+If you are on a Mac, note that only Apple Silicon builds are published so far. Intel is the open
+one, and it is a packaging change rather than a code one.
 
 ## License
 
