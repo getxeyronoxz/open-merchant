@@ -20,7 +20,45 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The three platform jobs all run `electron-builder --publish always` in
+  # parallel, and GitHub has no get-or-create for a release. Whichever two
+  # started before either had created the draft both created one, which left
+  # the tag pointing at two drafts with the assets split between them --
+  # publishing either alone gives a release with no Windows installer, or none
+  # of the Linux packages. The draft is therefore created here, once, before the
+  # matrix exists; each job then finds the release that is already there and
+  # adds its own assets to it.
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      release_id: ${{ steps.ensure.outputs.release_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - id: ensure
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # `gh release view` is the get half of get-or-create: it exits non-zero
+          # when nothing exists for the tag, which is the signal to create.
+          if id=$(gh release view "$TAG" --json databaseId --jq .databaseId 2>/dev/null); then
+            echo "release_id=$id" >> "$GITHUB_OUTPUT"
+            echo "reusing release $id for $TAG"
+            exit 0
+          fi
+          gh release create "$TAG" --draft --verify-tag --title "Open Merchant $TAG" --notes "Build in progress."
+          id=$(gh release view "$TAG" --json databaseId --jq .databaseId)
+          echo "release_id=$id" >> "$GITHUB_OUTPUT"
+          echo "created draft $id for $TAG"
+
   build:
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:

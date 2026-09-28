@@ -6,8 +6,8 @@
 
 [![Release](https://img.shields.io/github/v/release/getxeyronoxz/open-merchant?label=release&color=blue)](https://github.com/getxeyronoxz/open-merchant/releases/latest)
 [![License: AGPL-3.0](https://img.shields.io/github/license/getxeyronoxz/open-merchant?color=blue)](LICENSE)
-[![CI](https://img.shields.io/github/actions/workflow/status/ci.yml?branch=dev&label=tests&color=green)](https://github.com/getxeyronoxz/open-merchant/actions)
-[![CodeQL](https://img.shields.io/github/actions/workflow/status/codeql/codeql.yml?branch=dev&label=code%20scanning&color=green)](https://github.com/getxeyronoxz/open-merchant/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/getxeyronoxz/open-merchant/ci.yml?branch=dev&label=tests&color=green)](https://github.com/getxeyronoxz/open-merchant/actions)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/getxeyronoxz/open-merchant/codeql.yml?branch=dev&label=code%20scanning&color=green)](https://github.com/getxeyronoxz/open-merchant/actions)
 
 </div>
 
