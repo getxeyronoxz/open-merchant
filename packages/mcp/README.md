@@ -33,7 +33,7 @@ the app does not own, or when you would rather not install the app at all.
 - [Host configuration](#host-configuration)
 - [Resources](#resources)
 - [What it will not do](#what-it-will-not-do)
-- [Building and verifying locally](#building-and-verifying-locally)
+- [Verification](#verification)
 
 ## Host configuration
 
@@ -75,8 +75,11 @@ separate `args`.
 > Windows `cmd` is wrong in PowerShell and a no-op in a POSIX shell, so there is no single correct
 > escaper, and an incomplete one hands you a path that looks quoted and is not.
 
-See [`docs/mcp-hosts.md`](https://github.com/getxeyronoxz/open-merchant/blob/dev/docs/mcp-hosts.md)
-in the main repository for both formats with their sources.
+See The folder must contain a valid `.openmerchant/manifest.json`; a malformed
+workspace is refused, never repaired.
+
+[`docs/mcp-hosts.md`](https://github.com/getxeyronoxz/open-merchant/blob/dev/docs/mcp-hosts.md)
+in the main repository records both formats with their sources.
 
 ## What it will not do
 
@@ -91,13 +94,13 @@ in the main repository for both formats with their sources.
 
 The published bundle is exercised as a real child process, not a mock: initialize, list every
 resource, read each URI, confirm the run journal grows, verify the tools capability is absent, and
-attempt a write that must fail.
-
-To reproduce that from a clone of the main repository:
+attempt a write that must fail. To reproduce that from a clone of the main repository:
 
 ```bash
 pnpm --filter open-merchant-mcp test
 ```
+
+For manual checks, point MCP Inspector, Claude Desktop, or an IDE host at a project folder.
 
 ---
 
@@ -147,47 +150,14 @@ npx --yes open-merchant-mcp /path/to/project
 | `openmerchant://journal/runs` | `.openmerchant/runs.jsonl` |
 | `openmerchant://journal/provenance` | `.openmerchant/provenance.jsonl` |
 
-## Host configuration
-
-The config key and shape differ per host — opencode reads `mcp` with the command
-as an array, Claude Code and Claude Desktop read `mcpServers`. The app generates
-the right one; `docs/mcp-hosts.md` records both. This example is the
-`mcpServers` form:
-
-```json
-{
-  "mcpServers": {
-    "open-merchant": {
-      "command": "node",
-      "args": ["/path/to/open-merchant/packages/mcp/dist/cli.mjs", "/path/to/project"]
-    }
-  }
-}
-```
-
-Use an absolute path in both fields. The project folder must contain a valid
-`.openmerchant/manifest.json`; malformed workspaces are refused, never repaired.
-
 ### Version compatibility
 
 This server journals the `mcpArtifactRead` run operation, and reports its own
 version from `package.json` — a frozen literal here outlived every release once
-already. Use it with the coordinated Open Merchant `1.0.0` desktop build (or a
+already. Use it with the coordinated Open Merchant `1.0.1` desktop build (or a
 newer build carrying the same shared schema). Older alpha builds do not recognize
 that run operation and may reject the journal, so do not point this server at a
 project that must remain readable by an older alpha app.
-
-## Build and verify locally
-
-```bash
-pnpm --filter open-merchant-mcp build
-pnpm --filter open-merchant-mcp test
-```
-
-The test command rebuilds `dist/cli.mjs` first and includes a real spawned-child
-stdio test: initialize, list all resources, read each URI, confirm the run
-journal grows, verify the tools capability is absent, and attempt a write that
-must fail. Use MCP Inspector, Claude Desktop, or an IDE host for manual verification.
 
 ## Troubleshooting
 

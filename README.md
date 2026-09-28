@@ -6,11 +6,8 @@
 
 [![Release](https://img.shields.io/github/v/release/getxeyronoxz/open-merchant?label=release&color=blue)](https://github.com/getxeyronoxz/open-merchant/releases/latest)
 [![License: AGPL-3.0](https://img.shields.io/github/license/getxeyronoxz/open-merchant?color=blue)](LICENSE)
-[![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-555555?logo=electron&logoColor=white)](https://www.electron.build/)
-[![MCP](https://img.shields.io/badge/MCP-read--only%20server-8A5CF5)](docs/mcp-hosts.md)
-[![npm](https://img.shields.io/npm/v/open-merchant-mcp?label=npm&color=cb3837&logo=npm&logoColor=white)](https://www.npmjs.com/package/open-merchant-mcp)
+[![CI](https://img.shields.io/github/actions/workflow/status/ci.yml?branch=dev&label=tests&color=green)](https://github.com/getxeyronoxz/open-merchant/actions)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/codeql/codeql.yml?branch=dev&label=code%20scanning&color=green)](https://github.com/getxeyronoxz/open-merchant/actions)
-[![CI](https://img.shields.io/github/actions/workflow/status/ci.yml?branch=dev&label=ci&color=green)](https://github.com/getxeyronoxz/open-merchant/actions)
 
 </div>
 
