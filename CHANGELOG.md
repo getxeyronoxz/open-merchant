@@ -7,9 +7,18 @@ All notable changes to Open Merchant are documented in this file.
 ## [1.0.1] - 2026-09-28
 
 The first stable release. Phase 3 is in: the read-only MCP server, the connector client, the
-plugin surface, standing reviews, the Draft Desk, and the project currency change. `1.0.0` is a
-promise about one thing — that a version 2 project folder keeps opening — not a published format;
-the interchange-spec item was withdrawn by owner decision.
+plugin surface, standing reviews, the Draft Desk, and the project currency change.
+
+`1.0` promises one thing: that a version 2 project folder keeps opening. It is plain JSON and
+JSONL, and you can read it without this app. The interchange-spec item was withdrawn by owner
+decision, so there is no promise to third-party readers.
+
+`1.0.0` was tagged but never published: its Linux job failed on a missing packaging field, and
+this is the first version to actually ship.
+
+The `open-merchant-mcp` package is versioned separately and ships as `1.0.2` — it is independently
+versioned software, and a patch release ahead of the app that carries it is ordinary rather than a
+mismatch to reconcile.
 
 ### Added
 - macOS and Linux get a proper launcher for the bundled MCP server. Only Windows had one; elsewhere the app handed a host a bare `.mjs` whose executable bit had to survive being copied into a DMG, an AppImage, or a snap — with no fallback and no explanation if it didn't. A `/bin/sh` launcher now stages for those platforms (LF endings, executable, resolving its own directory with parameter expansion so it depends on nothing outside the shell), and prefers the Node runtime that ships with the app over whatever is on `PATH`. This matters most on macOS, where a GUI-launched app has a minimal `PATH` and the person may never have installed Node. When the app's own runtime is not where the launcher expects — `Contents/MacOS` for a `.app`, the install root elsewhere — it falls back to `node`, and refuses with a named cause if there is none or it predates Node 20. Staging is now per-platform, so a macOS build no longer ships a `.cmd`, and the POSIX launcher is covered by tests that build both a fake `.app` and a fake Linux install tree.
@@ -50,9 +59,10 @@ the interchange-spec item was withdrawn by owner decision.
 ### Known gaps
 - Intel macOS has no build. The macOS runner produces one architecture, so only Apple Silicon is
   published. Recorded rather than hidden; the ROADMAP tracks the fix.
-- The matrix's three platform jobs each create the GitHub Release, so a `v1.0.1` build left two
-  drafts for the same tag with the assets split between them. Known behaviour of publishing from
-  parallel jobs, not a packaging fault.
+- The matrix's three platform jobs each created the GitHub Release, so an early build left two
+  drafts for the same tag with the assets split between them — publishing either alone gives a
+  release with no Windows installer, or none of the Linux packages. A `prepare` job now creates
+  the draft once before the matrix runs.
 
 ### Fixed
 - A development build announced Electron's version as its own. The `app.isPackaged` guard lived only in `initAutoUpdate`, so the renderer and the menu — which call `checkForUpdates` directly — bypassed it, reached the network with no feed, and rendered "You are on 39.8.10, the newest release" about software that is not Open Merchant. The guard moved into `checkForUpdates` itself, and a build with no updater now reports an explicit `unavailable` state and says nothing.
